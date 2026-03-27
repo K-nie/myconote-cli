@@ -1,0 +1,90 @@
+site_name: Myconote_CLI
+site_description: Genome Annotation Pipeline for Fungi and Other Eukaryotes
+site_author: Benjamin Narh-Madey
+site_url: https://k-nie.github.io/myconote-cli/
+
+repo_name: K-nie/myconote-cli
+repo_url: https://github.com/K-nie/myconote-cli
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quickstart.md
+  - Pipeline Commands:
+    - Overview: pipeline/overview.md
+    - sort: pipeline/sort.md
+    - mask: pipeline/mask.md
+    - train: pipeline/train.md
+    - predict: pipeline/predict.md
+    - update: pipeline/update.md
+    - annotate: pipeline/annotate.md
+  - Analysis Commands:
+    - phylogeny: analysis/phylogeny.md
+    - plot: analysis/plot.md
+    - stats: analysis/stats.md
+    - blast: analysis/blast.md
+  - Databases: databases.md
+  - Workshop Lesson: lesson.md
+  - Reference:
+    - Kingdom Defaults: reference/kingdoms.md
+    - Output Formats: reference/outputs.md
+    - Citation: reference/citation.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/K-nie/myconote-cli
+  version:
+    provider: mike
+
+copyright: "© 2026 Benjamin Narh-Madey · Hittinger Lab · University of Wisconsin–Madison"

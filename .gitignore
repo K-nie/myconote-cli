@@ -1,0 +1,44 @@
+# Rust build artifacts
+/target
+
+# macOS metadata
+.DS_Store
+
+# Large external tool directories
+trinityrnaseq-v2.15.2/
+trinityrnaseq-v2.15.2.FULL.tar.gz
+augustus/
+
+# Database / index files (download separately via `myconote db setup`)
+dbCAN.dmnd
+repeats.dmnd
+repeats.tar.gz
+go.json
+go.obo
+go.obo.1
+
+# Genome / sequence data (not version-controlled)
+brettanomyces_anomalus.fas
+brettanomyces_cleaned.fas
+brettanomyces_fixed.fas
+
+# Generated GFF / annotation outputs
+genome1.gff
+genome2.gff
+test.fa
+test.gff
+isoforms.gff
+
+# Pipeline output directories
+test_output/
+compare_results/
+funannotate_test/
+
+# Log and stats files
+funannotate-setup.log
+stats.csv
+stats.json
+
+# Generated plots
+isoforms.png
+isoforms_improved.png

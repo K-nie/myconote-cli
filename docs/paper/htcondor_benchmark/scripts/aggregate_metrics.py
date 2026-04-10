@@ -26,7 +26,8 @@ from collections import defaultdict
 from pathlib import Path
 
 
-TOOLS = ['myconote', 'funannotate', 'maker', 'braker']
+ALL_TOOLS = ['myconote', 'funannotate', 'maker', 'braker']
+TOOLS = list(ALL_TOOLS)  # overwritten in main() to just the tools that ran
 METRIC_FIELDS = [
     'gene_loose_sens', 'gene_loose_spec', 'gene_loose_F1',
     'gene_strict_sens', 'gene_strict_spec', 'gene_strict_F1',
@@ -199,6 +200,11 @@ def write_comparison_table(rows: list, out_path: Path):
 
 def write_statistical_tests(rows: list, out_path: Path):
     """Paired t-tests comparing MycoNote-CLI vs each other tool."""
+    other_tools = [t for t in TOOLS if t != 'myconote']
+    if not other_tools:
+        print('Only myconote results present — skipping statistical tests '
+              '(nothing to compare against)', file=sys.stderr)
+        return
     try:
         from scipy import stats
     except ImportError:
@@ -220,7 +226,7 @@ def write_statistical_tests(rows: list, out_path: Path):
         f.write('comparison\tmetric\tn_pairs\tmyconote_mean\tother_mean\t'
                 'mean_difference\tt_stat\tp_value\teffect_size_d\n')
 
-        for other in ['funannotate', 'maker', 'braker']:
+        for other in other_tools:
             for metric in test_metrics:
                 myco_vals = []
                 other_vals = []
@@ -276,15 +282,30 @@ def main():
     print(f'Found {len(genomes)} genomes in config')
     print(f'Loading metrics from {results_dir}...')
 
+    # Only aggregate tools whose result directory exists — supports
+    # partial runs (e.g. --myconote-only) without emitting a flood of
+    # NA rows for tools that were never executed.
+    tools = [t for t in ALL_TOOLS if (results_dir / t).is_dir()]
+    if not tools:
+        print(f'ERROR: no tool result directories found under {results_dir}',
+              file=sys.stderr)
+        sys.exit(1)
+    print(f'Tools with results: {", ".join(tools)}')
+
+    # Expose the active tool set to the writer helpers via a module global
+    # so they can use it for ordering columns.
+    global TOOLS
+    TOOLS = tools
+
     all_rows = []
-    for tool in TOOLS:
+    for tool in tools:
         for genome in genomes:
             for rep in [1, 2, 3]:
                 row = load_run(tool, genome, rep, results_dir)
                 if row:
                     all_rows.append(row)
 
-    print(f'Loaded {len(all_rows)} runs (out of {len(TOOLS) * len(genomes) * 3} possible)')
+    print(f'Loaded {len(all_rows)} runs (out of {len(tools) * len(genomes) * 3} possible)')
 
     # Create aggregated output directory
     agg_dir = results_dir / 'aggregated'

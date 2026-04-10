@@ -14,8 +14,22 @@ DATA_DIR="${DATA_DIR:-$BENCHMARK_DIR/data}"
 RESULTS_DIR="${RESULTS_DIR:-$BENCHMARK_DIR/results}"
 CONFIG="$BENCHMARK_DIR/configs/genomes.tsv"
 
-TOOLS=(myconote funannotate maker braker)
 REPS=(1 2 3)
+
+# Only consider tools whose results directory actually exists. This lets
+# collect_results.sh work for --myconote-only runs without complaining about
+# funannotate/MAKER/BRAKER directories that were never populated.
+ALL_TOOLS=(myconote funannotate maker braker)
+TOOLS=()
+for t in "${ALL_TOOLS[@]}"; do
+    if [[ -d "${RESULTS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/results}/$t" ]]; then
+        TOOLS+=("$t")
+    fi
+done
+if [[ "${#TOOLS[@]}" -eq 0 ]]; then
+    echo "ERROR: no tool result directories found under RESULTS_DIR" >&2
+    exit 1
+fi
 
 echo "═══════════════════════════════════════════════════════════"
 echo "MycoNote-CLI Benchmark: Result Collection"

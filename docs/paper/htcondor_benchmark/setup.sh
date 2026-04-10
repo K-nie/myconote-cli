@@ -24,6 +24,41 @@ echo "Data dir      : $DATA_DIR"
 echo "Results dir   : $RESULTS_DIR"
 echo ""
 
+# ── Sanity check: reject a stale DATA_DIR inherited from a prior shell ───
+# On shared clusters a common footgun is exporting DATA_DIR in one clone
+# and forgetting about it. If DATA_DIR points outside BENCHMARK_DIR AND at
+# a path that looks unrelated, stop and make the user confirm.
+case "$DATA_DIR" in
+    "$BENCHMARK_DIR"/*|"$BENCHMARK_DIR")
+        ;;  # within the current clone — fine
+    *)
+        echo "⚠ DATA_DIR is set to a path outside this clone:"
+        echo "    DATA_DIR       = $DATA_DIR"
+        echo "    BENCHMARK_DIR  = $BENCHMARK_DIR"
+        echo ""
+        echo "  If this is intentional (e.g. pointing at /staging or /scratch),"
+        echo "  press Enter to continue. Otherwise Ctrl-C, then:"
+        echo "      unset DATA_DIR RESULTS_DIR && bash setup.sh"
+        read -r -p "  Continue with DATA_DIR=$DATA_DIR ? [Enter/Ctrl-C] " _
+        ;;
+esac
+
+# Make sure we can actually write there and have disk space.
+if ! mkdir -p "$DATA_DIR" 2>/dev/null; then
+    echo "ERROR: Cannot create DATA_DIR: $DATA_DIR" >&2
+    exit 1
+fi
+if command -v df &>/dev/null; then
+    avail_kb=$(df -Pk "$DATA_DIR" | awk 'NR==2 {print $4}')
+    avail_gb=$(( avail_kb / 1024 / 1024 ))
+    echo "Free space on DATA_DIR filesystem: ${avail_gb} GB"
+    if [[ "$avail_gb" -lt 10 ]]; then
+        echo "⚠ Less than 10 GB free — reference genomes need ~5 GB, intermediate"
+        echo "  files during benchmark runs can add 20-40 GB per tool."
+    fi
+    echo ""
+fi
+
 # ── Step 1: Download reference genomes ────────────────────────────────────
 echo "── Step 1: Downloading reference genomes ──"
 bash "$BENCHMARK_DIR/scripts/download_references.sh" "$DATA_DIR"

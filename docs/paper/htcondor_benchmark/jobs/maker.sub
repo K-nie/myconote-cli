@@ -1,0 +1,50 @@
+# HTCondor submit file for MAKER benchmark runs.
+# 24 jobs: 8 genomes x 3 replicates.
+
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_maker.sh
+getenv         = true
+
+request_cpus   = 8
+request_memory = 32 GB
+request_disk   = 30 GB
++RequestRuntime = 43200   # 12 hours per job
+
+log    = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).log
+output = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).out
+error  = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).err
+
+arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
+
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+
+notification = Error
+notify_user  = narhmadey@wisc.edu
+
+queue genome_id, rep from (
+    sce 1
+    sce 2
+    sce 3
+    cal 1
+    cal 2
+    cal 3
+    ani 1
+    ani 2
+    ani 3
+    cne 1
+    cne 2
+    cne 3
+    ath 1
+    ath 2
+    ath 3
+    dme 1
+    dme 2
+    dme 3
+    cel 1
+    cel 2
+    cel 3
+    pfa 1
+    pfa 2
+    pfa 3
+)

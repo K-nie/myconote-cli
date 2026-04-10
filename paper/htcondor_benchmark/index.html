@@ -1675,69 +1675,69 @@
 <th>Organism</th>
 <th>Size (Mb)</th>
 <th>Kingdom</th>
-<th>Reference annotation source</th>
+<th>NCBI RefSeq assembly</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
+<td>sce</td>
 <td><em>Saccharomyces cerevisiae</em> S288C</td>
 <td>12</td>
 <td>Fungi</td>
-<td>SGD R64-1-1</td>
+<td>GCF_000146045.2 (R64)</td>
 </tr>
 <tr>
-<td>2</td>
+<td>cal</td>
 <td><em>Candida albicans</em> SC5314</td>
 <td>14</td>
-<td>Fungi (CTG)</td>
-<td>CGD A22</td>
+<td>Fungi (CTG clade)</td>
+<td>GCF_000182965.3 (ASM18296v3)</td>
 </tr>
 <tr>
-<td>3</td>
+<td>ani</td>
 <td><em>Aspergillus nidulans</em> FGSC A4</td>
 <td>30</td>
 <td>Fungi</td>
-<td>AspGD / FungiDB</td>
+<td>GCF_000011425.1 (ASM1142v1)</td>
 </tr>
 <tr>
-<td>4</td>
+<td>cne</td>
 <td><em>Cryptococcus neoformans</em> JEC21</td>
 <td>19</td>
 <td>Fungi</td>
-<td>NCBI RefSeq</td>
+<td>GCF_000091045.1 (ASM9104v1)</td>
 </tr>
 <tr>
-<td>5</td>
+<td>ath</td>
 <td><em>Arabidopsis thaliana</em> Col-0</td>
 <td>135</td>
 <td>Plant</td>
-<td>TAIR10 / Araport11</td>
+<td>GCF_000001735.4 (TAIR10.1)</td>
 </tr>
 <tr>
-<td>6</td>
+<td>dme</td>
 <td><em>Drosophila melanogaster</em></td>
 <td>144</td>
 <td>Insect</td>
-<td>FlyBase r6.55</td>
+<td>GCF_000001215.4 (Release 6)</td>
 </tr>
 <tr>
-<td>7</td>
+<td>cel</td>
 <td><em>Caenorhabditis elegans</em></td>
 <td>100</td>
 <td>Animal</td>
-<td>WormBase WS292</td>
+<td>GCF_000002985.6 (WBcel235)</td>
 </tr>
 <tr>
-<td>8</td>
+<td>pfa</td>
 <td><em>Plasmodium falciparum</em> 3D7</td>
 <td>23</td>
 <td>Protist</td>
-<td>PlasmoDB-66</td>
+<td>GCF_000002765.6</td>
 </tr>
 </tbody>
 </table>
-<p>All eight have manually curated reference annotations that serve as gold standards for sensitivity/specificity calculations.</p>
+<p>All eight assemblies carry manually curated NCBI RefSeq annotations (which mirror the canonical community resources — SGD, CGD, FungiDB, TAIR, FlyBase, WormBase, PlasmoDB — but through a single stable download endpoint). These serve as gold standards for sensitivity/specificity calculations.</p>
 <hr />
 <h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>htcondor_benchmark/

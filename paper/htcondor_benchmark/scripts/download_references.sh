@@ -64,14 +64,17 @@ find_ncbi_subdir() {
 validate_fasta() {
     local f="$1"
     local min_bytes="$2"
+    # Use wc -c for size — portable, follows symlinks, immune to NFS
+    # attribute-cache lag that can confuse `stat` and `du` on GLBRC.
     local sz
-    sz=$(file_size "$f")
+    sz=$(wc -c < "$f" 2>/dev/null || echo 0)
     if [[ "$sz" -lt "$min_bytes" ]]; then
         echo "    ✗ FASTA too small: $sz bytes (expected >= $min_bytes)"
         return 1
     fi
     if ! head -1 "$f" | grep -q '^>'; then
         echo "    ✗ Not a valid FASTA (first line does not start with '>')"
+        echo "    ↳ first line: $(head -1 "$f" | cut -c1-80)"
         return 1
     fi
     return 0
@@ -81,14 +84,21 @@ validate_gff3() {
     local f="$1"
     local min_bytes="$2"
     local sz
-    sz=$(file_size "$f")
+    sz=$(wc -c < "$f" 2>/dev/null || echo 0)
     if [[ "$sz" -lt "$min_bytes" ]]; then
         echo "    ✗ GFF3 too small: $sz bytes (expected >= $min_bytes)"
         return 1
     fi
-    if ! head -50 "$f" | grep -qE '^##gff-version|	gene	|	CDS	|	mRNA	'; then
-        echo "    ✗ Not a valid GFF3 (no gff-version header or gene/mRNA/CDS features in first 50 lines)"
-        return 1
+    # NCBI GFF3s start with `##gff-version 3`. Some assemblies have hundreds
+    # of ##sequence-region header lines (one per scaffold) before the first
+    # feature, so we scan the first 2000 lines and look for either the gff
+    # header directive OR any non-comment line (which would be a feature row).
+    if ! head -2000 "$f" | grep -q '^##gff-version'; then
+        if ! head -2000 "$f" | grep -q '^[^#]'; then
+            echo "    ✗ Not a valid GFF3 (no gff-version header and no feature lines in first 2000 lines)"
+            echo "    ↳ first line: $(head -1 "$f" | cut -c1-80)"
+            return 1
+        fi
     fi
     return 0
 }
@@ -140,9 +150,10 @@ for i in "${!ids[@]}"; do
     ANNO_FILE="$GENOME_DIR/reference.gff3"
 
     # Minimum expected sizes (bytes): genome ~25% of expected uncompressed size,
-    # GFF3 >= 500 kB (even the tiniest curated eukaryotic annotation is bigger).
+    # GFF3 >= 100 kB (NCBI RefSeq annotations with thousands of features easily
+    # exceed this; anything smaller is probably an error page).
     min_genome_bytes=$(( size_mb * 256 * 1024 ))   # 0.25 * size_mb * 1MB
-    min_gff_bytes=$(( 500 * 1024 ))
+    min_gff_bytes=$(( 100 * 1024 ))
 
     # Skip if already present AND valid
     if [[ -f "$GENOME_FILE" && -f "$ANNO_FILE" ]]; then
@@ -195,7 +206,7 @@ for i in "${!ids[@]}"; do
         failed_ids+=("$id")
         continue
     fi
-    echo "    ✓ $(du -h "$GENOME_FILE" | cut -f1)"
+    echo "    ✓ genome.fa ($(wc -c < "$GENOME_FILE") bytes)"
 
     # ── Annotation ──
     echo "  Downloading annotation from $anno_url"
@@ -219,7 +230,7 @@ for i in "${!ids[@]}"; do
         failed_ids+=("$id")
         continue
     fi
-    echo "    ✓ $(du -h "$ANNO_FILE" | cut -f1)"
+    echo "    ✓ reference.gff3 ($(wc -c < "$ANNO_FILE") bytes)"
 
     ok_count=$((ok_count + 1))
 done

@@ -19,21 +19,21 @@ pub enum Kingdom {
 impl Kingdom {
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().trim() {
-            "fungi" | "fungal" | "fungus"      => Kingdom::Fungi,
+            "fungi" | "fungal" | "fungus" => Kingdom::Fungi,
             "plant" | "plants" | "viridiplantae" => Kingdom::Plant,
-            "animal" | "animals" | "metazoa"   => Kingdom::Animal,
-            "insect" | "insecta"               => Kingdom::Insect,
-            "protist" | "protista"             => Kingdom::Protist,
-            _                                  => Kingdom::Fungi, // safe default
+            "animal" | "animals" | "metazoa" => Kingdom::Animal,
+            "insect" | "insecta" => Kingdom::Insect,
+            "protist" | "protista" => Kingdom::Protist,
+            _ => Kingdom::Fungi, // safe default
         }
     }
 
     pub fn display_name(&self) -> &str {
         match self {
-            Kingdom::Fungi   => "Fungi",
-            Kingdom::Plant   => "Viridiplantae",
-            Kingdom::Animal  => "Metazoa",
-            Kingdom::Insect  => "Insecta",
+            Kingdom::Fungi => "Fungi",
+            Kingdom::Plant => "Viridiplantae",
+            Kingdom::Animal => "Metazoa",
+            Kingdom::Insect => "Insecta",
             Kingdom::Protist => "Protista",
         }
     }
@@ -41,10 +41,10 @@ impl Kingdom {
     /// Recommended Augustus species name, optionally overridden by `--species`
     pub fn default_augustus_species(&self) -> &str {
         match self {
-            Kingdom::Fungi   => "saccharomyces_cerevisiae_S288C",
-            Kingdom::Plant   => "arabidopsis",
-            Kingdom::Animal  => "human",
-            Kingdom::Insect  => "fly",
+            Kingdom::Fungi => "saccharomyces_cerevisiae_S288C",
+            Kingdom::Plant => "arabidopsis",
+            Kingdom::Animal => "human",
+            Kingdom::Insect => "fly",
             Kingdom::Protist => "toxoplasma",
         }
     }
@@ -103,38 +103,38 @@ impl Kingdom {
                 "aedes",
                 "anopheles",
             ],
-            Kingdom::Protist => &[
-                "toxoplasma",
-                "leishmania",
-                "tetrahymena",
-            ],
+            Kingdom::Protist => &["toxoplasma", "leishmania", "tetrahymena"],
         }
     }
 
     /// Expected intron size range (min, max bp)
     pub fn intron_size_range(&self) -> (u64, u64) {
         match self {
-            Kingdom::Fungi   => (40,   2_000),
-            Kingdom::Plant   => (40,  50_000),
-            Kingdom::Animal  => (40, 500_000),
-            Kingdom::Insect  => (40,  50_000),
-            Kingdom::Protist => (20,   1_000),
+            Kingdom::Fungi => (40, 2_000),
+            Kingdom::Plant => (40, 50_000),
+            Kingdom::Animal => (40, 500_000),
+            Kingdom::Insect => (40, 50_000),
+            Kingdom::Protist => (20, 1_000),
         }
     }
 
     /// BUSCO OrthoDB lineage dataset name
     pub fn busco_lineage(&self) -> &str {
         match self {
-            Kingdom::Fungi   => "fungi_odb10",
-            Kingdom::Plant   => "viridiplantae_odb10",
-            Kingdom::Animal  => "metazoa_odb10",
-            Kingdom::Insect  => "insecta_odb10",
+            Kingdom::Fungi => "fungi_odb10",
+            Kingdom::Plant => "viridiplantae_odb10",
+            Kingdom::Animal => "metazoa_odb10",
+            Kingdom::Insect => "insecta_odb10",
             Kingdom::Protist => "eukaryota_odb10",
         }
     }
 
-    /// Augustus UTR model flag (fungi have reliable UTR models, vertebrates less so)
+    /// Augustus UTR model flag.
+    /// Disabled by default — not all species models ship with trained UTR
+    /// parameters (e.g. saccharomyces_cerevisiae_S288C lacks _utr_probs.pbl).
+    /// UTR prediction is enabled automatically only when a user-trained model
+    /// that includes UTR parameters is detected, or via an explicit CLI flag.
     pub fn augustus_utr(&self) -> bool {
-        matches!(self, Kingdom::Fungi | Kingdom::Plant)
+        false
     }
 }

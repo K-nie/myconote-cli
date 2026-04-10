@@ -15,7 +15,6 @@
 ///   eggnog_og   — best orthologous group (e.g. "COG0001@1|root")
 ///   eggnog_kegg — KEGG pathway IDs (comma-separated)
 ///   eggnog_go   — GO terms from EggNog (supplement to UniProt GO)
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -29,19 +28,19 @@ use std::process::Command;
 #[derive(Debug, Clone, Default)]
 pub struct EggNogHit {
     /// Query gene / protein ID
-    pub query_id:    String,
+    pub query_id: String,
     /// Best orthologous group  (field 1 in emapper output)
-    pub best_og:     String,
+    pub best_og: String,
     /// COG functional category letter(s) (field 20)
-    pub cog_cat:     String,
+    pub cog_cat: String,
     /// Functional description (field 21)
     pub description: String,
     /// Preferred gene name (field 22), e.g. "tubulinA"
-    pub gene_name:   String,
+    pub gene_name: String,
     /// GO terms (field 9)
-    pub go_terms:    Vec<String>,
+    pub go_terms: Vec<String>,
     /// KEGG pathway IDs (field 11)
-    pub kegg_paths:  Vec<String>,
+    pub kegg_paths: Vec<String>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,21 +50,25 @@ pub struct EggNogHit {
 /// Parse an `*.emapper.annotations` file and return a map of
 /// query_id → EggNogHit.
 pub fn parse_emapper_results(path: &Path) -> Result<HashMap<String, EggNogHit>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map = HashMap::new();
 
     for line_res in reader.lines() {
         let line = line_res.map_err(MycoNoteError::Io)?;
         let trimmed = line.trim();
-        if trimmed.starts_with('#') || trimmed.is_empty() { continue; }
+        if trimmed.starts_with('#') || trimmed.is_empty() {
+            continue;
+        }
 
         let fields: Vec<&str> = trimmed.split('\t').collect();
         // emapper v2 output has at least 22 columns
-        if fields.len() < 22 { continue; }
+        if fields.len() < 22 {
+            continue;
+        }
 
-        let query_id    = fields[0].to_string();
-        let best_og     = fields[1].to_string();
+        let query_id = fields[0].to_string();
+        let best_og = fields[1].to_string();
         // fields[8] = GOs, fields[10] = KEGG pathways
         let go_terms: Vec<String> = if fields[9] == "-" {
             vec![]
@@ -75,21 +78,31 @@ pub fn parse_emapper_results(path: &Path) -> Result<HashMap<String, EggNogHit>> 
         let kegg_paths: Vec<String> = if fields[11] == "-" {
             vec![]
         } else {
-            fields[11].split(',').map(|s| s.trim().to_string()).collect()
+            fields[11]
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .collect()
         };
-        let cog_cat     = fields[20].to_string();
+        let cog_cat = fields[20].to_string();
         let description = fields[21].to_string();
-        let gene_name   = if fields.len() > 22 { fields[22].to_string() } else { String::new() };
+        let gene_name = if fields.len() > 22 {
+            fields[22].to_string()
+        } else {
+            String::new()
+        };
 
-        map.insert(query_id.clone(), EggNogHit {
-            query_id,
-            best_og,
-            cog_cat,
-            description,
-            gene_name,
-            go_terms,
-            kegg_paths,
-        });
+        map.insert(
+            query_id.clone(),
+            EggNogHit {
+                query_id,
+                best_og,
+                cog_cat,
+                description,
+                gene_name,
+                go_terms,
+                kegg_paths,
+            },
+        );
     }
 
     Ok(map)
@@ -103,9 +116,9 @@ pub fn parse_emapper_results(path: &Path) -> Result<HashMap<String, EggNogHit>> 
 /// generated `.emapper.annotations` file.
 pub fn run_emapper(
     protein_fasta: &Path,
-    out_dir:       &Path,
-    db_dir:        Option<&Path>,
-    threads:       usize,
+    out_dir: &Path,
+    db_dir: Option<&Path>,
+    threads: usize,
 ) -> Result<PathBuf> {
     let emapper = which_emapper()?;
 
@@ -114,21 +127,25 @@ pub fn run_emapper(
     let out_prefix = out_dir.join("eggnog");
 
     let mut cmd = Command::new(&emapper);
-    cmd.arg("-i").arg(protein_fasta)
-       .arg("-o").arg(&out_prefix)
-       .arg("--cpu").arg(threads.to_string())
-       .arg("--override");
+    cmd.arg("-i")
+        .arg(protein_fasta)
+        .arg("-o")
+        .arg(&out_prefix)
+        .arg("--cpu")
+        .arg(threads.to_string())
+        .arg("--override");
 
     if let Some(db) = db_dir {
         cmd.arg("--data_dir").arg(db);
     }
 
-    let status = cmd.status()
+    let status = cmd
+        .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("emapper.py: {}", e)))?;
 
     if !status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "emapper.py exited with non-zero status".to_string()
+            "emapper.py exited with non-zero status".to_string(),
         ));
     }
 
@@ -139,12 +156,18 @@ pub fn run_emapper(
 pub fn which_emapper() -> Result<String> {
     let candidates = ["emapper.py", "emapper"];
     for c in &candidates {
-        if Command::new("which").arg(c).output().map(|o| o.status.success()).unwrap_or(false) {
+        if Command::new("which")
+            .arg(c)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
             return Ok(c.to_string());
         }
     }
     Err(MycoNoteError::ExternalTool(
-        "emapper.py not found in PATH. Install with: conda install -c bioconda eggnog-mapper".to_string()
+        "emapper.py not found in PATH. Install with: conda install -c bioconda eggnog-mapper"
+            .to_string(),
     ))
 }
 
@@ -157,19 +180,20 @@ pub fn emapper_available() -> bool {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Write a two-column TSV: gene_id, cog_category, description, gene_name, kegg
-pub fn write_eggnog_table(
-    hits:   &HashMap<String, EggNogHit>,
-    output: &Path,
-) -> Result<usize> {
+pub fn write_eggnog_table(hits: &HashMap<String, EggNogHit>, output: &Path) -> Result<usize> {
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
-    writeln!(out, "gene_id\tbest_og\tcog_category\tdescription\tgene_name\tgo_terms\tkegg_pathways")
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        out,
+        "gene_id\tbest_og\tcog_category\tdescription\tgene_name\tgo_terms\tkegg_pathways"
+    )
+    .map_err(MycoNoteError::Io)?;
 
     let mut sorted: Vec<&EggNogHit> = hits.values().collect();
     sorted.sort_by(|a, b| a.query_id.cmp(&b.query_id));
 
     for hit in &sorted {
-        writeln!(out,
+        writeln!(
+            out,
             "{}\t{}\t{}\t{}\t{}\t{}\t{}",
             hit.query_id,
             hit.best_og,
@@ -178,7 +202,8 @@ pub fn write_eggnog_table(
             hit.gene_name,
             hit.go_terms.join(","),
             hit.kegg_paths.join(","),
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
     }
 
     Ok(sorted.len())
@@ -217,7 +242,7 @@ pub fn cog_category_name(cat: char) -> &'static str {
         'Q' => "Secondary metabolites biosynthesis, transport and catabolism",
         'R' => "General function prediction only",
         'S' => "Function unknown",
-        _   => "Unknown category",
+        _ => "Unknown category",
     }
 }
 
@@ -232,7 +257,9 @@ pub fn print_cog_summary(hits: &HashMap<String, EggNogHit>) {
         }
     }
 
-    if cat_counts.is_empty() { return; }
+    if cat_counts.is_empty() {
+        return;
+    }
 
     let mut sorted: Vec<(char, usize)> = cat_counts.into_iter().collect();
     sorted.sort_by(|a, b| b.1.cmp(&a.1));

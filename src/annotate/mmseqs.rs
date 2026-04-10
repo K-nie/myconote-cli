@@ -1,3 +1,4 @@
+use super::AnnotateConfig;
 /// MMseqs2 homology search wrapper
 ///
 /// Searches predicted protein sequences against Swiss-Prot (or a custom DB)
@@ -5,9 +6,7 @@
 ///
 /// Install: conda install -c bioconda mmseqs2
 /// DB setup: myconote annotate --download-dbs   (downloads & indexes Swiss-Prot)
-
 use crate::utils::error::{MycoNoteError, Result};
-use super::AnnotateConfig;
 use std::path::Path;
 use std::process::Command;
 
@@ -17,12 +16,12 @@ use std::process::Command;
 
 #[derive(Debug, Clone)]
 pub struct MmseqsHit {
-    pub query_id:    String,
-    pub target_id:   String,
+    pub query_id: String,
+    pub target_id: String,
     pub description: String,
-    pub identity:    f64,   // percent (0–100)
-    pub evalue:      f64,
-    pub bitscore:    f64,
+    pub identity: f64, // percent (0–100)
+    pub evalue: f64,
+    pub bitscore: f64,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,15 +30,16 @@ pub struct MmseqsHit {
 
 /// Run MMseqs2 easy-search and return parsed hits (best per query).
 pub fn run(
-    query_fa:   &Path,
-    db_path:    &Path,
+    query_fa: &Path,
+    db_path: &Path,
     output_tsv: &Path,
-    config:     &AnnotateConfig,
+    config: &AnnotateConfig,
 ) -> Result<Vec<MmseqsHit>> {
     let mmseqs = which::which("mmseqs").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "mmseqs not found in PATH.\n\
-             Install with: conda install -c bioconda mmseqs2".to_string()
+             Install with: conda install -c bioconda mmseqs2"
+                .to_string(),
         )
     })?;
 
@@ -48,21 +48,28 @@ pub fn run(
     let tmp_dir = tempfile::TempDir::new().map_err(MycoNoteError::Io)?;
 
     // Output format: query target identity evalue bitscore description
-    let format_str = "query,target,fident,evalue,bits,tset_description";
+    let format_str = "query,target,fident,evalue,bits,theader";
+
+    let query_s = query_fa.to_string_lossy();
+    let db_s = db_path.to_string_lossy();
+    let out_s = output_tsv.to_string_lossy();
+    let tmp_s = tmp_dir.path().to_string_lossy();
 
     let status = Command::new(&mmseqs)
         .args([
             "easy-search",
-            query_fa.to_str().unwrap_or(""),
-            db_path.to_str().unwrap_or(""),
-            output_tsv.to_str().unwrap_or(""),
-            tmp_dir.path().to_str().unwrap_or("/tmp"),
-            "--format-mode", "4",
-            "--format-output", format_str,
-            "--threads", &config.threads.to_string(),
-            "-e",       &config.evalue.to_string(),
-            "--min-seq-id", &config.min_identity.to_string(),
-            "--db-load-mode", "2",
+            query_s.as_ref(),
+            db_s.as_ref(),
+            out_s.as_ref(),
+            tmp_s.as_ref(),
+            "--format-output",
+            format_str,
+            "--threads",
+            &config.threads.to_string(),
+            "-e",
+            &config.evalue.to_string(),
+            "--min-seq-id",
+            &config.min_identity.to_string(),
         ])
         .status()
         .map_err(MycoNoteError::Io)?;
@@ -70,7 +77,8 @@ pub fn run(
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(
             "MMseqs2 easy-search failed. Check that the Swiss-Prot database \
-             has been indexed (run: myconote annotate --download-dbs)".to_string()
+             has been indexed (run: myconote annotate --download-dbs)"
+                .to_string(),
         ));
     }
 
@@ -84,7 +92,7 @@ pub fn run(
 // TSV parser
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Parse MMseqs2 --format-output "query,target,fident,evalue,bits,tset_description"
+/// Parse MMseqs2 --format-output "query,target,fident,evalue,bits,theader"
 /// Returns only the best hit per query (lowest e-value).
 fn parse_mmseqs_tsv(path: &Path) -> Result<Vec<MmseqsHit>> {
     use std::io::BufRead;
@@ -94,17 +102,21 @@ fn parse_mmseqs_tsv(path: &Path) -> Result<Vec<MmseqsHit>> {
 
     for line in std::io::BufReader::new(file).lines() {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.starts_with('#') || line.trim().is_empty() { continue; }
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
 
         let f: Vec<&str> = line.splitn(6, '\t').collect();
-        if f.len() < 5 { continue; }
+        if f.len() < 5 {
+            continue;
+        }
 
-        let query_id  = f[0].to_string();
+        let query_id = f[0].to_string();
         let target_id = f[1].to_string();
-        let identity: f64  = f[2].parse::<f64>().unwrap_or(0.0) * 100.0;
-        let evalue:   f64  = f[3].parse().unwrap_or(f64::MAX);
-        let bitscore: f64  = f[4].parse().unwrap_or(0.0);
-        let description    = clean_description(f.get(5).unwrap_or(&""));
+        let identity: f64 = f[2].parse::<f64>().unwrap_or(0.0) * 100.0;
+        let evalue: f64 = f[3].parse().unwrap_or(f64::MAX);
+        let bitscore: f64 = f[4].parse().unwrap_or(0.0);
+        let description = clean_description(f.get(5).unwrap_or(&""));
 
         let hit = MmseqsHit {
             query_id: query_id.clone(),
@@ -146,7 +158,11 @@ fn clean_description(raw: &str) -> String {
     // Remove leading accession-like prefix "GENENAME_SPECIES "
     let desc = if let Some(pos) = desc.find(' ') {
         let prefix = &desc[..pos];
-        if prefix.contains('_') && prefix.chars().all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit()) {
+        if prefix.contains('_')
+            && prefix
+                .chars()
+                .all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
+        {
             desc[pos + 1..].trim()
         } else {
             desc.trim()
@@ -168,20 +184,21 @@ fn clean_description(raw: &str) -> String {
 
 /// Build an MMseqs2 sequence database from a FASTA file.
 pub fn create_db(fasta: &Path, db_out: &Path) -> Result<()> {
-    let mmseqs = which::which("mmseqs").map_err(|_| {
-        MycoNoteError::UnsupportedFormat("mmseqs not found in PATH.".to_string())
-    })?;
+    let mmseqs = which::which("mmseqs")
+        .map_err(|_| MycoNoteError::UnsupportedFormat("mmseqs not found in PATH.".to_string()))?;
 
     println!("  Indexing {} for MMseqs2…", fasta.display());
 
+    let fasta_s = fasta.to_string_lossy();
+    let db_s = db_out.to_string_lossy();
     let status = Command::new(&mmseqs)
-        .args(["createdb", fasta.to_str().unwrap_or(""), db_out.to_str().unwrap_or("")])
+        .args(["createdb", fasta_s.as_ref(), db_s.as_ref()])
         .status()
         .map_err(MycoNoteError::Io)?;
 
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(
-            "mmseqs createdb failed.".to_string()
+            "mmseqs createdb failed.".to_string(),
         ));
     }
 

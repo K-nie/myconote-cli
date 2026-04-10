@@ -1,0 +1,11 @@
+myconote predict — Summary
+==========================
+Input FASTA  : brettanomyces_test/01_sorted/genome_masked.fas
+Kingdom      : Fungi
+Locus prefix : BRET
+
+Predictors used:
+  Augustus     weight=10  → brettanomyces_test/02_predict/augustus.gff3
+  SNAP         weight=3  → brettanomyces_test/02_predict/snap.gff3
+
+Final gene count : 6027

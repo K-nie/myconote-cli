@@ -52,8 +52,8 @@ plotters-svg = "0.3.6"
 plotters-bitmap = "0.3.6"
 
 # HTTP/API (for BLAST and annotation)
-reqwest = { version = "0.12", features = ["blocking", "json"] }
-ureq = "2.10"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+ureq = { version = "2.10", features = ["tls"] }
 xml = "0.8"
 
 # Progress bars

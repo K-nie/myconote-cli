@@ -2,7 +2,6 @@
 ///
 /// VCF → BED intervals, TSV table, consensus FASTA, ANNOVAR input, MAF
 /// Handles plain .vcf and gzip-compressed .vcf.gz files.
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::io::{BufRead, Write};
 use std::path::Path;
@@ -28,21 +27,23 @@ fn open_vcf(path: &Path) -> Result<Box<dyn BufRead>> {
 /// A single parsed VCF variant record.
 #[derive(Debug)]
 pub struct VcfRecord {
-    pub chrom:  String,
-    pub pos:    u64,        // 1-based
-    pub id:     String,
-    pub ref_:   String,
-    pub alt:    String,     // first ALT allele
-    pub qual:   Option<f64>,
+    pub chrom: String,
+    pub pos: u64, // 1-based
+    pub id: String,
+    pub ref_: String,
+    pub alt: String, // first ALT allele
+    pub qual: Option<f64>,
     pub filter: String,
-    pub info:   std::collections::HashMap<String, String>,
+    pub info: std::collections::HashMap<String, String>,
     pub samples: Vec<String>,
 }
 
 impl VcfRecord {
     fn from_line(line: &str) -> Option<Self> {
         let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 8 { return None; }
+        if f.len() < 8 {
+            return None;
+        }
 
         let pos: u64 = f[1].parse().ok()?;
         let qual = if f[5] == "." { None } else { f[5].parse().ok() };
@@ -61,13 +62,13 @@ impl VcfRecord {
         let samples: Vec<String> = f[9..].iter().map(|s| s.to_string()).collect();
 
         Some(VcfRecord {
-            chrom:   f[0].to_string(),
+            chrom: f[0].to_string(),
             pos,
-            id:      f[2].to_string(),
-            ref_:    f[3].to_string(),
-            alt:     f[4].split(',').next().unwrap_or(".").to_string(),
+            id: f[2].to_string(),
+            ref_: f[3].to_string(),
+            alt: f[4].split(',').next().unwrap_or(".").to_string(),
             qual,
-            filter:  f[6].to_string(),
+            filter: f[6].to_string(),
             info,
             samples,
         })
@@ -92,21 +93,29 @@ pub fn vcf_to_bed(input: &Path, output: &Path) -> Result<usize> {
 
     for line in reader.lines() {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.starts_with('#') { continue; }
-        let rec = match VcfRecord::from_line(&line) { Some(r) => r, None => continue };
+        if line.starts_with('#') {
+            continue;
+        }
+        let rec = match VcfRecord::from_line(&line) {
+            Some(r) => r,
+            None => continue,
+        };
 
         // VCF POS is 1-based → BED chromStart is 0-based
         let bed_start = rec.pos - 1;
-        let bed_end   = rec.pos + rec.ref_.len() as u64 - 1;
+        let bed_end = rec.pos + rec.ref_.len() as u64 - 1;
         let name = if rec.id == "." {
             format!("{}_{}_{}/{}", rec.chrom, rec.pos, rec.ref_, rec.alt)
         } else {
             rec.id.clone()
         };
 
-        writeln!(out, "{}\t{}\t{}\t{}\t.\t+",
+        writeln!(
+            out,
+            "{}\t{}\t{}\t{}\t.\t+",
             rec.chrom, bed_start, bed_end, name
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
         count += 1;
     }
 
@@ -130,10 +139,14 @@ pub fn vcf_to_table(input: &Path, output: &Path) -> Result<usize> {
                 if let Some(id_start) = line.find("ID=") {
                     let rest = &line[id_start + 3..];
                     let id: String = rest.chars().take_while(|&c| c != ',').collect();
-                    if !info_keys.contains(&id) { info_keys.push(id); }
+                    if !info_keys.contains(&id) {
+                        info_keys.push(id);
+                    }
                 }
             }
-            if !line.starts_with('#') { break; }
+            if !line.starts_with('#') {
+                break;
+            }
         }
     }
 
@@ -142,18 +155,33 @@ pub fn vcf_to_table(input: &Path, output: &Path) -> Result<usize> {
 
     // Header
     let mut header = "CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER".to_string();
-    for k in &info_keys { header.push('\t'); header.push_str(k); }
+    for k in &info_keys {
+        header.push('\t');
+        header.push_str(k);
+    }
     writeln!(out, "{}", header).map_err(MycoNoteError::Io)?;
 
     let mut count = 0;
     for line in reader.lines() {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.starts_with('#') { continue; }
-        let rec = match VcfRecord::from_line(&line) { Some(r) => r, None => continue };
+        if line.starts_with('#') {
+            continue;
+        }
+        let rec = match VcfRecord::from_line(&line) {
+            Some(r) => r,
+            None => continue,
+        };
 
-        let mut row = format!("{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            rec.chrom, rec.pos, rec.id, rec.ref_, rec.alt,
-            rec.qual.map(|q| format!("{:.2}", q)).unwrap_or_else(|| ".".into()),
+        let mut row = format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            rec.chrom,
+            rec.pos,
+            rec.id,
+            rec.ref_,
+            rec.alt,
+            rec.qual
+                .map(|q| format!("{:.2}", q))
+                .unwrap_or_else(|| ".".into()),
             rec.filter,
         );
         for k in &info_keys {
@@ -185,12 +213,16 @@ pub fn vcf_to_consensus(vcf_path: &Path, ref_fasta: &Path, output: &Path) -> Res
 
     for line in reader.lines() {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.starts_with('#') { continue; }
+        if line.starts_with('#') {
+            continue;
+        }
         if let Some(rec) = VcfRecord::from_line(&line) {
             if rec.alt != "." && rec.alt != rec.ref_ {
-                variants.entry(rec.chrom.clone())
-                    .or_default()
-                    .push((rec.pos, rec.ref_.clone(), rec.alt.clone()));
+                variants.entry(rec.chrom.clone()).or_default().push((
+                    rec.pos,
+                    rec.ref_.clone(),
+                    rec.alt.clone(),
+                ));
             }
         }
     }
@@ -209,7 +241,7 @@ pub fn vcf_to_consensus(vcf_path: &Path, ref_fasta: &Path, output: &Path) -> Res
 
         if let Some(vars) = variants.get(&rec.id) {
             for (pos, ref_allele, alt_allele) in vars {
-                let s = (*pos as usize).saturating_sub(1);  // 0-based
+                let s = (*pos as usize).saturating_sub(1); // 0-based
                 let e = s + ref_allele.len();
                 if e <= seq.len() {
                     seq.replace_range(s..e, alt_allele.to_uppercase().as_str());
@@ -241,8 +273,13 @@ pub fn vcf_to_annovar(input: &Path, output: &Path) -> Result<usize> {
 
     for line in reader.lines() {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.starts_with('#') { continue; }
-        let rec = match VcfRecord::from_line(&line) { Some(r) => r, None => continue };
+        if line.starts_with('#') {
+            continue;
+        }
+        let rec = match VcfRecord::from_line(&line) {
+            Some(r) => r,
+            None => continue,
+        };
 
         // ANNOVAR uses 1-based coordinates (same as VCF)
         let _end = rec.pos + rec.ref_.len() as u64 - 1;
@@ -254,7 +291,11 @@ pub fn vcf_to_annovar(input: &Path, output: &Path) -> Result<usize> {
         } else if rec.ref_.len() > rec.alt.len() {
             // Deletion: trim leading common base
             let r = rec.ref_[1..].to_string();
-            let a = if rec.alt.len() > 1 { rec.alt[1..].to_string() } else { "-".to_string() };
+            let a = if rec.alt.len() > 1 {
+                rec.alt[1..].to_string()
+            } else {
+                "-".to_string()
+            };
             (rec.pos + 1, rec.pos + r.len() as u64, r, a)
         } else {
             // Insertion
@@ -262,8 +303,12 @@ pub fn vcf_to_annovar(input: &Path, output: &Path) -> Result<usize> {
             (rec.pos, rec.pos + 1, "-".to_string(), a)
         };
 
-        writeln!(out, "{}\t{}\t{}\t{}\t{}", rec.chrom, start, end_out, ref_out, alt_out)
-            .map_err(MycoNoteError::Io)?;
+        writeln!(
+            out,
+            "{}\t{}\t{}\t{}\t{}",
+            rec.chrom, start, end_out, ref_out, alt_out
+        )
+        .map_err(MycoNoteError::Io)?;
         count += 1;
     }
 
@@ -281,29 +326,35 @@ pub fn vcf_to_maf(input: &Path, output: &Path, tumor_sample: &str) -> Result<usi
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
 
     // MAF header
-    writeln!(out,
+    writeln!(
+        out,
         "Hugo_Symbol\tEntrez_Gene_Id\tCenter\tNCBI_Build\tChromosome\t\
          Start_Position\tEnd_Position\tStrand\tVariant_Classification\t\
          Variant_Type\tReference_Allele\tTumor_Seq_Allele1\tTumor_Seq_Allele2\t\
          Tumor_Sample_Barcode"
-    ).map_err(MycoNoteError::Io)?;
+    )
+    .map_err(MycoNoteError::Io)?;
 
     let mut count = 0;
     for line in reader.lines() {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.starts_with('#') { continue; }
-        let rec = match VcfRecord::from_line(&line) { Some(r) => r, None => continue };
+        if line.starts_with('#') {
+            continue;
+        }
+        let rec = match VcfRecord::from_line(&line) {
+            Some(r) => r,
+            None => continue,
+        };
 
         let variant_type = classify_variant(&rec.ref_, &rec.alt);
         let end_pos = rec.pos + rec.ref_.len() as u64 - 1;
 
-        writeln!(out,
+        writeln!(
+            out,
             "Unknown\t0\t.\tGRCh38\t{}\t{}\t{}\t+\tMissense_Mutation\t{}\t{}\t{}\t{}\t{}",
-            rec.chrom, rec.pos, end_pos,
-            variant_type,
-            rec.ref_, rec.ref_, rec.alt,
-            tumor_sample,
-        ).map_err(MycoNoteError::Io)?;
+            rec.chrom, rec.pos, end_pos, variant_type, rec.ref_, rec.ref_, rec.alt, tumor_sample,
+        )
+        .map_err(MycoNoteError::Io)?;
         count += 1;
     }
 

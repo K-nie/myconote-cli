@@ -4,7 +4,6 @@
 /// Works well for model organism genes and widely-studied fungal species.
 ///
 /// API docs: https://rest.uniprot.org/docs/
-
 use std::collections::HashMap;
 
 const UNIPROT_SEARCH: &str = "https://rest.uniprot.org/uniprotkb/search";
@@ -79,9 +78,11 @@ fn fetch_chunk(ids: &[String]) -> Result<HashMap<String, String>, Box<dyn std::e
 }
 
 fn urlencoding(s: &str) -> String {
-    s.chars().map(|c| match c {
-        'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
-        ' ' => "+".to_string(),
-        _ => format!("%{:02X}", c as u32),
-    }).collect()
+    s.chars()
+        .map(|c| match c {
+            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
+            ' ' => "+".to_string(),
+            _ => format!("%{:02X}", c as u32),
+        })
+        .collect()
 }

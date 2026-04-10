@@ -69,7 +69,7 @@ echo -e "  This will install:"
 echo -e "    • Miniconda3             (if not already present)"
 echo -e "    • Rust ≥ ${MIN_RUST_VERSION}              (via rustup — no root required)"
 echo -e "    • myconote-cli binary    (compiled from source)"
-echo -e "    • All 27 bioinformatics tools  (via conda/mamba + pip)"
+echo -e "    • All 30+ bioinformatics tools  (via conda/mamba + pip)"
 echo -e "    • Annotation databases   (~2.5 GB)"
 echo ""
 read -r -p "  Continue? [y/N] " CONFIRM
@@ -274,7 +274,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 5 — Install all 27 bioinformatics tools via myconote-cli install
 # ─────────────────────────────────────────────────────────────────────────────
-step "Step 5/6 — Installing bioinformatics tools"
+step "Step 5/6 — Installing bioinformatics tools (30+)"
 
 if [[ "${SKIP_TOOLS:-0}" == "1" ]]; then
     warn "SKIP_TOOLS=1, skipping bioinformatics tool installation"

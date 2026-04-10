@@ -1,10 +1,10 @@
+pub mod autodetect;
+pub mod fasta;
+pub mod genbank;
 pub mod gff;
 pub mod region;
-pub mod genbank;
-pub mod fasta;
-pub mod autodetect;
 
-pub use gff::{GFFRecord, GFFReader};
+pub use autodetect::{detect_format, FileFormat};
+pub use fasta::{read_fasta, read_fasta_index, reverse_complement, FastaReader, FastaRecord};
+pub use gff::{GFFReader, GFFRecord};
 pub use region::{Region, RegionSelector};
-pub use fasta::{FastaRecord, FastaReader, read_fasta, read_fasta_index, reverse_complement};
-pub use autodetect::{FileFormat, detect_format};

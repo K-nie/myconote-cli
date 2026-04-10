@@ -39,15 +39,19 @@ impl GFFRecord {
         let source = fields[1].to_string();
         let feature_type = fields[2].to_string();
 
-        let start = fields[3].parse::<u64>().map_err(|_| MycoNoteError::ParseError {
-            line: line_num,
-            message: format!("Invalid start coordinate: {}", fields[3]),
-        })?;
+        let start = fields[3]
+            .parse::<u64>()
+            .map_err(|_| MycoNoteError::ParseError {
+                line: line_num,
+                message: format!("Invalid start coordinate: {}", fields[3]),
+            })?;
 
-        let end = fields[4].parse::<u64>().map_err(|_| MycoNoteError::ParseError {
-            line: line_num,
-            message: format!("Invalid end coordinate: {}", fields[4]),
-        })?;
+        let end = fields[4]
+            .parse::<u64>()
+            .map_err(|_| MycoNoteError::ParseError {
+                line: line_num,
+                message: format!("Invalid end coordinate: {}", fields[4]),
+            })?;
 
         if start > end {
             return Err(MycoNoteError::ParseError {
@@ -59,10 +63,14 @@ impl GFFRecord {
         let score = if fields[5] == "." {
             None
         } else {
-            Some(fields[5].parse::<f64>().map_err(|_| MycoNoteError::ParseError {
-                line: line_num,
-                message: format!("Invalid score: {}", fields[5]),
-            })?)
+            Some(
+                fields[5]
+                    .parse::<f64>()
+                    .map_err(|_| MycoNoteError::ParseError {
+                        line: line_num,
+                        message: format!("Invalid score: {}", fields[5]),
+                    })?,
+            )
         };
 
         let strand = if fields[6].len() == 1 {
@@ -74,10 +82,14 @@ impl GFFRecord {
         let phase = if fields[7] == "." {
             None
         } else {
-            Some(fields[7].parse::<u8>().map_err(|_| MycoNoteError::ParseError {
-                line: line_num,
-                message: format!("Invalid phase: {}", fields[7]),
-            })?)
+            Some(
+                fields[7]
+                    .parse::<u8>()
+                    .map_err(|_| MycoNoteError::ParseError {
+                        line: line_num,
+                        message: format!("Invalid phase: {}", fields[7]),
+                    })?,
+            )
         };
 
         let mut attributes = HashMap::new();
@@ -122,7 +134,7 @@ impl GFFRecord {
     pub fn score_str(&self) -> String {
         match self.score {
             Some(s) => format!("{}", s),
-            None    => ".".to_string(),
+            None => ".".to_string(),
         }
     }
 
@@ -130,22 +142,33 @@ impl GFFRecord {
     pub fn phase_str(&self) -> String {
         match self.phase {
             Some(p) => format!("{}", p),
-            None    => ".".to_string(),
+            None => ".".to_string(),
         }
     }
 
     /// Serialise the record back to a GFF3 tab-separated line.
     pub fn to_gff3_line(&self) -> String {
-        let attrs: String = self.attributes.iter()
+        let attrs: String = self
+            .attributes
+            .iter()
             .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>()
             .join(";");
         format!(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            self.seqid, self.source, self.feature_type,
-            self.start, self.end,
-            self.score_str(), self.strand, self.phase_str(),
-            if attrs.is_empty() { ".".to_string() } else { attrs }
+            self.seqid,
+            self.source,
+            self.feature_type,
+            self.start,
+            self.end,
+            self.score_str(),
+            self.strand,
+            self.phase_str(),
+            if attrs.is_empty() {
+                ".".to_string()
+            } else {
+                attrs
+            }
         )
     }
 }

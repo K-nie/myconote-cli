@@ -1,3 +1,5 @@
+use crate::parser::fasta::{read_fasta_index, FastaRecord};
+use crate::parser::gff::{GFFReader, GFFRecord};
 /// Augustus self-training
 ///
 /// Trains a custom Augustus HMM species model from a set of gene models,
@@ -17,10 +19,7 @@
 /// All Perl script calls (gff2gbSmallDNA.pl etc.) are replaced by a native
 /// Rust implementation so the tool works even when Augustus Perl scripts are
 /// not in PATH.
-
 use crate::utils::error::{MycoNoteError, Result};
-use crate::parser::gff::{GFFReader, GFFRecord};
-use crate::parser::fasta::{read_fasta_index, FastaRecord};
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -33,37 +32,37 @@ use std::process::Command;
 #[derive(Debug, Clone)]
 pub struct TrainConfig {
     /// GFF3 with gene models to train from (ideally high-confidence set)
-    pub gff:          PathBuf,
+    pub gff: PathBuf,
     /// Genome FASTA (unmasked preferred so flanking context is intact)
-    pub fasta:        PathBuf,
+    pub fasta: PathBuf,
     /// New species name to register in Augustus (e.g. "myorganism_v1")
     pub species_name: String,
     /// Output directory for training files and logs
-    pub out_dir:      PathBuf,
+    pub out_dir: PathBuf,
     /// Flanking DNA context on each side of a gene (bp)
-    pub flanking:     usize,
+    pub flanking: usize,
     /// Min gene length to include in training (filters tiny ORFs)
     pub min_gene_len: u64,
     /// Fraction of models held out for accuracy test (0.0–0.5)
     pub test_fraction: f64,
     /// Run optimize_augustus.pl after etraining (slow, 1–4 h)
-    pub optimize:     bool,
+    pub optimize: bool,
     /// Threads for optimize_augustus.pl
-    pub threads:      usize,
+    pub threads: usize,
 }
 
 impl Default for TrainConfig {
     fn default() -> Self {
         Self {
-            gff:           PathBuf::new(),
-            fasta:         PathBuf::new(),
-            species_name:  "myorganism_v1".to_string(),
-            out_dir:       PathBuf::from("train_out"),
-            flanking:      1000,
-            min_gene_len:  300,
+            gff: PathBuf::new(),
+            fasta: PathBuf::new(),
+            species_name: "myorganism_v1".to_string(),
+            out_dir: PathBuf::from("train_out"),
+            flanking: 1000,
+            min_gene_len: 300,
             test_fraction: 0.2,
-            optimize:      false,
-            threads:       4,
+            optimize: false,
+            threads: 4,
         }
     }
 }
@@ -74,15 +73,15 @@ impl Default for TrainConfig {
 
 #[derive(Debug)]
 pub struct TrainReport {
-    pub species_name:      String,
-    pub n_training_genes:  usize,
-    pub n_test_genes:      usize,
+    pub species_name: String,
+    pub n_training_genes: usize,
+    pub n_test_genes: usize,
     /// Sensitivity at gene level (0–100)
-    pub gene_sensitivity:  Option<f64>,
+    pub gene_sensitivity: Option<f64>,
     /// Specificity at gene level (0–100)
-    pub gene_specificity:  Option<f64>,
+    pub gene_specificity: Option<f64>,
     /// Path to trained species configuration
-    pub species_path:      Option<PathBuf>,
+    pub species_path: Option<PathBuf>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,7 +93,8 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainReport> {
     for p in [&config.gff, &config.fasta] {
         if !p.exists() {
             return Err(MycoNoteError::InvalidFormat(format!(
-                "File not found: {}", p.display()
+                "File not found: {}",
+                p.display()
             )));
         }
     }
@@ -109,7 +109,11 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainReport> {
 
     // ── 1. Load gene models ───────────────────────────────────────────────────
     let (gene_models, fasta_index) = load_gene_models(config)?;
-    println!("  Loaded {} gene models (≥{} bp)", gene_models.len(), config.min_gene_len);
+    println!(
+        "  Loaded {} gene models (≥{} bp)",
+        gene_models.len(),
+        config.min_gene_len
+    );
 
     if gene_models.len() < 50 {
         return Err(MycoNoteError::InvalidFormat(format!(
@@ -125,10 +129,12 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainReport> {
     println!("  Wrote {} mini-GenBank records for training", n_written);
 
     // ── 3. Split train / test ─────────────────────────────────────────────────
-    let n_test   = ((n_written as f64 * config.test_fraction) as usize).max(10).min(n_written - 20);
-    let n_train  = n_written - n_test;
+    let n_test = ((n_written as f64 * config.test_fraction) as usize)
+        .max(10)
+        .min(n_written - 20);
+    let n_train = n_written - n_test;
     let train_gb = config.out_dir.join("train.gb");
-    let test_gb  = config.out_dir.join("test.gb");
+    let test_gb = config.out_dir.join("test.gb");
     split_genbank(&gb_path, &train_gb, &test_gb, n_test)?;
     println!("  Split: {} training, {} test", n_train, n_test);
 
@@ -142,8 +148,11 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainReport> {
     // ── 6. Evaluate on test set ───────────────────────────────────────────────
     let (gene_sens, gene_spec) = evaluate_model(&config.species_name, &test_gb, config)?;
     if let Some(sens) = gene_sens {
-        println!("  Accuracy: sensitivity={:.1}%  specificity={:.1}%",
-            sens, gene_spec.unwrap_or(0.0));
+        println!(
+            "  Accuracy: sensitivity={:.1}%  specificity={:.1}%",
+            sens,
+            gene_spec.unwrap_or(0.0)
+        );
     }
 
     // ── 7. Optional optimization ─────────────────────────────────────────────
@@ -154,17 +163,20 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainReport> {
 
     // ── 8. Write report ───────────────────────────────────────────────────────
     let report = TrainReport {
-        species_name:      config.species_name.clone(),
-        n_training_genes:  n_train,
-        n_test_genes:      n_test,
-        gene_sensitivity:  gene_sens,
-        gene_specificity:  gene_spec,
-        species_path:      find_augustus_species_path(&config.species_name),
+        species_name: config.species_name.clone(),
+        n_training_genes: n_train,
+        n_test_genes: n_test,
+        gene_sensitivity: gene_sens,
+        gene_specificity: gene_spec,
+        species_path: find_augustus_species_path(&config.species_name),
     };
     write_train_report(&report, config)?;
 
     println!("  ✓ Trained species: {}", config.species_name);
-    println!("    Use with: myconote predict <fasta> --species {}", config.species_name);
+    println!(
+        "    Use with: myconote predict <fasta> --species {}",
+        config.species_name
+    );
 
     Ok(report)
 }
@@ -177,9 +189,9 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainReport> {
 #[derive(Debug)]
 #[allow(dead_code)]
 struct GeneModel {
-    gene:  GFFRecord,
+    gene: GFFRecord,
     mrnas: Vec<GFFRecord>,
-    cds:   Vec<GFFRecord>,  // all CDS for this gene across all mRNAs
+    cds: Vec<GFFRecord>, // all CDS for this gene across all mRNAs
 }
 
 fn load_gene_models(
@@ -193,38 +205,49 @@ fn load_gene_models(
     let mut models: Vec<GeneModel> = Vec::new();
 
     for rec in &all_records {
-        if rec.feature_type != "gene" { continue; }
+        if rec.feature_type != "gene" {
+            continue;
+        }
         let gene_len = rec.end.saturating_sub(rec.start);
-        if gene_len < config.min_gene_len { continue; }
+        if gene_len < config.min_gene_len {
+            continue;
+        }
 
         // Check sequence is available
-        if !fasta_index.contains_key(&rec.seqid) { continue; }
+        if !fasta_index.contains_key(&rec.seqid) {
+            continue;
+        }
 
-        let gene_id = match rec.id() { Some(id) => id.clone(), None => continue };
+        let gene_id = match rec.id() {
+            Some(id) => id.clone(),
+            None => continue,
+        };
 
         // Collect mRNA children
-        let mrnas: Vec<GFFRecord> = all_records.iter()
+        let mrnas: Vec<GFFRecord> = all_records
+            .iter()
             .filter(|r| {
-                (r.feature_type == "mRNA" || r.feature_type == "transcript") &&
-                r.parent().map(|p| p == &gene_id).unwrap_or(false)
+                (r.feature_type == "mRNA" || r.feature_type == "transcript")
+                    && r.parent().map(|p| p == &gene_id).unwrap_or(false)
             })
             .cloned()
             .collect();
 
         // Collect CDS for all mRNAs
-        let mrna_ids: std::collections::HashSet<String> = mrnas.iter()
-            .filter_map(|m| m.id().cloned())
-            .collect();
+        let mrna_ids: std::collections::HashSet<String> =
+            mrnas.iter().filter_map(|m| m.id().cloned()).collect();
 
-        let cds: Vec<GFFRecord> = all_records.iter()
+        let cds: Vec<GFFRecord> = all_records
+            .iter()
             .filter(|r| {
-                r.feature_type == "CDS" &&
-                r.parent().map(|p| mrna_ids.contains(p)).unwrap_or(false)
+                r.feature_type == "CDS" && r.parent().map(|p| mrna_ids.contains(p)).unwrap_or(false)
             })
             .cloned()
             .collect();
 
-        if cds.is_empty() { continue; }
+        if cds.is_empty() {
+            continue;
+        }
 
         models.push(GeneModel {
             gene: rec.clone(),
@@ -243,10 +266,10 @@ fn load_gene_models(
 /// Write each gene model as a mini-GenBank record with flanking context.
 /// Returns the number of records written.
 fn write_augustus_genbank(
-    models:      &[GeneModel],
+    models: &[GeneModel],
     fasta_index: &HashMap<String, FastaRecord>,
-    config:      &TrainConfig,
-    out_path:    &Path,
+    config: &TrainConfig,
+    out_path: &Path,
 ) -> Result<usize> {
     let mut f = std::fs::File::create(out_path).map_err(MycoNoteError::Io)?;
     let mut written = 0usize;
@@ -254,37 +277,47 @@ fn write_augustus_genbank(
     for model in models {
         let seq_rec = match fasta_index.get(&model.gene.seqid) {
             Some(s) => s,
-            None    => continue,
+            None => continue,
         };
 
-        let seq_len    = seq_rec.sequence.len() as u64;
-        let flank      = config.flanking as u64;
+        let seq_len = seq_rec.sequence.len() as u64;
+        let flank = config.flanking as u64;
         // Clamp to sequence bounds
         let region_start = model.gene.start.saturating_sub(flank).max(1);
-        let region_end   = (model.gene.end + flank).min(seq_len);
-        let region_len   = region_end - region_start + 1;
+        let region_end = (model.gene.end + flank).min(seq_len);
+        let region_len = region_end - region_start + 1;
 
         // Extract genomic region (1-based inclusive → slice)
         let region_seq = seq_rec.subsequence(region_start, region_end);
-        if region_seq.is_empty() { continue; }
+        if region_seq.is_empty() {
+            continue;
+        }
 
         // Offset: coordinates relative to extracted region start
-        let offset = region_start - 1;  // convert to 0-based offset
+        let offset = region_start - 1; // convert to 0-based offset
 
         // Collect CDS intervals (0-based within extracted region)
-        let mut cds_coords: Vec<(u64, u64)> = model.cds.iter()
+        let mut cds_coords: Vec<(u64, u64)> = model
+            .cds
+            .iter()
             .map(|c| (c.start - 1 - offset, c.end - 1 - offset))
             .collect();
         cds_coords.sort_by_key(|c| c.0);
         cds_coords.dedup();
 
-        if cds_coords.is_empty() { continue; }
+        if cds_coords.is_empty() {
+            continue;
+        }
 
-        let gene_id = model.gene.id().cloned().unwrap_or_else(|| format!("gene{}", written + 1));
+        let gene_id = model
+            .gene
+            .id()
+            .cloned()
+            .unwrap_or_else(|| format!("gene{}", written + 1));
 
         // Write LOCUS line
-        writeln!(f, "LOCUS       {:<20} {} bp    DNA",
-            gene_id, region_len).map_err(MycoNoteError::Io)?;
+        writeln!(f, "LOCUS       {:<20} {} bp    DNA", gene_id, region_len)
+            .map_err(MycoNoteError::Io)?;
         writeln!(f, "FEATURES             Location/Qualifiers").map_err(MycoNoteError::Io)?;
 
         // Write CDS feature
@@ -315,8 +348,9 @@ fn write_augustus_genbank(
 /// Build the GenBank CDS location string, e.g. `join(100..200,300..400)` or
 /// `complement(join(...))` for minus-strand genes.
 fn build_location(coords: &[(u64, u64)], strand: char) -> String {
-    let intervals: Vec<String> = coords.iter()
-        .map(|(s, e)| format!("{}..{}", s + 1, e + 1))  // back to 1-based
+    let intervals: Vec<String> = coords
+        .iter()
+        .map(|(s, e)| format!("{}..{}", s + 1, e + 1)) // back to 1-based
         .collect();
 
     let join = if intervals.len() == 1 {
@@ -338,15 +372,11 @@ fn build_location(coords: &[(u64, u64)], strand: char) -> String {
 
 /// Split a GenBank file into training and test sets.
 /// Takes the LAST n_test records as the test set (deterministic, no random seed needed).
-fn split_genbank(
-    gb_path:  &Path,
-    train_out: &Path,
-    test_out:  &Path,
-    n_test:    usize,
-) -> Result<()> {
+fn split_genbank(gb_path: &Path, train_out: &Path, test_out: &Path, n_test: usize) -> Result<()> {
     // Read all records
     let content = std::fs::read_to_string(gb_path).map_err(MycoNoteError::Io)?;
-    let records: Vec<&str> = content.split("//\n")
+    let records: Vec<&str> = content
+        .split("//\n")
         .filter(|s| !s.trim().is_empty())
         .collect();
 
@@ -354,10 +384,14 @@ fn split_genbank(
     let n_train = n_total.saturating_sub(n_test);
 
     let mut train_f = std::fs::File::create(train_out).map_err(MycoNoteError::Io)?;
-    let mut test_f  = std::fs::File::create(test_out).map_err(MycoNoteError::Io)?;
+    let mut test_f = std::fs::File::create(test_out).map_err(MycoNoteError::Io)?;
 
     for (i, rec) in records.iter().enumerate() {
-        let target: &mut dyn std::io::Write = if i < n_train { &mut train_f } else { &mut test_f };
+        let target: &mut dyn std::io::Write = if i < n_train {
+            &mut train_f
+        } else {
+            &mut test_f
+        };
         writeln!(target, "{}//", rec).map_err(MycoNoteError::Io)?;
     }
 
@@ -392,7 +426,8 @@ fn run_etraining(species: &str, train_gb: &Path, config: &TrainConfig) -> Result
     let etraining = which::which("etraining").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "etraining not found in PATH.\n\
-             Install Augustus: conda install -c bioconda augustus".to_string()
+             Install Augustus: conda install -c bioconda augustus"
+                .to_string(),
         )
     })?;
 
@@ -413,7 +448,7 @@ fn run_etraining(species: &str, train_gb: &Path, config: &TrainConfig) -> Result
 
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(
-            "etraining failed. Check train_out/etraining.log for details.".to_string()
+            "etraining failed. Check train_out/etraining.log for details.".to_string(),
         ));
     }
     Ok(())
@@ -422,9 +457,9 @@ fn run_etraining(species: &str, train_gb: &Path, config: &TrainConfig) -> Result
 /// Evaluate the trained model on the test set.
 /// Returns (sensitivity, specificity) at the gene level.
 fn evaluate_model(
-    species:  &str,
-    test_gb:  &Path,
-    config:   &TrainConfig,
+    species: &str,
+    test_gb: &Path,
+    config: &TrainConfig,
 ) -> Result<(Option<f64>, Option<f64>)> {
     let augustus = which::which("augustus").ok();
     if augustus.is_none() {
@@ -464,12 +499,16 @@ fn parse_augustus_accuracy(aug_gff: &Path) -> Result<(Option<f64>, Option<f64>)>
         let line = line.map_err(MycoNoteError::Io)?;
         // Augustus outputs: "# sensitivity of gene prediction: 0.85"
         if line.contains("sensitivity of gene prediction:") {
-            sensitivity = line.split(':').last()
+            sensitivity = line
+                .split(':')
+                .last()
                 .and_then(|s| s.trim().parse::<f64>().ok())
                 .map(|v| v * 100.0);
         }
         if line.contains("specificity of gene prediction:") {
-            specificity = line.split(':').last()
+            specificity = line
+                .split(':')
+                .last()
                 .and_then(|s| s.trim().parse::<f64>().ok())
                 .map(|v| v * 100.0);
         }
@@ -509,19 +548,25 @@ fn find_augustus_script(name: &str) -> Result<PathBuf> {
     // Check $AUGUSTUS_SCRIPTS_PATH first
     if let Ok(dir) = std::env::var("AUGUSTUS_SCRIPTS_PATH") {
         let p = PathBuf::from(&dir).join(name);
-        if p.exists() { return Ok(p); }
+        if p.exists() {
+            return Ok(p);
+        }
     }
     // Check $AUGUSTUS_BIN_PATH/../scripts
     if let Ok(bin_dir) = std::env::var("AUGUSTUS_BIN_PATH") {
-        let p = PathBuf::from(&bin_dir).parent()
+        let p = PathBuf::from(&bin_dir)
+            .parent()
             .unwrap_or(Path::new("/"))
             .join("scripts")
             .join(name);
-        if p.exists() { return Ok(p); }
+        if p.exists() {
+            return Ok(p);
+        }
     }
     // Try to find augustus binary and look in sibling scripts/ directory
     if let Ok(aug_bin) = which::which("augustus") {
-        let scripts_dir = aug_bin.parent()
+        let scripts_dir = aug_bin
+            .parent()
             .unwrap_or(Path::new("/usr/bin"))
             .parent()
             .unwrap_or(Path::new("/usr"))
@@ -529,13 +574,17 @@ fn find_augustus_script(name: &str) -> Result<PathBuf> {
             .join("augustus")
             .join("scripts");
         let p = scripts_dir.join(name);
-        if p.exists() { return Ok(p); }
+        if p.exists() {
+            return Ok(p);
+        }
     }
     // Common conda paths
     for prefix in &["/usr", "/opt/conda", "/usr/local"] {
         for subdir in &["share/augustus/scripts", "bin"] {
             let p = PathBuf::from(prefix).join(subdir).join(name);
-            if p.exists() { return Ok(p); }
+            if p.exists() {
+                return Ok(p);
+            }
         }
     }
     Err(MycoNoteError::UnsupportedFormat(format!(
@@ -555,7 +604,9 @@ fn find_augustus_species_path(species: &str) -> Option<PathBuf> {
     for dir_opt in &base_dirs {
         if let Some(dir) = dir_opt {
             let p = PathBuf::from(dir).join("species").join(species);
-            if p.exists() { return Some(p); }
+            if p.exists() {
+                return Some(p);
+            }
         }
     }
     None
@@ -576,15 +627,24 @@ fn write_train_report(report: &TrainReport, config: &TrainConfig) -> Result<()> 
     writeln!(f, "Test genes      : {}", report.n_test_genes).map_err(MycoNoteError::Io)?;
     if let Some(s) = report.gene_sensitivity {
         writeln!(f, "Sensitivity     : {:.1}%", s).map_err(MycoNoteError::Io)?;
-        writeln!(f, "Specificity     : {:.1}%",
-            report.gene_specificity.unwrap_or(0.0)).map_err(MycoNoteError::Io)?;
+        writeln!(
+            f,
+            "Specificity     : {:.1}%",
+            report.gene_specificity.unwrap_or(0.0)
+        )
+        .map_err(MycoNoteError::Io)?;
     } else {
-        writeln!(f, "Accuracy        : not evaluated (augustus not in PATH)").map_err(MycoNoteError::Io)?;
+        writeln!(f, "Accuracy        : not evaluated (augustus not in PATH)")
+            .map_err(MycoNoteError::Io)?;
     }
     writeln!(f, "").map_err(MycoNoteError::Io)?;
     writeln!(f, "To use this model in gene prediction:").map_err(MycoNoteError::Io)?;
-    writeln!(f, "  myconote predict <masked.fa> --species {}", report.species_name)
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "  myconote predict <masked.fa> --species {}",
+        report.species_name
+    )
+    .map_err(MycoNoteError::Io)?;
 
     Ok(())
 }

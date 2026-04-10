@@ -11,10 +11,9 @@
 ///   5. Full          — RepeatModeler (de novo) + RepeatMasker + SelfAlign
 ///
 /// Output: soft-masked FASTA (`genome_masked.fa`) + stats report
-
 pub mod repeatmasker;
-pub mod self_align;
 pub mod repeatmodeler;
+pub mod self_align;
 
 use crate::utils::error::{MycoNoteError, Result};
 use std::path::PathBuf;
@@ -25,21 +24,21 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MaskEngine {
-    SelfAlign,      // minimap2 self-alignment (no external DB needed)
-    RepeatMasker,   // RepeatMasker with RepBase
-    Both,           // RepeatMasker + SelfAlign merged
-    RepeatModeler,  // De novo library (RepeatModeler) → RepeatMasker
-    Full,           // RepeatModeler → RepeatMasker → SelfAlign (most thorough)
+    SelfAlign,     // minimap2 self-alignment (no external DB needed)
+    RepeatMasker,  // RepeatMasker with RepBase
+    Both,          // RepeatMasker + SelfAlign merged
+    RepeatModeler, // De novo library (RepeatModeler) → RepeatMasker
+    Full,          // RepeatModeler → RepeatMasker → SelfAlign (most thorough)
 }
 
 impl MaskEngine {
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "repeatmasker" | "rm"           => MaskEngine::RepeatMasker,
-            "repeatmodeler" | "denovo"      => MaskEngine::RepeatModeler,
-            "full" | "all"                  => MaskEngine::Full,
-            "both"                          => MaskEngine::Both,
-            _                               => MaskEngine::SelfAlign,
+            "repeatmasker" | "rm" => MaskEngine::RepeatMasker,
+            "repeatmodeler" | "denovo" => MaskEngine::RepeatModeler,
+            "full" | "all" => MaskEngine::Full,
+            "both" => MaskEngine::Both,
+            _ => MaskEngine::SelfAlign,
         }
     }
 }
@@ -68,14 +67,14 @@ pub struct MaskConfig {
 impl Default for MaskConfig {
     fn default() -> Self {
         Self {
-            input:      PathBuf::new(),
-            output:     PathBuf::new(),
-            engine:     MaskEngine::SelfAlign,
-            species:    None,
+            input: PathBuf::new(),
+            output: PathBuf::new(),
+            engine: MaskEngine::SelfAlign,
+            species: None,
             repeat_lib: None,
-            threads:    4,
+            threads: 4,
             min_length: 200,
-            hard_mask:  false,
+            hard_mask: false,
         }
     }
 }
@@ -86,21 +85,27 @@ impl Default for MaskConfig {
 
 #[derive(Debug, Default)]
 pub struct MaskStats {
-    pub total_bases:    u64,
-    pub masked_bases:   u64,
+    pub total_bases: u64,
+    pub masked_bases: u64,
     pub repeat_regions: usize,
 }
 
 impl MaskStats {
     pub fn percent_masked(&self) -> f64 {
-        if self.total_bases == 0 { 0.0 }
-        else { self.masked_bases as f64 / self.total_bases as f64 * 100.0 }
+        if self.total_bases == 0 {
+            0.0
+        } else {
+            self.masked_bases as f64 / self.total_bases as f64 * 100.0
+        }
     }
 
     pub fn print_summary(&self) {
         println!("\n  Total bases:    {}", self.total_bases);
-        println!("  Masked bases:   {} ({:.1}%)",
-            self.masked_bases, self.percent_masked());
+        println!(
+            "  Masked bases:   {} ({:.1}%)",
+            self.masked_bases,
+            self.percent_masked()
+        );
         println!("  Repeat regions: {}", self.repeat_regions);
     }
 }
@@ -112,8 +117,8 @@ impl MaskStats {
 #[derive(Debug, Clone)]
 pub struct MaskedRegion {
     pub seqid: String,
-    pub start: usize,   // 0-based
-    pub end:   usize,   // exclusive
+    pub start: usize, // 0-based
+    pub end: usize,   // exclusive
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,9 +128,9 @@ pub struct MaskedRegion {
 /// Apply a set of masked regions to sequences and write the masked FASTA.
 /// Regions outside any sequence are silently ignored.
 pub fn apply_masking(
-    sequences: &[(String, String)],  // (id, seq)
-    regions:   &[MaskedRegion],
-    config:    &MaskConfig,
+    sequences: &[(String, String)], // (id, seq)
+    regions: &[MaskedRegion],
+    config: &MaskConfig,
 ) -> (Vec<(String, String)>, MaskStats) {
     use std::collections::HashMap;
 
@@ -140,7 +145,10 @@ pub fn apply_masking(
         let mut merged: Vec<(usize, usize)> = Vec::new();
         for &(s, e) in spans.iter() {
             if let Some(last) = merged.last_mut() {
-                if s <= last.1 { last.1 = last.1.max(e); continue; }
+                if s <= last.1 {
+                    last.1 = last.1.max(e);
+                    continue;
+                }
             }
             merged.push((s, e));
         }
@@ -157,7 +165,9 @@ pub fn apply_masking(
         if let Some(spans) = by_seq.get(id.as_str()) {
             for &(s, e) in spans {
                 let e = e.min(chars.len());
-                if s >= e { continue; }
+                if s >= e {
+                    continue;
+                }
                 stats.repeat_regions += 1;
                 for c in &mut chars[s..e] {
                     stats.masked_bases += 1;
@@ -207,13 +217,19 @@ pub fn run_masking(config: &MaskConfig) -> Result<MaskStats> {
     // Load genome
     let pb = progress::spinner(format!("Loading {}", config.input.display()));
     let records = read_fasta(&config.input)?;
-    let sequences: Vec<(String, String)> = records.iter()
+    let sequences: Vec<(String, String)> = records
+        .iter()
         .map(|r| (r.id.clone(), r.sequence.clone()))
         .collect();
     let total_bases: u64 = sequences.iter().map(|(_, s)| s.len() as u64).sum();
-    progress::finish_spinner(&pb, format!(
-        "{} sequences ({:.1} Mbp)", sequences.len(), total_bases as f64 / 1e6
-    ));
+    progress::finish_spinner(
+        &pb,
+        format!(
+            "{} sequences ({:.1} Mbp)",
+            sequences.len(),
+            total_bases as f64 / 1e6
+        ),
+    );
 
     // Gather masked regions
     let regions: Vec<MaskedRegion> = match &config.engine {
@@ -231,11 +247,10 @@ pub fn run_masking(config: &MaskConfig) -> Result<MaskStats> {
         }
         MaskEngine::Both => {
             let pb2 = progress::spinner("Running RepeatMasker…");
-            let mut r = repeatmasker::run(&sequences, config)
-                .unwrap_or_else(|e| {
-                    progress::warn_spinner(&pb2, format!("RepeatMasker failed: {}", e));
-                    Vec::new()
-                });
+            let mut r = repeatmasker::run(&sequences, config).unwrap_or_else(|e| {
+                progress::warn_spinner(&pb2, format!("RepeatMasker failed: {}", e));
+                Vec::new()
+            });
             progress::finish_spinner(&pb2, format!("{} RepeatMasker regions", r.len()));
             let pb3 = progress::spinner("Running self-alignment masking…");
             let self_r = self_align::run(&sequences, config)?;
@@ -244,9 +259,7 @@ pub fn run_masking(config: &MaskConfig) -> Result<MaskStats> {
             r
         }
         MaskEngine::RepeatModeler => {
-            let pb2 = progress::spinner(
-                "Building de novo repeat library with RepeatModeler…"
-            );
+            let pb2 = progress::spinner("Building de novo repeat library with RepeatModeler…");
             let r = repeatmodeler::run(&sequences, config)?;
             progress::finish_spinner(&pb2, format!("{} de novo repeat regions", r.len()));
             r
@@ -254,20 +267,18 @@ pub fn run_masking(config: &MaskConfig) -> Result<MaskStats> {
         MaskEngine::Full => {
             // Step 1: RepeatModeler de novo library → RepeatMasker
             let pb2 = progress::spinner("Step 1/3: RepeatModeler (de novo library)…");
-            let mut r = repeatmodeler::run(&sequences, config)
-                .unwrap_or_else(|e| {
-                    progress::warn_spinner(&pb2, format!("RepeatModeler failed: {}", e));
-                    Vec::new()
-                });
+            let mut r = repeatmodeler::run(&sequences, config).unwrap_or_else(|e| {
+                progress::warn_spinner(&pb2, format!("RepeatModeler failed: {}", e));
+                Vec::new()
+            });
             progress::finish_spinner(&pb2, format!("{} de novo regions", r.len()));
 
             // Step 2: RepeatMasker with species database (catches known families)
             let pb3 = progress::spinner("Step 2/3: RepeatMasker (species database)…");
-            let rm_r = repeatmasker::run(&sequences, config)
-                .unwrap_or_else(|e| {
-                    progress::warn_spinner(&pb3, format!("RepeatMasker failed: {}", e));
-                    Vec::new()
-                });
+            let rm_r = repeatmasker::run(&sequences, config).unwrap_or_else(|e| {
+                progress::warn_spinner(&pb3, format!("RepeatMasker failed: {}", e));
+                Vec::new()
+            });
             progress::finish_spinner(&pb3, format!("{} RepeatMasker regions", rm_r.len()));
             r.extend(rm_r);
 
@@ -285,7 +296,11 @@ pub fn run_masking(config: &MaskConfig) -> Result<MaskStats> {
 
     // Write output
     let out_path = if config.output.as_os_str().is_empty() {
-        let stem = config.input.file_stem().unwrap_or_default().to_string_lossy();
+        let stem = config
+            .input
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy();
         config.input.with_file_name(format!("{}_masked.fa", stem))
     } else {
         config.output.clone()

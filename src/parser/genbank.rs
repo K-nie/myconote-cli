@@ -9,7 +9,6 @@
 /// - Full gene → mRNA → CDS hierarchy with propagated `locus_tag`
 /// - SeqID matching: strips FASTA header to first whitespace token
 ///   (fixes the notorious mismatch problem from progressiveMauve workflows)
-
 use crate::parser::fasta::FastaRecord;
 use crate::parser::gff::GFFRecord;
 use crate::utils::error::{MycoNoteError, Result};
@@ -20,11 +19,11 @@ use std::io::Write;
 // Line-width constants (NCBI spec)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const LOCUS_WIDTH:      usize = 80;
-const FEATURE_INDENT:   &str  = "     ";          // 5 spaces
-const QUALIFIER_INDENT: &str  = "                     "; // 21 spaces
-const SEQUENCE_WIDTH:   usize = 60;
-const SEQUENCE_CHUNK:   usize = 10;
+const LOCUS_WIDTH: usize = 80;
+const FEATURE_INDENT: &str = "     "; // 5 spaces
+const QUALIFIER_INDENT: &str = "                     "; // 21 spaces
+const SEQUENCE_WIDTH: usize = 60;
+const SEQUENCE_CHUNK: usize = 10;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal data model
@@ -32,21 +31,25 @@ const SEQUENCE_CHUNK:   usize = 10;
 
 #[derive(Debug, Clone)]
 struct Interval {
-    start:  u64,
-    end:    u64,
+    start: u64,
+    end: u64,
     strand: char,
 }
 
 #[derive(Debug)]
 struct FeatureBlock {
-    kind:       String,
-    intervals:  Vec<Interval>,
+    kind: String,
+    intervals: Vec<Interval>,
     qualifiers: Vec<(String, String)>,
 }
 
 impl FeatureBlock {
     fn new(kind: &str) -> Self {
-        FeatureBlock { kind: kind.to_string(), intervals: Vec::new(), qualifiers: Vec::new() }
+        FeatureBlock {
+            kind: kind.to_string(),
+            intervals: Vec::new(),
+            qualifiers: Vec::new(),
+        }
     }
 
     fn add_qualifier(&mut self, key: &str, value: &str) {
@@ -58,12 +61,15 @@ impl FeatureBlock {
     }
 
     fn location_string(&self) -> String {
-        if self.intervals.is_empty() { return String::new(); }
+        if self.intervals.is_empty() {
+            return String::new();
+        }
 
         let mut sorted = self.intervals.clone();
         sorted.sort_by_key(|i| i.start);
 
-        let parts: Vec<String> = sorted.iter()
+        let parts: Vec<String> = sorted
+            .iter()
             .map(|i| format!("{}..{}", i.start, i.end))
             .collect();
 
@@ -73,7 +79,11 @@ impl FeatureBlock {
             format!("join({})", parts.join(","))
         };
 
-        if self.strand() == '-' { format!("complement({})", loc) } else { loc }
+        if self.strand() == '-' {
+            format!("complement({})", loc)
+        } else {
+            loc
+        }
     }
 }
 
@@ -82,14 +92,18 @@ impl FeatureBlock {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn strand_char(s: char) -> char {
-    if s == '-' { '-' } else { '+' }
+    if s == '-' {
+        '-'
+    } else {
+        '+'
+    }
 }
 
 fn build_feature_blocks(records: &[GFFRecord], chr: &str) -> Vec<FeatureBlock> {
-    let mut id_to_gene:    HashMap<String, &GFFRecord>        = HashMap::new();
-    let mut id_to_mrna:    HashMap<String, &GFFRecord>        = HashMap::new();
-    let mut mrna_to_cds:   HashMap<String, Vec<&GFFRecord>>   = HashMap::new();
-    let mut gene_to_mrnas: HashMap<String, Vec<String>>       = HashMap::new();
+    let mut id_to_gene: HashMap<String, &GFFRecord> = HashMap::new();
+    let mut id_to_mrna: HashMap<String, &GFFRecord> = HashMap::new();
+    let mut mrna_to_cds: HashMap<String, Vec<&GFFRecord>> = HashMap::new();
+    let mut gene_to_mrnas: HashMap<String, Vec<String>> = HashMap::new();
 
     for rec in records.iter().filter(|r| r.seqid == chr) {
         match rec.feature_type.as_str() {
@@ -102,7 +116,10 @@ fn build_feature_blocks(records: &[GFFRecord], chr: &str) -> Vec<FeatureBlock> {
                 if let Some(id) = rec.id() {
                     id_to_mrna.insert(id.to_string(), rec);
                     if let Some(parent) = rec.parent() {
-                        gene_to_mrnas.entry(parent.to_string()).or_default().push(id.to_string());
+                        gene_to_mrnas
+                            .entry(parent.to_string())
+                            .or_default()
+                            .push(id.to_string());
                     }
                 }
             }
@@ -121,14 +138,18 @@ fn build_feature_blocks(records: &[GFFRecord], chr: &str) -> Vec<FeatureBlock> {
     gene_ids.sort_by_key(|id| id_to_gene[*id].start);
 
     for gene_id in gene_ids {
-        let gene_rec  = id_to_gene[gene_id];
-        let locus_tag = gene_rec.id().map(|s| s.clone())
+        let gene_rec = id_to_gene[gene_id];
+        let locus_tag = gene_rec
+            .id()
+            .map(|s| s.clone())
             .unwrap_or_else(|| format!("gene_{}", gene_rec.start));
 
         // gene block
         let mut gene_block = FeatureBlock::new("gene");
         gene_block.intervals.push(Interval {
-            start: gene_rec.start, end: gene_rec.end, strand: strand_char(gene_rec.strand),
+            start: gene_rec.start,
+            end: gene_rec.end,
+            strand: strand_char(gene_rec.strand),
         });
         gene_block.add_qualifier("locus_tag", &locus_tag);
         if let Some(name) = gene_rec.attributes.get("Name") {
@@ -140,12 +161,16 @@ fn build_feature_blocks(records: &[GFFRecord], chr: &str) -> Vec<FeatureBlock> {
         let mrnas = gene_to_mrnas.get(gene_id).unwrap_or(&empty);
 
         for mrna_id in mrnas {
-            let Some(mrna_rec) = id_to_mrna.get(mrna_id.as_str()) else { continue };
+            let Some(mrna_rec) = id_to_mrna.get(mrna_id.as_str()) else {
+                continue;
+            };
 
             // mRNA block
             let mut mrna_block = FeatureBlock::new("mRNA");
             mrna_block.intervals.push(Interval {
-                start: mrna_rec.start, end: mrna_rec.end, strand: strand_char(mrna_rec.strand),
+                start: mrna_rec.start,
+                end: mrna_rec.end,
+                strand: strand_char(mrna_rec.strand),
             });
             mrna_block.add_qualifier("locus_tag", &locus_tag);
             if let Some(name) = mrna_rec.attributes.get("Name") {
@@ -159,7 +184,9 @@ fn build_feature_blocks(records: &[GFFRecord], chr: &str) -> Vec<FeatureBlock> {
                 let mut cds_block = FeatureBlock::new("CDS");
                 for cds in cds_recs.iter() {
                     cds_block.intervals.push(Interval {
-                        start: cds.start, end: cds.end, strand: strand_char(cds.strand),
+                        start: cds.start,
+                        end: cds.end,
+                        strand: strand_char(cds.strand),
                     });
                 }
                 cds_block.add_qualifier("locus_tag", &locus_tag);
@@ -180,7 +207,7 @@ fn build_feature_blocks(records: &[GFFRecord], chr: &str) -> Vec<FeatureBlock> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn write_feature<W: Write>(w: &mut W, block: &FeatureBlock) -> std::io::Result<()> {
-    let loc      = block.location_string();
+    let loc = block.location_string();
     let key_field = format!("{:<16}", block.kind);
     writeln!(w, "{}{}{}", FEATURE_INDENT, key_field, loc)?;
 
@@ -205,7 +232,7 @@ fn write_wrapped<W: Write>(w: &mut W, indent: &str, text: &str) -> std::io::Resu
 
     let mut remaining = text;
     while !remaining.is_empty() {
-        let take  = remaining.len().min(avail);
+        let take = remaining.len().min(avail);
         let split = if take >= remaining.len() {
             take
         } else {
@@ -222,17 +249,21 @@ fn write_wrapped<W: Write>(w: &mut W, indent: &str, text: &str) -> std::io::Resu
 
 fn write_origin<W: Write>(w: &mut W, sequence: &str) -> std::io::Result<()> {
     writeln!(w, "ORIGIN")?;
-    let seq   = sequence.to_lowercase();
+    let seq = sequence.to_lowercase();
     let bytes = seq.as_bytes();
     let total = bytes.len();
     let mut pos = 0;
     while pos < total {
         write!(w, "{:>9}", pos + 1)?;
-        let line_end  = (pos + SEQUENCE_WIDTH).min(total);
+        let line_end = (pos + SEQUENCE_WIDTH).min(total);
         let mut chunk = pos;
         while chunk < line_end {
             let end = (chunk + SEQUENCE_CHUNK).min(line_end);
-            write!(w, " {}", std::str::from_utf8(&bytes[chunk..end]).unwrap_or(""))?;
+            write!(
+                w,
+                " {}",
+                std::str::from_utf8(&bytes[chunk..end]).unwrap_or("")
+            )?;
             chunk = end;
         }
         writeln!(w)?;
@@ -248,13 +279,13 @@ fn write_origin<W: Write>(w: &mut W, sequence: &str) -> std::io::Result<()> {
 
 /// Write one GenBank record for a single chromosome / contig.
 pub fn write_genbank_record<W: Write>(
-    w:        &mut W,
-    seqid:    &str,
-    records:  &[GFFRecord],
-    fasta:    &FastaRecord,
+    w: &mut W,
+    seqid: &str,
+    records: &[GFFRecord],
+    fasta: &FastaRecord,
     organism: Option<&str>,
 ) -> Result<()> {
-    let seq_len      = fasta.len();
+    let seq_len = fasta.len();
     let organism_str = organism.unwrap_or("Unknown fungal organism");
 
     // LOCUS
@@ -266,8 +297,7 @@ pub fn write_genbank_record<W: Write>(
         .map_err(MycoNoteError::Io)?;
 
     // DEFINITION
-    writeln!(w, "DEFINITION  {} chromosome {}.", organism_str, seqid)
-        .map_err(MycoNoteError::Io)?;
+    writeln!(w, "DEFINITION  {} chromosome {}.", organism_str, seqid).map_err(MycoNoteError::Io)?;
 
     // ACCESSION / VERSION
     writeln!(w, "ACCESSION   {}", seqid).map_err(MycoNoteError::Io)?;
@@ -283,7 +313,11 @@ pub fn write_genbank_record<W: Write>(
 
     // source spanning the whole record
     let mut source = FeatureBlock::new("source");
-    source.intervals.push(Interval { start: 1, end: seq_len as u64, strand: '+' });
+    source.intervals.push(Interval {
+        start: 1,
+        end: seq_len as u64,
+        strand: '+',
+    });
     source.add_qualifier("organism", organism_str);
     source.add_qualifier("mol_type", "genomic DNA");
     write_feature(w, &source).map_err(MycoNoteError::Io)?;
@@ -306,10 +340,10 @@ pub fn write_genbank_record<W: Write>(
 /// delimited token of the `>` header line).  Chromosomes without a matching
 /// FASTA entry are skipped with a warning.
 pub fn write_genbank<W: Write>(
-    w:           &mut W,
-    all_records:  &[GFFRecord],
-    fasta_index:  &HashMap<String, FastaRecord>,
-    organism:     Option<&str>,
+    w: &mut W,
+    all_records: &[GFFRecord],
+    fasta_index: &HashMap<String, FastaRecord>,
+    organism: Option<&str>,
 ) -> Result<()> {
     use std::collections::BTreeSet;
 
@@ -318,7 +352,8 @@ pub fn write_genbank<W: Write>(
     let mut written = 0usize;
     for seqid in seqids {
         if let Some(fasta_rec) = fasta_index.get(seqid) {
-            let owned: Vec<GFFRecord> = all_records.iter()
+            let owned: Vec<GFFRecord> = all_records
+                .iter()
                 .filter(|r| r.seqid == seqid)
                 .cloned()
                 .collect();

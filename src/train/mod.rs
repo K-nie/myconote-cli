@@ -1,3 +1,6 @@
+pub mod augustus_train;
+pub mod pasa;
+pub mod snap_train;
 /// RNA-seq mediated training pipeline
 ///
 /// Equivalent to `funannotate train`:
@@ -16,14 +19,10 @@
 ///   - `augustus_training/`     — trained Augustus species dir
 ///   - `snap_training.hmm`      — trained SNAP HMM
 ///   - `train_summary.txt`      — summary of models used for training
-
 pub mod trinity;
-pub mod pasa;
-pub mod augustus_train;
-pub mod snap_train;
 
-use crate::utils::error::{MycoNoteError, Result};
 use crate::progress;
+use crate::utils::error::{MycoNoteError, Result};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -36,29 +35,29 @@ pub struct TrainConfig {
     /// Soft-masked genome FASTA (output of `myconote mask`)
     pub masked_fasta: PathBuf,
     /// Output directory
-    pub out_dir:      PathBuf,
+    pub out_dir: PathBuf,
     /// Left (R1) RNA-seq reads — can be multiple files (comma-separated)
-    pub left_reads:   Vec<PathBuf>,
+    pub left_reads: Vec<PathBuf>,
     /// Right (R2) RNA-seq reads — same order as left (empty = single-end)
-    pub right_reads:  Vec<PathBuf>,
+    pub right_reads: Vec<PathBuf>,
     /// Single-end reads (alternative to paired left/right)
     pub single_reads: Vec<PathBuf>,
     /// Pre-assembled Trinity FASTA (skip Trinity if provided)
     pub trinity_fasta: Option<PathBuf>,
     /// Species name for Augustus training
-    pub species:      String,
+    pub species: String,
     /// Number of threads
-    pub threads:      usize,
+    pub threads: usize,
     /// Maximum intron size (bp). Default: 3000 (fungi), 200000 (plants)
-    pub max_intron:   usize,
+    pub max_intron: usize,
     /// Minimum number of complete PASA models for training. Default: 200
-    pub min_models:   usize,
+    pub min_models: usize,
     /// Also train SNAP (in addition to Augustus)
-    pub train_snap:   bool,
+    pub train_snap: bool,
     /// Also train/run GeneMark-ES on masked genome
     pub train_genemark: bool,
     /// Strand specificity: "RF", "FR", or "" (unstranded)
-    pub strand:       String,
+    pub strand: String,
     /// Memory for Trinity (e.g. "50G")
     pub trinity_memory: String,
 }
@@ -66,19 +65,19 @@ pub struct TrainConfig {
 impl Default for TrainConfig {
     fn default() -> Self {
         Self {
-            masked_fasta:   PathBuf::new(),
-            out_dir:        PathBuf::from("train_out"),
-            left_reads:     vec![],
-            right_reads:    vec![],
-            single_reads:   vec![],
-            trinity_fasta:  None,
-            species:        "myconote_trained".to_string(),
-            threads:        4,
-            max_intron:     3000,
-            min_models:     200,
-            train_snap:     true,
+            masked_fasta: PathBuf::new(),
+            out_dir: PathBuf::from("train_out"),
+            left_reads: vec![],
+            right_reads: vec![],
+            single_reads: vec![],
+            trinity_fasta: None,
+            species: "myconote_trained".to_string(),
+            threads: 4,
+            max_intron: 3000,
+            min_models: 200,
+            train_snap: true,
             train_genemark: false,
-            strand:         String::new(),
+            strand: String::new(),
             trinity_memory: "50G".to_string(),
         }
     }
@@ -90,9 +89,9 @@ impl Default for TrainConfig {
 
 pub struct TrainResult {
     pub augustus_species_dir: Option<PathBuf>,
-    pub snap_hmm:             Option<PathBuf>,
-    pub pasa_gff3:            Option<PathBuf>,
-    pub trinity_fasta:        Option<PathBuf>,
+    pub snap_hmm: Option<PathBuf>,
+    pub pasa_gff3: Option<PathBuf>,
+    pub trinity_fasta: Option<PathBuf>,
     pub training_model_count: usize,
 }
 
@@ -120,18 +119,26 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainResult> {
     pb.set_message("Aligning transcripts to genome");
 
     let bam_path = config.out_dir.join("trinity_aligned.bam");
-    align_transcripts_to_genome(&trinity_fasta, &config.masked_fasta, &bam_path, config.threads)?;
+    align_transcripts_to_genome(
+        &trinity_fasta,
+        &config.masked_fasta,
+        &bam_path,
+        config.threads,
+    )?;
 
     // ── Step 3: PASA database ─────────────────────────────────────────────
     pb.set_message("Building PASA transcript database");
 
-    let pasa_db   = config.out_dir.join("pasa.sqlite");
+    let pasa_db = config.out_dir.join("pasa.sqlite");
     let pasa_gff3 = config.out_dir.join("pasa_assemblies.gff3");
 
     match pasa::run_pasa(config, &trinity_fasta, &pasa_db, &pasa_gff3) {
         Ok(n) => println!("  PASA: {} transcript assemblies", n),
         Err(e) => {
-            eprintln!("  ⚠  PASA failed ({}). Will use direct Trinity alignments for training.", e);
+            eprintln!(
+                "  ⚠  PASA failed ({}). Will use direct Trinity alignments for training.",
+                e
+            );
         }
     }
 
@@ -140,11 +147,17 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainResult> {
 
     let training_gff3 = config.out_dir.join("training_models.gff3");
     let model_count = extract_training_models(
-        &pasa_gff3, &config.masked_fasta, &training_gff3, config.min_models
+        &pasa_gff3,
+        &config.masked_fasta,
+        &training_gff3,
+        config.min_models,
     )?;
 
     if model_count < config.min_models {
-        eprintln!("  ⚠  Only {} complete models found (minimum: {}).", model_count, config.min_models);
+        eprintln!(
+            "  ⚠  Only {} complete models found (minimum: {}).",
+            model_count, config.min_models
+        );
         eprintln!("     Training may be suboptimal. Consider more RNA-seq data.");
     } else {
         println!("  Training models: {}", model_count);
@@ -154,7 +167,11 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainResult> {
     pb.set_message("Training Augustus");
 
     let augustus_dir = augustus_train::train_augustus(
-        &training_gff3, &config.masked_fasta, &config.species, &config.out_dir, config.threads
+        &training_gff3,
+        &config.masked_fasta,
+        &config.species,
+        &config.out_dir,
+        config.threads,
     )?;
     println!("  Augustus trained: {}", augustus_dir.display());
 
@@ -204,9 +221,9 @@ pub fn run_training(config: &TrainConfig) -> Result<TrainResult> {
 
 fn align_transcripts_to_genome(
     transcripts: &Path,
-    genome:      &Path,
-    bam_out:     &Path,
-    threads:     usize,
+    genome: &Path,
+    bam_out: &Path,
+    threads: usize,
 ) -> Result<()> {
     // Try minimap2 first (fast, handles spliced alignments well for fungi)
     let use_minimap2 = std::process::Command::new("which")
@@ -220,9 +237,11 @@ fn align_transcripts_to_genome(
 
         let status = std::process::Command::new("minimap2")
             .arg("-a")
-            .arg("-x").arg("splice")
+            .arg("-x")
+            .arg("splice")
             .arg("--cs")
-            .arg("-t").arg(threads.to_string())
+            .arg("-t")
+            .arg(threads.to_string())
             .arg(genome)
             .arg(transcripts)
             .stdout(std::fs::File::create(&sam_path).map_err(MycoNoteError::Io)?)
@@ -230,7 +249,9 @@ fn align_transcripts_to_genome(
             .map_err(|e| MycoNoteError::ExternalTool(format!("minimap2: {}", e)))?;
 
         if !status.success() {
-            return Err(MycoNoteError::ExternalTool("minimap2 alignment failed".to_string()));
+            return Err(MycoNoteError::ExternalTool(
+                "minimap2 alignment failed".to_string(),
+            ));
         }
 
         // Sort and index with samtools
@@ -238,7 +259,8 @@ fn align_transcripts_to_genome(
             .args(["sort", "-o"])
             .arg(bam_out)
             .arg(&sam_path)
-            .arg("-@").arg(threads.to_string())
+            .arg("-@")
+            .arg(threads.to_string())
             .status();
         let _ = std::process::Command::new("samtools")
             .arg("index")
@@ -252,10 +274,10 @@ fn align_transcripts_to_genome(
 }
 
 fn extract_training_models(
-    pasa_gff3:    &Path,
+    pasa_gff3: &Path,
     _genome_fasta: &Path,
-    output:       &Path,
-    min_models:   usize,
+    output: &Path,
+    min_models: usize,
 ) -> Result<usize> {
     use std::io::{BufRead, BufReader, Write as IoWrite};
 
@@ -265,7 +287,7 @@ fn extract_training_models(
         return Ok(0);
     }
 
-    let file   = std::fs::File::open(pasa_gff3).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(pasa_gff3).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
 
@@ -290,7 +312,9 @@ fn extract_training_models(
         }
 
         let fields: Vec<&str> = trimmed.split('\t').collect();
-        if fields.len() < 9 { continue; }
+        if fields.len() < 9 {
+            continue;
+        }
 
         match fields[2] {
             "gene" => {
@@ -325,10 +349,10 @@ fn extract_training_models(
 }
 
 fn write_train_summary(
-    config:        &TrainConfig,
-    model_count:   usize,
-    augustus_dir:  &Path,
-    snap_hmm:      Option<&Path>,
+    config: &TrainConfig,
+    model_count: usize,
+    augustus_dir: &Path,
+    snap_hmm: Option<&Path>,
 ) -> Result<()> {
     let summary_path = config.out_dir.join("train_summary.txt");
     let mut f = std::fs::File::create(&summary_path).map_err(MycoNoteError::Io)?;
@@ -336,8 +360,14 @@ fn write_train_summary(
     writeln!(f, "myconote-cli train summary").map_err(MycoNoteError::Io)?;
     writeln!(f, "=========================").map_err(MycoNoteError::Io)?;
     writeln!(f, "Species:          {}", config.species).map_err(MycoNoteError::Io)?;
-    writeln!(f, "Genome:           {}", config.masked_fasta.display()).map_err(MycoNoteError::Io)?;
-    writeln!(f, "RNA-seq reads:    {} file(s)", config.left_reads.len() + config.single_reads.len()).map_err(MycoNoteError::Io)?;
+    writeln!(f, "Genome:           {}", config.masked_fasta.display())
+        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "RNA-seq reads:    {} file(s)",
+        config.left_reads.len() + config.single_reads.len()
+    )
+    .map_err(MycoNoteError::Io)?;
     writeln!(f, "Training models:  {}", model_count).map_err(MycoNoteError::Io)?;
     writeln!(f, "Augustus trained: {}", augustus_dir.display()).map_err(MycoNoteError::Io)?;
     if let Some(hmm) = snap_hmm {
@@ -345,7 +375,12 @@ fn write_train_summary(
     }
     writeln!(f).map_err(MycoNoteError::Io)?;
     writeln!(f, "Next step:").map_err(MycoNoteError::Io)?;
-    writeln!(f, "  myconote-cli predict <genome.fa> --species {} \\", config.species).map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "  myconote-cli predict <genome.fa> --species {} \\",
+        config.species
+    )
+    .map_err(MycoNoteError::Io)?;
     if let Some(hmm) = snap_hmm {
         writeln!(f, "    --snap-hmm {} \\", hmm.display()).map_err(MycoNoteError::Io)?;
     }

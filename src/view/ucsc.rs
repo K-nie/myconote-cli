@@ -1,3 +1,4 @@
+use super::ViewConfig;
 /// UCSC Genome Browser integration
 ///
 /// Two outputs:
@@ -11,11 +12,9 @@
 ///    that opens UCSC at the requested position with the data pre-loaded.
 ///    (The data must be hosted at a publicly reachable URL for UCSC to
 ///    fetch it; for private genomes use the custom-track file instead.)
-
 use crate::utils::error::Result;
-use super::ViewConfig;
-use std::io::{BufRead, BufReader};
 use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -27,8 +26,7 @@ fn url_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len() * 2);
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9'
-            | b'-' | b'_' | b'.' | b'~' | b':' | b'/' => {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b':' | b'/' => {
                 out.push(b as char);
             }
             _ => {
@@ -64,17 +62,23 @@ fn guess_ucsc_db(gff_path: &std::path::Path) -> String {
 
 /// Read at most `limit` seqid values from a GFF3.
 fn sniff_seqids(gff_path: &std::path::Path, limit: usize) -> Vec<String> {
-    let Ok(file) = File::open(gff_path) else { return vec![] };
+    let Ok(file) = File::open(gff_path) else {
+        return vec![];
+    };
     let reader = BufReader::new(file);
     let mut out = Vec::new();
     for line in reader.lines().flatten() {
-        if line.starts_with('#') || line.trim().is_empty() { continue; }
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
         if let Some(seqid) = line.split('\t').next() {
             if !out.contains(&seqid.to_string()) {
                 out.push(seqid.to_string());
             }
         }
-        if out.len() >= limit { break; }
+        if out.len() >= limit {
+            break;
+        }
     }
     out
 }
@@ -88,7 +92,10 @@ fn ucsc_position(config: &ViewConfig) -> String {
     }
     // Default: first seqid, first 100 kb
     let seqids = sniff_seqids(&config.gff_path, 1);
-    let chr = seqids.into_iter().next().unwrap_or_else(|| "chr1".to_string());
+    let chr = seqids
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| "chr1".to_string());
     format!("{}:1-100000", chr)
 }
 
@@ -130,7 +137,7 @@ pub fn generate_ucsc_track_file(config: &ViewConfig) -> Result<()> {
 
 /// Print the UCSC custom-track URL to stdout (data must be publicly hosted).
 pub fn print_ucsc_url(config: &ViewConfig) -> Result<()> {
-    let db  = guess_ucsc_db(&config.gff_path);
+    let db = guess_ucsc_db(&config.gff_path);
     let pos = ucsc_position(config);
 
     println!("🔗 UCSC Genome Browser URL");

@@ -15,7 +15,6 @@
 ///   <prefix>.iqtree     — full IQ-TREE run report
 ///   <prefix>.log        — console log
 ///   <prefix>.ckp.gz     — checkpoint (allows resuming interrupted runs)
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -43,11 +42,11 @@ pub struct PhylogenyConfig {
 impl Default for PhylogenyConfig {
     fn default() -> Self {
         Self {
-            model:      "MFP".to_string(),
-            bootstrap:  1000,
-            partition:  None,
-            threads:    4,
-            prefix:     None,
+            model: "MFP".to_string(),
+            bootstrap: 1000,
+            partition: None,
+            threads: 4,
+            prefix: None,
             extra_args: Vec::new(),
         }
     }
@@ -60,7 +59,8 @@ impl Default for PhylogenyConfig {
 pub fn iqtree_available() -> bool {
     // IQ-TREE 2 ships as "iqtree2"; IQ-TREE 1 as "iqtree"
     for bin in &["iqtree2", "iqtree"] {
-        if Command::new("which").arg(bin)
+        if Command::new("which")
+            .arg(bin)
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -73,7 +73,8 @@ pub fn iqtree_available() -> bool {
 
 /// Return the IQ-TREE binary name that is present on PATH, preferring v2.
 fn iqtree_bin() -> &'static str {
-    if Command::new("which").arg("iqtree2")
+    if Command::new("which")
+        .arg("iqtree2")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -91,10 +92,7 @@ fn iqtree_bin() -> &'static str {
 /// Run IQ-TREE on `alignment` with the given `config`.
 ///
 /// Returns the path to the best-fit ML tree (`.treefile`).
-pub fn build_tree<P: AsRef<Path>>(
-    alignment: P,
-    config: &PhylogenyConfig,
-) -> Result<PathBuf> {
+pub fn build_tree<P: AsRef<Path>>(alignment: P, config: &PhylogenyConfig) -> Result<PathBuf> {
     let alignment = alignment.as_ref();
 
     if !alignment.exists() {
@@ -129,15 +127,21 @@ pub fn build_tree<P: AsRef<Path>>(
     let prefix_path = outdir.join(&prefix);
 
     println!("  Running IQ-TREE ({bin}) on: {}", alignment.display());
-    println!("  Model: {}  Bootstrap: {}  Threads: {}",
-        config.model, config.bootstrap, config.threads);
+    println!(
+        "  Model: {}  Bootstrap: {}  Threads: {}",
+        config.model, config.bootstrap, config.threads
+    );
 
     let mut cmd = Command::new(bin);
-    cmd.arg("-s").arg(alignment)
-        .arg("-m").arg(&config.model)
-        .arg("--prefix").arg(&prefix_path)
-        .arg("-T").arg(config.threads.to_string())
-        .arg("--redo");   // overwrite any previous run with same prefix
+    cmd.arg("-s")
+        .arg(alignment)
+        .arg("-m")
+        .arg(&config.model)
+        .arg("--prefix")
+        .arg(&prefix_path)
+        .arg("-T")
+        .arg(config.threads.to_string())
+        .arg("--redo"); // overwrite any previous run with same prefix
 
     // Partition file
     if let Some(part) = &config.partition {
@@ -148,7 +152,7 @@ pub fn build_tree<P: AsRef<Path>>(
     if config.bootstrap > 0 {
         // UFBoot2 (ultrafast, recommended for large datasets)
         cmd.arg("-B").arg(config.bootstrap.to_string());
-        cmd.arg("--alrt").arg("1000");   // SH-aLRT branch support alongside UFBoot
+        cmd.arg("--alrt").arg("1000"); // SH-aLRT branch support alongside UFBoot
     }
 
     // Extra user-supplied args
@@ -200,9 +204,16 @@ pub fn read_treefile<P: AsRef<Path>>(path: P) -> Result<String> {
 
 /// Check what IQ-TREE version is installed and return the version string.
 pub fn iqtree_version() -> Option<String> {
-    let bin = if Command::new("which").arg("iqtree2")
-        .output().map(|o| o.status.success()).unwrap_or(false)
-    { "iqtree2" } else { "iqtree" };
+    let bin = if Command::new("which")
+        .arg("iqtree2")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        "iqtree2"
+    } else {
+        "iqtree"
+    };
 
     Command::new(bin)
         .arg("--version")
@@ -212,7 +223,9 @@ pub fn iqtree_version() -> Option<String> {
             let out = String::from_utf8_lossy(&o.stdout).to_string()
                 + &String::from_utf8_lossy(&o.stderr);
             out.lines()
-                .find(|l| l.to_lowercase().contains("iq-tree") || l.to_lowercase().contains("version"))
+                .find(|l| {
+                    l.to_lowercase().contains("iq-tree") || l.to_lowercase().contains("version")
+                })
                 .map(|l| l.trim().to_string())
         })
 }

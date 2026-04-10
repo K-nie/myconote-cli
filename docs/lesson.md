@@ -1,7 +1,7 @@
 ---
 title: "Genome Annotation with Myconote_CLI"
 author: "Benjamin Narh-Madey"
-affiliation: "Hittinger Lab, University of Wisconsin–Madison"
+affiliation: "Hittinger Lab, Laboratory of Genetics, University of Wisconsin–Madison"
 date: "2026"
 ---
 
@@ -421,6 +421,47 @@ myconote-cli convert annotation/final.gff3 --to protein -o proteins.faa
 - The `stats` command gives you a quality summary at any point in the pipeline
 - eggNOG functional annotation is optional but strongly recommended for publication
 - Two tools (SignalP 6, GeneMark-ES) require manual download due to licensing
+
+---
+
+## Additional Capabilities (v0.1.0)
+
+Since the initial workshop lesson was written, myconote-cli has gained several major features:
+
+### tRNA prediction
+```bash
+myconote-cli annotate genes.gff3 --fasta genome.fa --trnascan
+```
+
+### Genetic code support (Candida CTG clade, mitochondrial, etc.)
+```bash
+myconote-cli annotate genes.gff3 --fasta genome.fa --genetic-code 12
+```
+
+### NCBI submission preparation
+```bash
+myconote-cli submit annotated.gff3 --fasta genome.fa --organism "Genus species"
+```
+
+### Protein evidence for gene prediction
+```bash
+myconote-cli predict genome.fa --protein-fasta swissprot.fasta --kingdom fungi
+```
+
+### Custom evidence weights
+```bash
+myconote-cli predict genome.fa --weights my_weights.toml
+```
+
+### Interactive self-paced tutorial
+```bash
+myconote-cli learn    # 8 lessons, swirl-style
+```
+
+### Docker / Singularity containers
+```bash
+docker run -v $(pwd):/data myconote-cli predict /data/genome.fa --kingdom fungi
+```
 
 ---
 

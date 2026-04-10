@@ -4,23 +4,20 @@
 /// masked regions.  RepeatMasker must be installed and in PATH.
 ///
 /// Install: conda install -c bioconda repeatmasker
-
 use super::{MaskConfig, MaskedRegion};
 use crate::utils::error::{MycoNoteError, Result};
 use std::io::Write;
 use std::process::Command;
 
 /// Run RepeatMasker on the given sequences and return masked regions.
-pub fn run(
-    sequences: &[(String, String)],
-    config:    &MaskConfig,
-) -> Result<Vec<MaskedRegion>> {
+pub fn run(sequences: &[(String, String)], config: &MaskConfig) -> Result<Vec<MaskedRegion>> {
     // Check RepeatMasker is available
     let rm_path = which::which("RepeatMasker").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "RepeatMasker not found in PATH.\n\
              Install with: conda install -c bioconda repeatmasker\n\
-             Or use --engine minimap2 for the built-in repeat finder.".to_string()
+             Or use --engine minimap2 for the built-in repeat finder."
+                .to_string(),
         )
     })?;
 
@@ -40,10 +37,12 @@ pub fn run(
 
     // Build RepeatMasker arguments
     let mut args: Vec<String> = vec![
-        "-pa".into(), config.threads.to_string(),
-        "-xsmall".into(),  // soft-mask (lowercase)
-        "-nolow".into(),   // skip low-complexity (handled separately)
-        "-dir".into(), tmp_dir.path().to_string_lossy().into_owned(),
+        "-pa".into(),
+        config.threads.to_string(),
+        "-xsmall".into(), // soft-mask (lowercase)
+        "-nolow".into(),  // skip low-complexity (handled separately)
+        "-dir".into(),
+        tmp_dir.path().to_string_lossy().into_owned(),
     ];
 
     if config.hard_mask {
@@ -75,7 +74,8 @@ pub fn run(
         return Err(MycoNoteError::InvalidFormat(
             "RepeatMasker exited with non-zero status. \
              Check that the species database is installed: \
-             `RepeatMasker -species fungi -help`".to_string()
+             `RepeatMasker -species fungi -help`"
+                .to_string(),
         ));
     }
 
@@ -83,7 +83,7 @@ pub fn run(
     let out_file = tmp_dir.path().join("input.fa.out");
     if !out_file.exists() {
         return Err(MycoNoteError::InvalidFormat(
-            "RepeatMasker did not produce an output file.".to_string()
+            "RepeatMasker did not produce an output file.".to_string(),
         ));
     }
 
@@ -94,10 +94,7 @@ pub fn run(
 ///
 /// Format (space-delimited, skip first 3 header lines):
 ///   score  div  del  ins  query  qStart  qEnd  qLeft  strand  repeat  class  rStart  rEnd  rLeft  id
-fn parse_rm_out(
-    path: &std::path::Path,
-    min_length: usize,
-) -> Result<Vec<MaskedRegion>> {
+fn parse_rm_out(path: &std::path::Path, min_length: usize) -> Result<Vec<MaskedRegion>> {
     use std::io::BufRead;
 
     let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
@@ -105,16 +102,22 @@ fn parse_rm_out(
     let mut regions = Vec::new();
 
     for (i, line) in reader.lines().enumerate() {
-        if i < 3 { continue; } // skip header lines
+        if i < 3 {
+            continue;
+        } // skip header lines
         let line = line.map_err(MycoNoteError::Io)?;
         let cols: Vec<&str> = line.split_whitespace().collect();
-        if cols.len() < 9 { continue; }
+        if cols.len() < 9 {
+            continue;
+        }
 
         let seqid = cols[4].to_string();
         let start: usize = cols[5].parse().unwrap_or(0);
-        let end:   usize = cols[6].parse().unwrap_or(0);
+        let end: usize = cols[6].parse().unwrap_or(0);
 
-        if end.saturating_sub(start) < min_length { continue; }
+        if end.saturating_sub(start) < min_length {
+            continue;
+        }
 
         // RepeatMasker uses 1-based inclusive; convert to 0-based half-open
         regions.push(MaskedRegion {
@@ -124,6 +127,9 @@ fn parse_rm_out(
         });
     }
 
-    println!("  RepeatMasker: {} repeat regions identified", regions.len());
+    println!(
+        "  RepeatMasker: {} repeat regions identified",
+        regions.len()
+    );
     Ok(regions)
 }

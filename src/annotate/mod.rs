@@ -1,3 +1,12 @@
+pub mod antismash;
+pub mod busco;
+pub mod cazyme;
+pub mod db;
+pub mod eggnog;
+pub mod genetic_code;
+pub mod go;
+pub mod interproscan;
+pub mod merops;
 /// Functional annotation pipeline
 ///
 /// Assigns biological function to predicted genes by:
@@ -10,22 +19,14 @@
 /// is absent or a database has not been downloaded.
 ///
 /// Download databases with: `myconote annotate --download-dbs`
-
 pub mod mmseqs;
 pub mod pfam;
-pub mod go;
-pub mod busco;
-pub mod db;
-pub mod interproscan;
-pub mod eggnog;
-pub mod cazyme;
 pub mod secretome;
-pub mod antismash;
-pub mod merops;
+pub mod trnascan;
 
-use crate::utils::error::{MycoNoteError, Result};
 use crate::predict::kingdom::Kingdom;
 use crate::progress;
+use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -37,33 +38,33 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub struct AnnotateConfig {
     /// Predicted gene GFF3 (output of `myconote predict`)
-    pub gff:          PathBuf,
+    pub gff: PathBuf,
     /// Genome FASTA (masked or unmasked)
-    pub fasta:        PathBuf,
+    pub fasta: PathBuf,
     /// Output directory
-    pub out_dir:      PathBuf,
+    pub out_dir: PathBuf,
     /// Kingdom (affects BUSCO lineage selection)
-    pub kingdom:      Kingdom,
+    pub kingdom: Kingdom,
     /// Locus tag prefix (must match the one used in `predict`)
     pub locus_prefix: String,
     /// Organism name for report header
-    pub organism:     Option<String>,
+    pub organism: Option<String>,
     /// Parallel threads
-    pub threads:      usize,
+    pub threads: usize,
     /// Run MMseqs2 homology search
-    pub run_mmseqs:   bool,
+    pub run_mmseqs: bool,
     /// Run hmmscan Pfam domain search
-    pub run_pfam:     bool,
+    pub run_pfam: bool,
     /// Run BUSCO completeness check
-    pub run_busco:    bool,
+    pub run_busco: bool,
     /// Path to Swiss-Prot MMseqs2 database (auto-detected from db_dir)
     pub swissprot_db: Option<PathBuf>,
     /// Path to Pfam-A HMM database (auto-detected from db_dir)
-    pub pfam_db:      Option<PathBuf>,
+    pub pfam_db: Option<PathBuf>,
     /// Directory where databases are stored (default: ~/.myconote/dbs)
-    pub db_dir:       PathBuf,
+    pub db_dir: PathBuf,
     /// E-value cutoff for MMseqs2 and hmmscan
-    pub evalue:       f64,
+    pub evalue: f64,
     /// Minimum sequence identity for MMseqs2 hits (0.0–1.0)
     pub min_identity: f64,
     /// Run InterProScan via EBI REST API (requires internet; very thorough)
@@ -73,81 +74,94 @@ pub struct AnnotateConfig {
 
     // ── New annotation modules ────────────────────────────────────────────
     /// Run EggNog-mapper (COG/NOG functional categories)
-    pub run_eggnog:       bool,
+    pub run_eggnog: bool,
     /// Path to EggNog-mapper database dir (default: auto-detect)
-    pub eggnog_db:        Option<PathBuf>,
+    pub eggnog_db: Option<PathBuf>,
     /// Pre-computed emapper.annotations file (skip running emapper)
-    pub eggnog_results:   Option<PathBuf>,
+    pub eggnog_results: Option<PathBuf>,
 
     /// Run CAZyme annotation (dbCAN / DIAMOND vs dbCAN database)
-    pub run_cazyme:       bool,
+    pub run_cazyme: bool,
     /// Path to dbCAN diamond database (.dmnd) for fallback DIAMOND search
-    pub cazyme_db:        Option<PathBuf>,
+    pub cazyme_db: Option<PathBuf>,
 
     /// Run secretome prediction (SignalP + TMHMM)
-    pub run_secretome:    bool,
+    pub run_secretome: bool,
     /// SignalP organism type: "euk" (default), "gram+", "gram-"
     pub signalp_organism: String,
 
     /// Run antiSMASH BGC cluster prediction
-    pub run_antismash:    bool,
+    pub run_antismash: bool,
     /// Pre-computed antiSMASH output directory (skip running antiSMASH)
-    pub antismash_dir:    Option<PathBuf>,
+    pub antismash_dir: Option<PathBuf>,
     /// antiSMASH taxon: "fungi" | "bacteria" | "plants"
-    pub antismash_taxon:  String,
+    pub antismash_taxon: String,
 
     /// Run MEROPS protease annotation (DIAMOND vs merops.dmnd)
-    pub run_merops:       bool,
+    pub run_merops: bool,
     /// Path to MEROPS DIAMOND database (auto-detected from db_dir)
-    pub merops_db:        Option<PathBuf>,
+    pub merops_db: Option<PathBuf>,
+
+    // ── tRNA + genetic code ──────────────────────────────────────────────
+    /// Run tRNAscan-SE for tRNA gene prediction
+    pub run_trnascan: bool,
+    /// tRNAscan mode: "eukaryotic" | "mitochondrial" | "general"
+    pub trnascan_mode: String,
+    /// Genetic code table (1=standard, 12=Candida CTG, etc.)
+    pub genetic_code: u8,
 }
 
 impl Default for AnnotateConfig {
     fn default() -> Self {
         let db_dir = dirs_home().join(".myconote").join("dbs");
         Self {
-            gff:          PathBuf::new(),
-            fasta:        PathBuf::new(),
-            out_dir:      PathBuf::from("annotate_out"),
-            kingdom:      Kingdom::Fungi,
+            gff: PathBuf::new(),
+            fasta: PathBuf::new(),
+            out_dir: PathBuf::from("annotate_out"),
+            kingdom: Kingdom::Fungi,
             locus_prefix: "GENE".to_string(),
-            organism:     None,
-            threads:      4,
-            run_mmseqs:   true,
-            run_pfam:     true,
-            run_busco:    true,
+            organism: None,
+            threads: 4,
+            run_mmseqs: true,
+            run_pfam: true,
+            run_busco: true,
             swissprot_db: None,
-            pfam_db:      None,
+            pfam_db: None,
             db_dir,
-            evalue:              1e-5,
-            run_interproscan:    false,
-            interproscan_email:  String::new(),
-            min_identity:        0.3,
+            evalue: 1e-5,
+            run_interproscan: false,
+            interproscan_email: String::new(),
+            min_identity: 0.3,
 
-            run_eggnog:       false,
-            eggnog_db:        None,
-            eggnog_results:   None,
+            run_eggnog: false,
+            eggnog_db: None,
+            eggnog_results: None,
 
-            run_cazyme:       false,
-            cazyme_db:        None,
+            run_cazyme: false,
+            cazyme_db: None,
 
-            run_secretome:    false,
+            run_secretome: false,
             signalp_organism: "euk".to_string(),
 
-            run_antismash:    false,
-            antismash_dir:    None,
-            antismash_taxon:  "fungi".to_string(),
+            run_antismash: false,
+            antismash_dir: None,
+            antismash_taxon: "fungi".to_string(),
 
-            run_merops:       false,
-            merops_db:        None,
+            run_merops: false,
+            merops_db: None,
+
+            run_trnascan: false,
+            trnascan_mode: "eukaryotic".to_string(),
+            genetic_code: 1,
         }
     }
 }
 
 fn dirs_home() -> PathBuf {
     std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .unwrap_or_else(|_| std::env::temp_dir())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,17 +170,17 @@ fn dirs_home() -> PathBuf {
 
 #[derive(Debug, Clone, Default)]
 pub struct GeneAnnotation {
-    pub locus_tag:    String,
+    pub locus_tag: String,
     /// Best Swiss-Prot hit description
-    pub product:      Option<String>,
+    pub product: Option<String>,
     /// Matched UniProt accession
-    pub uniprot_acc:  Option<String>,
+    pub uniprot_acc: Option<String>,
     /// Swiss-Prot hit identity (0–100)
-    pub identity:     Option<f64>,
+    pub identity: Option<f64>,
     /// e-value of best hit
-    pub evalue:       Option<f64>,
+    pub evalue: Option<f64>,
     /// GO terms assigned (from UniProt mapping)
-    pub go_terms:     Vec<String>,
+    pub go_terms: Vec<String>,
     /// Pfam domain IDs found
     pub pfam_domains: Vec<String>,
     /// Whether BUSCO marked this as complete (if applicable)
@@ -174,7 +188,7 @@ pub struct GeneAnnotation {
     /// InterPro accessions from InterProScan (IPR...)
     pub ipr_accessions: Vec<String>,
     /// Additional databases from InterProScan (TIGRFAM, Gene3D, etc.)
-    pub ipr_databases:  Vec<String>,
+    pub ipr_databases: Vec<String>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,14 +197,16 @@ pub struct GeneAnnotation {
 
 #[derive(Debug, Default)]
 pub struct AnnotationResults {
-    pub genes:        HashMap<String, GeneAnnotation>,
+    pub genes: HashMap<String, GeneAnnotation>,
     pub busco_summary: Option<busco::BuscoSummary>,
 }
 
 impl AnnotationResults {
     /// Annotated fraction (genes with a product description)
     pub fn annotated_fraction(&self) -> f64 {
-        if self.genes.is_empty() { return 0.0; }
+        if self.genes.is_empty() {
+            return 0.0;
+        }
         let ann = self.genes.values().filter(|g| g.product.is_some()).count();
         ann as f64 / self.genes.len() as f64
     }
@@ -205,12 +221,14 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     // ── Validate inputs ───────────────────────────────────────────────────────
     if !config.gff.exists() {
         return Err(MycoNoteError::InvalidFormat(format!(
-            "GFF3 not found: {}", config.gff.display()
+            "GFF3 not found: {}",
+            config.gff.display()
         )));
     }
     if !config.fasta.exists() {
         return Err(MycoNoteError::InvalidFormat(format!(
-            "FASTA not found: {}", config.fasta.display()
+            "FASTA not found: {}",
+            config.fasta.display()
         )));
     }
 
@@ -234,15 +252,23 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     progress::step(step, total_steps, "Extracting protein sequences…");
     let pb = progress::spinner("Translating CDS features…");
     let proteins_fa = config.out_dir.join("proteins.fa");
-    let gene_ids = extract_proteins(&config.gff, &config.fasta, &proteins_fa)?;
+    let gene_ids = extract_proteins(
+        &config.gff,
+        &config.fasta,
+        &proteins_fa,
+        config.genetic_code,
+    )?;
     progress::finish_spinner(&pb, format!("{} proteins extracted", gene_ids.len()));
 
     let mut results = AnnotationResults::default();
     for id in &gene_ids {
-        results.genes.insert(id.clone(), GeneAnnotation {
-            locus_tag: id.clone(),
-            ..Default::default()
-        });
+        results.genes.insert(
+            id.clone(),
+            GeneAnnotation {
+                locus_tag: id.clone(),
+                ..Default::default()
+            },
+        );
     }
 
     // ── MMseqs2 homology ──────────────────────────────────────────────────────
@@ -280,7 +306,11 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
             match interproscan::run(&proteins_fa, &ipr_tsv, &config.interproscan_email) {
                 Ok(ipr_map) => {
                     let n_with_hits = ipr_map.values().filter(|v| !v.is_empty()).count();
-                    println!("  InterProScan: {}/{} proteins have hits", n_with_hits, gene_ids.len());
+                    println!(
+                        "  InterProScan: {}/{} proteins have hits",
+                        n_with_hits,
+                        gene_ids.len()
+                    );
                     merge_interproscan_hits(&mut results, ipr_map);
                 }
                 Err(e) => eprintln!("  ⚠  InterProScan failed: {}", e),
@@ -291,14 +321,24 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     // ── GO term assignment (from MMseqs2 UniProt hits) ────────────────────────
     {
         let go_tsv = config.out_dir.join("go_terms.tsv");
-        let uniprot_accs: Vec<String> = results.genes.values()
+        let uniprot_accs: Vec<String> = results
+            .genes
+            .values()
             .filter_map(|g| g.uniprot_acc.clone())
             .collect();
         if !uniprot_accs.is_empty() {
             let pb2 = progress::spinner("Fetching GO terms from UniProt…");
             match go::assign_go_terms(&uniprot_accs, &go_tsv) {
                 Ok(go_map) => {
-                    progress::finish_spinner(&pb2, format!("GO terms for {} genes", go_map.len()));
+                    let with_go = go_map.values().filter(|v| !v.is_empty()).count();
+                    progress::finish_spinner(
+                        &pb2,
+                        format!(
+                            "GO terms for {} / {} genes (via UniProt)",
+                            with_go,
+                            go_map.len()
+                        ),
+                    );
                     merge_go_terms(&mut results, go_map);
                 }
                 Err(e) => progress::warn_spinner(&pb2, format!("GO assignment failed: {}", e)),
@@ -334,34 +374,80 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     if config.run_busco {
         step += 1;
         let lineage = config.kingdom.busco_lineage();
-        progress::step(step, total_steps, &format!("BUSCO completeness ({})…", lineage));
+        progress::step(
+            step,
+            total_steps,
+            &format!("BUSCO completeness ({})…", lineage),
+        );
         let pb2 = progress::spinner(format!("Running BUSCO (lineage: {})…", lineage));
         let busco_dir = config.out_dir.join("busco");
         match busco::run(&proteins_fa, lineage, &busco_dir, config.threads) {
             Ok(summary) => {
-                progress::finish_spinner(&pb2, format!(
-                    "BUSCO: {:.1}% complete ({} single, {} dup, {} missing)",
-                    summary.percent_complete(), summary.single_copy,
-                    summary.duplicated, summary.missing,
-                ));
+                progress::finish_spinner(
+                    &pb2,
+                    format!(
+                        "BUSCO: {:.1}% complete ({} single, {} dup, {} missing)",
+                        summary.percent_complete(),
+                        summary.single_copy,
+                        summary.duplicated,
+                        summary.missing,
+                    ),
+                );
                 results.busco_summary = Some(summary);
             }
             Err(e) => progress::warn_spinner(&pb2, format!("BUSCO failed (non-fatal): {}", e)),
         }
     }
 
+    // ── tRNAscan-SE tRNA prediction ──────────────────────────────────────────
+    if config.run_trnascan {
+        let pb_trna = progress::spinner("Running tRNAscan-SE…");
+        let trna_dir = config.out_dir.join("trnascan");
+        let trna_cfg = trnascan::TrnaScanConfig {
+            mode: config.trnascan_mode.clone(),
+            threads: config.threads,
+            ..trnascan::TrnaScanConfig::default()
+        };
+        match trnascan::run_trnascan(&config.fasta, &trna_dir, &trna_cfg) {
+            Ok(trna_result) => {
+                progress::finish_spinner(
+                    &pb_trna,
+                    format!("tRNAscan-SE: {} tRNA genes found", trna_result.total),
+                );
+                trna_result.summarize();
+                // Write tRNA GFF3
+                let trna_gff = config.out_dir.join("trnascan.gff3");
+                if let Err(e) =
+                    trnascan::write_trna_gff3(&trna_result.trnas, &trna_gff, &config.locus_prefix)
+                {
+                    eprintln!("  Warning: failed to write tRNA GFF3: {}", e);
+                }
+            }
+            Err(e) => {
+                progress::warn_spinner(&pb_trna, format!("tRNAscan-SE failed (non-fatal): {}", e))
+            }
+        }
+    }
+
     // ── MEROPS protease annotation ────────────────────────────────────────────
     if config.run_merops {
         let merops_dir = config.out_dir.join("merops");
-        let db_dir = config.merops_db.as_ref()
+        let db_dir = config
+            .merops_db
+            .as_ref()
             .and_then(|p| p.parent().map(|d| d.to_path_buf()))
             .unwrap_or_else(|| config.db_dir.clone());
         let pb2 = progress::spinner("Running MEROPS protease annotation…");
-        match merops::run_merops(&proteins_fa, &db_dir, &merops_dir, config.threads, config.evalue) {
+        match merops::run_merops(
+            &proteins_fa,
+            &db_dir,
+            &merops_dir,
+            config.threads,
+            config.evalue,
+        ) {
             Ok(hits_map) if !hits_map.is_empty() => {
                 let merops_tsv = config.out_dir.join("merops_hits.tsv");
-                let n = merops::write_merops_table(&hits_map, &merops_tsv)
-                    .unwrap_or(0);
+                let n = merops::write_merops_table(&hits_map, &merops_tsv).unwrap_or(0);
                 progress::finish_spinner(&pb2, format!("{} protease genes annotated", n));
                 merops::print_merops_summary(&hits_map);
             }
@@ -375,6 +461,32 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     write_annotated_gff(&config.gff, &annotated_gff, &results)?;
     println!("  ✓  Annotated GFF3 → {}", annotated_gff.display());
 
+    // ── Validate output GFF3 ────────────────────────────────────────────────
+    match crate::utils::validation::validate_gff3(&annotated_gff) {
+        Ok(validation) => {
+            if !validation.is_valid() {
+                println!(
+                    "  ⚠  Output GFF3 has {} validation issue(s) — see annotation_report.txt",
+                    validation.errors.len()
+                );
+            }
+        }
+        Err(_) => {} // validation failure is non-fatal
+    }
+
+    // ── Validate output protein FASTA ────────────────────────────────────────
+    match crate::utils::validation::validate_protein_fasta(&proteins_fa) {
+        Ok(pval) => {
+            if !pval.internal_stops.is_empty() {
+                println!(
+                    "  ⚠  {} protein(s) have internal stop codons",
+                    pval.internal_stops.len()
+                );
+            }
+        }
+        Err(_) => {}
+    }
+
     // ── Write functional annotation TSV ──────────────────────────────────────
     let annot_tsv = config.out_dir.join("annotations.tsv");
     write_annotation_tsv(&annot_tsv, &results)?;
@@ -384,8 +496,10 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     let report_path = config.out_dir.join("annotation_report.txt");
     write_report(&report_path, config, &results)?;
     println!("  ✓  Report → {}", report_path.display());
-    println!("  Annotated: {:.1}% of genes have a functional description",
-        results.annotated_fraction() * 100.0);
+    println!(
+        "  Annotated: {:.1}% of genes have a functional description",
+        results.annotated_fraction() * 100.0
+    );
 
     Ok(results)
 }
@@ -397,12 +511,13 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
 /// Extract translated CDS sequences for all genes → proteins.fa
 /// Returns list of locus_tag / gene IDs extracted.
 fn extract_proteins(
-    gff_path:  &Path,
+    gff_path: &Path,
     fasta_path: &Path,
-    out_fa:    &Path,
+    out_fa: &Path,
+    genetic_code_table: u8,
 ) -> Result<Vec<String>> {
-    use crate::parser::gff::GFFReader;
     use crate::parser::fasta::read_fasta_index;
+    use crate::parser::gff::GFFReader;
 
     let fasta_index = read_fasta_index(fasta_path)?;
     let records: Vec<_> = GFFReader::from_path(gff_path)?
@@ -412,11 +527,13 @@ fn extract_proteins(
     // Collect CDS records grouped by gene (via Parent chain)
     let mut gene_cds: HashMap<String, Vec<_>> = HashMap::new();
     for rec in &records {
-        if rec.feature_type != "CDS" { continue; }
+        if rec.feature_type != "CDS" {
+            continue;
+        }
         // Walk up Parent chain to find gene locus_tag
         let parent = match rec.parent() {
             Some(p) => p.clone(),
-            None    => continue,
+            None => continue,
         };
         gene_cds.entry(parent).or_default().push(rec.clone());
     }
@@ -426,13 +543,15 @@ fn extract_proteins(
 
     for (mrna_id, mut cds_list) in gene_cds {
         // Find the gene parent of this mRNA
-        let gene_id = records.iter()
+        let gene_id = records
+            .iter()
             .find(|r| r.id().map(|id| id == &mrna_id).unwrap_or(false))
             .and_then(|r| r.parent())
             .cloned()
             .unwrap_or_else(|| mrna_id.clone());
 
-        let locus_tag = records.iter()
+        let locus_tag = records
+            .iter()
             .find(|r| r.id().map(|id| id == &gene_id).unwrap_or(false))
             .and_then(|r| r.attributes.get("locus_tag"))
             .cloned()
@@ -444,7 +563,7 @@ fn extract_proteins(
         // Get genome sequence for this seqid
         let seq_rec = match fasta_index.get(&cds_list[0].seqid) {
             Some(s) => s,
-            None    => continue,
+            None => continue,
         };
 
         // Concatenate CDS bases (1-based inclusive)
@@ -460,9 +579,13 @@ fn extract_proteins(
             cds_seq = crate::parser::fasta::reverse_complement(&cds_seq);
         }
 
-        // Translate to protein
-        let protein = translate_dna(&cds_seq);
-        if protein.len() < 10 { continue; }  // skip very short ORFs
+        // Translate to protein (genetic code-aware)
+        let gc = genetic_code::GeneticCode::from_table_number(genetic_code_table)
+            .unwrap_or(genetic_code::GeneticCode::Standard);
+        let protein = gc.translate(&cds_seq);
+        if protein.len() < 10 {
+            continue;
+        } // skip very short ORFs
 
         writeln!(out, ">{}", locus_tag).map_err(MycoNoteError::Io)?;
         for chunk in protein.as_bytes().chunks(60) {
@@ -477,6 +600,8 @@ fn extract_proteins(
 }
 
 /// Standard genetic code translation (stop = *)
+/// Retained for backwards compatibility; prefer genetic_code::GeneticCode::translate()
+#[allow(dead_code)]
 fn translate_dna(dna: &str) -> String {
     let bytes = dna.as_bytes();
     let mut prot = String::with_capacity(bytes.len() / 3);
@@ -484,17 +609,20 @@ fn translate_dna(dna: &str) -> String {
     while i + 2 < bytes.len() {
         let codon = [
             bytes[i].to_ascii_uppercase(),
-            bytes[i+1].to_ascii_uppercase(),
-            bytes[i+2].to_ascii_uppercase(),
+            bytes[i + 1].to_ascii_uppercase(),
+            bytes[i + 2].to_ascii_uppercase(),
         ];
         prot.push(codon_to_aa(&codon));
         i += 3;
     }
     // Remove trailing stop codon if present
-    if prot.ends_with('*') { prot.pop(); }
+    if prot.ends_with('*') {
+        prot.pop();
+    }
     prot
 }
 
+#[allow(dead_code)]
 fn codon_to_aa(c: &[u8; 3]) -> char {
     match c {
         b"TTT" | b"TTC" => 'F',
@@ -529,7 +657,9 @@ fn codon_to_aa(c: &[u8; 3]) -> char {
 
 fn resolve_swissprot(config: &AnnotateConfig) -> Option<PathBuf> {
     if let Some(ref p) = config.swissprot_db {
-        if p.exists() { return Some(p.clone()); }
+        if p.exists() {
+            return Some(p.clone());
+        }
     }
     // Look in db_dir
     let candidates = [
@@ -541,7 +671,9 @@ fn resolve_swissprot(config: &AnnotateConfig) -> Option<PathBuf> {
 
 fn resolve_pfam(config: &AnnotateConfig) -> Option<PathBuf> {
     if let Some(ref p) = config.pfam_db {
-        if p.exists() { return Some(p.clone()); }
+        if p.exists() {
+            return Some(p.clone());
+        }
     }
     let candidates = [
         config.db_dir.join("pfam").join("Pfam-A.hmm"),
@@ -558,10 +690,10 @@ fn merge_mmseqs_hits(results: &mut AnnotationResults, hits: Vec<mmseqs::MmseqsHi
     for hit in hits {
         if let Some(gene) = results.genes.get_mut(&hit.query_id) {
             if gene.product.is_none() {
-                gene.product      = Some(hit.description.clone());
-                gene.uniprot_acc  = Some(hit.target_id.clone());
-                gene.identity     = Some(hit.identity);
-                gene.evalue       = Some(hit.evalue);
+                gene.product = Some(hit.description.clone());
+                gene.uniprot_acc = Some(hit.target_id.clone());
+                gene.identity = Some(hit.identity);
+                gene.evalue = Some(hit.evalue);
             }
         }
     }
@@ -571,7 +703,13 @@ fn merge_go_terms(results: &mut AnnotationResults, go_map: HashMap<String, Vec<S
     for gene in results.genes.values_mut() {
         if let Some(ref acc) = gene.uniprot_acc.clone() {
             if let Some(terms) = go_map.get(acc) {
-                gene.go_terms = terms.clone();
+                // Extend rather than replace — preserve GO terms already added
+                // by InterProScan (merge_interproscan_hits runs first).
+                for t in terms {
+                    if !gene.go_terms.contains(t) {
+                        gene.go_terms.push(t.clone());
+                    }
+                }
             }
         }
     }
@@ -612,8 +750,10 @@ fn merge_interproscan_hits(
                     }
                 }
                 // Add product description if not yet set
-                if gene.product.is_none() && !hit.db_desc.is_empty()
-                    && hit.db_desc != "Uncharacterised protein" {
+                if gene.product.is_none()
+                    && !hit.db_desc.is_empty()
+                    && hit.db_desc != "Uncharacterised protein"
+                {
                     gene.product = Some(hit.db_desc.clone());
                 }
             }
@@ -627,9 +767,9 @@ fn merge_interproscan_hits(
 
 /// Copy input GFF3, adding product= and Dbxref= attributes to gene features.
 fn write_annotated_gff(
-    input_gff:  &Path,
+    input_gff: &Path,
     output_gff: &Path,
-    results:    &AnnotationResults,
+    results: &AnnotationResults,
 ) -> Result<()> {
     use crate::parser::gff::GFFReader;
 
@@ -637,10 +777,15 @@ fn write_annotated_gff(
     writeln!(out, "##gff-version 3").map_err(MycoNoteError::Io)?;
 
     for rec_res in GFFReader::from_path(input_gff)? {
-        let mut rec = match rec_res { Ok(r) => r, Err(_) => continue };
+        let mut rec = match rec_res {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
 
         if rec.feature_type == "gene" {
-            let locus_tag = rec.attributes.get("locus_tag")
+            let locus_tag = rec
+                .attributes
+                .get("locus_tag")
                 .or_else(|| rec.attributes.get("ID"))
                 .cloned()
                 .unwrap_or_default();
@@ -661,8 +806,8 @@ fn write_annotated_gff(
                     rec.attributes.insert("Dbxref".into(), dbxrefs.join(","));
                 }
                 if !ann.go_terms.is_empty() {
-                    rec.attributes.insert("Ontology_term".into(),
-                        ann.go_terms.join(","));
+                    rec.attributes
+                        .insert("Ontology_term".into(), ann.go_terms.join(","));
                 }
                 // Note: Pfam domains + InterPro database entries
                 let mut notes: Vec<String> = Vec::new();
@@ -695,7 +840,9 @@ fn write_annotation_tsv(path: &Path, results: &AnnotationResults) -> Result<()> 
     genes.sort_by(|a, b| a.locus_tag.cmp(&b.locus_tag));
 
     for g in genes {
-        writeln!(f, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        writeln!(
+            f,
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             g.locus_tag,
             g.product.as_deref().unwrap_or("hypothetical protein"),
             g.uniprot_acc.as_deref().unwrap_or(""),
@@ -705,7 +852,8 @@ fn write_annotation_tsv(path: &Path, results: &AnnotationResults) -> Result<()> 
             g.pfam_domains.join("|"),
             g.ipr_accessions.join("|"),
             g.ipr_databases.join("|"),
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
     }
 
     Ok(())
@@ -725,27 +873,56 @@ fn write_report(path: &Path, config: &AnnotateConfig, results: &AnnotationResult
     writeln!(f, "").map_err(MycoNoteError::Io)?;
 
     let total = results.genes.len();
-    let annotated = results.genes.values().filter(|g| g.product.is_some()).count();
-    let with_go   = results.genes.values().filter(|g| !g.go_terms.is_empty()).count();
-    let with_pfam = results.genes.values().filter(|g| !g.pfam_domains.is_empty()).count();
+    let annotated = results
+        .genes
+        .values()
+        .filter(|g| g.product.is_some())
+        .count();
+    let with_go = results
+        .genes
+        .values()
+        .filter(|g| !g.go_terms.is_empty())
+        .count();
+    let with_pfam = results
+        .genes
+        .values()
+        .filter(|g| !g.pfam_domains.is_empty())
+        .count();
 
     writeln!(f, "Gene totals").map_err(MycoNoteError::Io)?;
     writeln!(f, "  Total genes             : {}", total).map_err(MycoNoteError::Io)?;
-    writeln!(f, "  With product description: {} ({:.1}%)",
-        annotated, annotated as f64 / total.max(1) as f64 * 100.0)
-        .map_err(MycoNoteError::Io)?;
-    writeln!(f, "  With GO terms           : {} ({:.1}%)",
-        with_go, with_go as f64 / total.max(1) as f64 * 100.0)
-        .map_err(MycoNoteError::Io)?;
-    writeln!(f, "  With Pfam domains       : {} ({:.1}%)",
-        with_pfam, with_pfam as f64 / total.max(1) as f64 * 100.0)
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "  With product description: {} ({:.1}%)",
+        annotated,
+        annotated as f64 / total.max(1) as f64 * 100.0
+    )
+    .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "  With GO terms           : {} ({:.1}%)",
+        with_go,
+        with_go as f64 / total.max(1) as f64 * 100.0
+    )
+    .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "  With Pfam domains       : {} ({:.1}%)",
+        with_pfam,
+        with_pfam as f64 / total.max(1) as f64 * 100.0
+    )
+    .map_err(MycoNoteError::Io)?;
 
     if let Some(ref b) = results.busco_summary {
         writeln!(f, "").map_err(MycoNoteError::Io)?;
         writeln!(f, "BUSCO ({} lineage)", b.lineage).map_err(MycoNoteError::Io)?;
-        writeln!(f, "  Complete    : {} ({:.1}%)", b.complete(), b.percent_complete())
-            .map_err(MycoNoteError::Io)?;
+        writeln!(
+            f,
+            "  Complete    : {} ({:.1}%)",
+            b.complete(),
+            b.percent_complete()
+        )
+        .map_err(MycoNoteError::Io)?;
         writeln!(f, "    Single    : {}", b.single_copy).map_err(MycoNoteError::Io)?;
         writeln!(f, "    Duplicated: {}", b.duplicated).map_err(MycoNoteError::Io)?;
         writeln!(f, "  Fragmented  : {}", b.fragmented).map_err(MycoNoteError::Io)?;

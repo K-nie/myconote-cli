@@ -2,31 +2,33 @@ use anyhow::Result;
 use std::env;
 use std::path::PathBuf;
 
-pub mod cli;
-pub mod parser;
-pub mod stats;
-pub mod blast;
 pub mod align;
+pub mod annotate;
+pub mod blast;
+pub mod check;
+pub mod cli;
+pub mod compare;
+pub mod convert;
+pub mod fix;
+pub mod install;
+pub mod learn;
+pub mod mask;
+pub mod names;
+pub mod parser;
 pub mod phylogeny;
 pub mod plot;
-pub mod compare;
-pub mod view;
-pub mod names;
-pub mod mask;
 pub mod predict;
-pub mod annotate;
 pub mod progress;
-pub mod utils;
-pub mod convert;
+pub mod remote;
+pub mod setup;
 pub mod sort;
+pub mod species;
+pub mod stats;
+pub mod submit;
 pub mod train;
 pub mod update;
-pub mod check;
-pub mod setup;
-pub mod install;
-pub mod fix;
-pub mod remote;
-pub mod species;
+pub mod utils;
+pub mod view;
 
 use parser::region::RegionSelector;
 use plot::PlotConfig;
@@ -38,12 +40,12 @@ fn has_help_flag(args: &[String]) -> bool {
 
 fn print_banner() {
     // Colour / style codes — gracefully degrade on non-ANSI terminals
-    let g = "\x1b[32m";   // green  (MYCONOTE)
-    let c = "\x1b[36m";   // cyan   (_CLI)
-    let b = "\x1b[1m";    // bold
-    let y = "\x1b[33m";   // yellow (version)
-    let d = "\x1b[2m";    // dim
-    let r = "\x1b[0m";    // reset
+    let g = "\x1b[32m"; // green  (MYCONOTE)
+    let c = "\x1b[36m"; // cyan   (_CLI)
+    let b = "\x1b[1m"; // bold
+    let y = "\x1b[33m"; // yellow (version)
+    let d = "\x1b[2m"; // dim
+    let r = "\x1b[0m"; // reset
 
     // ── MYCONOTE (green) ── and ── _CLI (cyan) ── side-by-side on one band ──
     let mc1 = "███╗   ███╗██╗   ██╗ ██████╗  ██████╗ ███╗   ██╗ ██████╗ ████████╗███████╗";
@@ -69,8 +71,10 @@ fn print_banner() {
     println!("{b}{g}  {mc6}{r}{b}{c}{cl6}{r}");
     println!();
     println!("  {b}Genome Annotation Pipeline{r}");
-    println!("  {y}v{}{r}  ·  Hittinger Lab  ·  University of Wisconsin–Madison",
-        env!("CARGO_PKG_VERSION"));
+    println!(
+        "  {y}v{}{r}  ·  Hittinger Lab  ·  Laboratory of Genetics  ·  UW–Madison",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("  {d}Benjamin Narh-Madey  ·  narhmadey@wisc.edu{r}");
     println!();
 }
@@ -88,7 +92,8 @@ fn print_main_help() {
     println!("  train    RNA-seq mediated training of Augustus/SNAP (Trinity + PASA)");
     println!("  predict  Predict genes (Augustus + SNAP + GlimmerHMM + GeneMark + EVM)");
     println!("  update   Refine gene models with RNA-seq evidence (PASA UTR extension)");
-    println!("  annotate Functionally annotate genes (MMseqs2 + Pfam + EggNog + CAZyme + MEROPS + ...)");
+    println!("  annotate Functionally annotate genes (MMseqs2 + Pfam + EggNog + CAZyme + MEROPS + tRNAscan + ...)");
+    println!("  submit   Prepare NCBI GenBank submission (validation + table2asn)");
     println!("  remote   Submit proteins to remote annotation servers (Phobius, InterProScan)");
     println!("\nAnalysis commands:");
     println!("  stats    Calculate statistics from annotation files");
@@ -105,6 +110,7 @@ fn print_main_help() {
     println!("  check    Check which external tools are installed");
     println!("  setup    Download and index reference databases");
     println!("  species  List available trained Augustus species");
+    println!("  learn    Interactive tutorial — learn myconote step by step (like R swirl)");
     println!("\nOptions for stats:");
     println!("  --format <json|csv|human>     Output format (default: human)");
     println!("  --taxon <group>               Taxonomic group for benchmarking");
@@ -145,9 +151,9 @@ fn main() -> Result<()> {
         print_version();
         return Ok(());
     }
-    
+
     let command = &args[1];
-    
+
     match command.as_str() {
         "sort" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -286,6 +292,9 @@ fn main() -> Result<()> {
                 println!("  --antismash-taxon <str>     antiSMASH taxon: fungi|bacteria|plants (default: fungi)");
                 println!("  --merops                    Run MEROPS protease annotation (DIAMOND vs merops.dmnd)");
                 println!("  --merops-db <file>          MEROPS DIAMOND database (default: auto-detect from db-dir)");
+                println!("  --trnascan                  Run tRNAscan-SE for tRNA gene prediction");
+                println!("  --trnascan-mode <mode>      tRNAscan mode: eukaryotic|mitochondrial|general (default: eukaryotic)");
+                println!("  --genetic-code <n>          Translation table (1=standard, 12=Candida CTG, etc.)");
                 println!("  --threads <n>               Threads (default: 4)");
                 println!("  --download-dbs              Download Swiss-Prot and Pfam databases");
                 println!("\nOutputs:");
@@ -743,7 +752,38 @@ fn main() -> Result<()> {
                 species::list_species(filter.as_deref());
             }
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species", command),
+        "learn" | "tutorial" | "swirl" => {
+            learn::run_learn(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
+        "submit" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli submit <annotated.gff3> --fasta <genome.fa> [options]");
+                println!("\nPrepares genome annotations for NCBI GenBank submission.");
+                println!("\nOptions:");
+                println!("  --fasta <file>              Genome FASTA (required)");
+                println!("  --output <dir>              Output directory (default: submit_out)");
+                println!("  --organism <name>           Organism name (required)");
+                println!("  --strain <name>             Strain name");
+                println!("  --bioproject <acc>          BioProject accession");
+                println!("  --biosample <acc>           BioSample accession");
+                println!("  --locus-prefix <str>        Locus tag prefix (default: MYCO)");
+                println!("  --genetic-code <n>          Translation table (default: 1)");
+                println!("  --email <address>           Contact email");
+                println!("  --validate-only             Only validate, do not generate files");
+                println!("\nOutputs:");
+                println!("  annotation.tbl              NCBI feature table");
+                println!("  annotation.fsa              Genome FASTA copy");
+                println!("  annotation.sqn              Sequin file (if table2asn available)");
+                println!("  template.sbt                Submission template");
+                println!("\nExamples:");
+                println!("  myconote-cli submit genes.gff3 --fasta genome.fa --organism 'Aspergillus niger'");
+                println!("  myconote-cli submit genes.gff3 --fasta genome.fa --organism 'Candida albicans' --genetic-code 12");
+                return Ok(());
+            }
+            let path = &args[2];
+            handle_submit(path, &args[3..])?;
+        }
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -757,7 +797,7 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
     let mut regions = Vec::new();
     let mut exclude = Vec::new();
     let mut primary_only = false;
-    
+
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -788,7 +828,7 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             _ => i += 1,
         }
     }
-    
+
     // Build region selector
     let mut selector = if !regions.is_empty() {
         RegionSelector::with_regions(&regions)?
@@ -797,14 +837,14 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
     } else {
         RegionSelector::new()
     };
-    
+
     for chr in &exclude {
         selector.exclude_chromosome(chr);
     }
-    
+
     // Calculate stats
     let stats = stats::GenomeStatistics::from_gff_with_selector(path, &selector, primary_only)?;
-    
+
     match format.as_str() {
         "json" => {
             let json = serde_json::to_string_pretty(&stats)?;
@@ -822,10 +862,13 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             println!("Min Gene Length,{}", stats.min_gene_length());
             println!("Max Gene Length,{}", stats.max_gene_length());
             println!("N50,{}", stats.n50());
-            
+
             for (chr, chr_stats) in &stats.chromosome_stats {
                 println!("Chromosome {}-Genes,{}", chr, chr_stats.gene_count);
-                println!("Chromosome {}-Transcripts,{}", chr, chr_stats.transcript_count);
+                println!(
+                    "Chromosome {}-Transcripts,{}",
+                    chr, chr_stats.transcript_count
+                );
                 println!("Chromosome {}-CDS,{}", chr, chr_stats.cds_count);
                 println!("Chromosome {}-Exons,{}", chr, chr_stats.exon_count);
             }
@@ -843,9 +886,9 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             if primary_only {
                 println!("\n🔍 Showing PRIMARY transcripts only");
             }
-            
+
             stats.print_summary();
-            
+
             if let Some(t) = taxon {
                 if let Some(warning) = stats.get_taxon_warning(&t) {
                     println!("\n{}", warning);
@@ -853,14 +896,14 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }
 
 fn handle_plot(path: &str, args: &[String]) -> Result<()> {
     let mut config = PlotConfig::default();
     let mut plot_type = "linear".to_string();
-    
+
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -895,22 +938,22 @@ fn handle_plot(path: &str, args: &[String]) -> Result<()> {
             _ => i += 1,
         }
     }
-    
+
     match plot_type.as_str() {
         "linear" => plot::generate_linear_plot(path, &config)?,
         "circular" => plot::generate_circular_plot(path, &config)?,
         _ => println!("Unknown plot type: {}", plot_type),
     }
-    
+
     Ok(())
 }
 
 fn handle_compare(paths: &[String]) -> Result<()> {
     use crate::compare::CompareConfig;
-    
+
     let mut config = CompareConfig::default();
     let args = &paths[1..]; // First path is the first genome, rest are args
-    
+
     // Parse options from the arguments
     let mut i = 0;
     while i < args.len() {
@@ -940,7 +983,7 @@ fn handle_compare(paths: &[String]) -> Result<()> {
             _ => i += 1,
         }
     }
-    
+
     // Collect genome paths (all arguments before the first option)
     let mut genome_paths = Vec::new();
     for path in paths {
@@ -949,12 +992,12 @@ fn handle_compare(paths: &[String]) -> Result<()> {
         }
         genome_paths.push(path);
     }
-    
+
     if genome_paths.len() < 2 {
         println!("Error: Need at least 2 genome files to compare");
         return Ok(());
     }
-    
+
     println!("\n🔬 Comparing {} genomes", genome_paths.len());
     compare::compare_genomes(&genome_paths, &config)?;
 
@@ -962,18 +1005,18 @@ fn handle_compare(paths: &[String]) -> Result<()> {
 }
 
 fn handle_view(path: &str, args: &[String]) -> Result<()> {
-    use view::{ViewConfig, BrowserType, generate_view};
     use names::NameResolver;
     use parser::GFFReader;
+    use view::{generate_view, BrowserType, ViewConfig};
 
     let mut config = ViewConfig {
         gff_path: PathBuf::from(path),
         ..ViewConfig::default()
     };
 
-    let mut names_file:  Option<String> = None;
-    let mut fetch_names  = false;
-    let mut taxon_id:    Option<u32> = None;
+    let mut names_file: Option<String> = None;
+    let mut fetch_names = false;
+    let mut taxon_id: Option<u32> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -1042,18 +1085,25 @@ fn handle_view(path: &str, args: &[String]) -> Result<()> {
                 .filter_map(|r| r.id().cloned())
                 .collect();
 
-            println!("🌐 Fetching names for {} genes (NCBI → UniProt → FungiDB)…", gene_ids.len());
+            println!(
+                "🌐 Fetching names for {} genes (NCBI → UniProt → FungiDB)…",
+                gene_ids.len()
+            );
             resolver.fetch_missing(&gene_ids, taxon_id);
         }
 
         // Copy into config.names
-        for (k, v) in resolver.to_tsv().lines()
-            .filter_map(|l| { let mut p = l.splitn(2,'\t'); Some((p.next()?.to_string(), p.next()?.to_string())) })
-        {
+        for (k, v) in resolver.to_tsv().lines().filter_map(|l| {
+            let mut p = l.splitn(2, '\t');
+            Some((p.next()?.to_string(), p.next()?.to_string()))
+        }) {
             config.names.insert(k, v);
         }
 
-        println!("   {} total gene names available for display", config.names.len());
+        println!(
+            "   {} total gene names available for display",
+            config.names.len()
+        );
     }
 
     generate_view(&config)?;
@@ -1068,12 +1118,12 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
     use std::path::Path;
 
     // ── Parse options ──────────────────────────────────────────────────────
-    let mut to_format:   Option<String> = None;
+    let mut to_format: Option<String> = None;
     let mut output_path: Option<String> = None;
-    let mut fasta_path:  Option<String> = None;
-    let mut organism:    Option<String> = None;
-    let mut sample:      Option<String> = None;
-    let mut qual_char:   char           = 'I';
+    let mut fasta_path: Option<String> = None;
+    let mut organism: Option<String> = None;
+    let mut sample: Option<String> = None;
+    let mut qual_char: char = 'I';
 
     let mut i = 0;
     while i < args.len() {
@@ -1115,28 +1165,32 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
         }
     };
 
-    let input_path  = Path::new(input);
-    let ext = input_path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let input_path = Path::new(input);
+    let ext = input_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
 
     // ── Auto-derive output path if not specified ───────────────────────────
     let out_path: PathBuf = match output_path {
         Some(ref p) => PathBuf::from(p),
         None => {
             let new_ext = match to {
-                "gtf"       => "gtf",
+                "gtf" => "gtf",
                 "bed" | "bed6" | "bed12" | "bedgraph" => "bed",
-                "table"     => "tsv",
-                "protein"   => "faa",
-                "genbank"   => "gbk",
-                "fastq"     => "fastq",
-                "fasta"     => "fasta",
-                "phylip"    => "phy",
-                "nexus"     => "nex",
-                "clustal"   => "aln",
+                "table" => "tsv",
+                "protein" => "faa",
+                "genbank" => "gbk",
+                "fastq" => "fastq",
+                "fasta" => "fasta",
+                "phylip" => "phy",
+                "nexus" => "nex",
+                "clustal" => "aln",
                 "consensus" => "fasta",
-                "annovar"   => "avinput",
-                "maf"       => "maf",
-                other       => other,
+                "annovar" => "avinput",
+                "maf" => "maf",
+                other => other,
             };
             input_path.with_extension(new_ext)
         }
@@ -1149,31 +1203,29 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
     // GFF3 conversions
     if matches!(ext.as_str(), "gff3" | "gff") {
         let n = match to {
-            "gtf" => {
-                convert::gff3_to_gtf(input_path, &out_path)?
-            }
-            "bed" | "bed6" => {
-                convert::gff3_to_bed(input_path, &out_path, &[])?
-            }
-            "bed12" => {
-                convert::gff3_to_bed12(input_path, &out_path)?
-            }
-            "bedgraph" => {
-                convert::gff3_to_bedgraph(input_path, &out_path, "gene")?
-            }
-            "table" | "tsv" => {
-                convert::gff3_to_table(input_path, &out_path)?
-            }
+            "gtf" => convert::gff3_to_gtf(input_path, &out_path)?,
+            "bed" | "bed6" => convert::gff3_to_bed(input_path, &out_path, &[])?,
+            "bed12" => convert::gff3_to_bed12(input_path, &out_path)?,
+            "bedgraph" => convert::gff3_to_bedgraph(input_path, &out_path, "gene")?,
+            "table" | "tsv" => convert::gff3_to_table(input_path, &out_path)?,
             "protein" | "faa" => {
                 let fa = require_fasta(&fasta_path, to)?;
                 convert::gff3_to_protein(input_path, Path::new(&fa), &out_path)?
             }
             "genbank" | "gbk" => {
-                handle_convert_genbank(input, fasta_path.as_deref(), &out_path, organism.as_deref())?;
+                handle_convert_genbank(
+                    input,
+                    fasta_path.as_deref(),
+                    &out_path,
+                    organism.as_deref(),
+                )?;
                 return Ok(());
             }
             other => {
-                eprintln!("Error: unsupported target format '{}' for GFF3 input.", other);
+                eprintln!(
+                    "Error: unsupported target format '{}' for GFF3 input.",
+                    other
+                );
                 eprintln!("Supported: gtf, bed, bed12, bedgraph, table, protein, genbank");
                 return Ok(());
             }
@@ -1197,7 +1249,10 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
                 convert::vcf_to_maf(input_path, &out_path, samp)?
             }
             other => {
-                eprintln!("Error: unsupported target format '{}' for VCF input.", other);
+                eprintln!(
+                    "Error: unsupported target format '{}' for VCF input.",
+                    other
+                );
                 eprintln!("Supported: bed, table, consensus, annovar, maf");
                 return Ok(());
             }
@@ -1212,7 +1267,10 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
             "fastq" | "fq" => convert::fasta_to_fastq(input_path, &out_path, qual_char)?,
             "table" | "tsv" => convert::fasta_to_table(input_path, &out_path)?,
             other => {
-                eprintln!("Error: unsupported target format '{}' for FASTA input.", other);
+                eprintln!(
+                    "Error: unsupported target format '{}' for FASTA input.",
+                    other
+                );
                 eprintln!("Supported: fastq, table");
                 return Ok(());
             }
@@ -1225,7 +1283,10 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
         let n = match to {
             "fasta" | "fa" => convert::fastq_to_fasta(input_path, &out_path)?,
             other => {
-                eprintln!("Error: unsupported target format '{}' for FASTQ input.", other);
+                eprintln!(
+                    "Error: unsupported target format '{}' for FASTQ input.",
+                    other
+                );
                 eprintln!("Supported: fasta");
                 return Ok(());
             }
@@ -1235,9 +1296,18 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
     }
 
     // Alignment format conversions
-    if matches!(ext.as_str(), "aln" | "phy" | "nex" | "nxs" | "nexus" | "phylip" | "clustal") {
-        if !matches!(to, "phylip" | "phy" | "nexus" | "nex" | "clustal" | "aln" | "fasta" | "fa") {
-            eprintln!("Error: unsupported target format '{}' for alignment input.", to);
+    if matches!(
+        ext.as_str(),
+        "aln" | "phy" | "nex" | "nxs" | "nexus" | "phylip" | "clustal"
+    ) {
+        if !matches!(
+            to,
+            "phylip" | "phy" | "nexus" | "nex" | "clustal" | "aln" | "fasta" | "fa"
+        ) {
+            eprintln!(
+                "Error: unsupported target format '{}' for alignment input.",
+                to
+            );
             eprintln!("Supported: phylip, nexus, clustal, fasta");
             return Ok(());
         }
@@ -1247,7 +1317,9 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
     }
 
     eprintln!("Error: unrecognised input file extension '.{}'.", ext);
-    eprintln!("Supported input types: .gff3, .gff, .vcf, .fasta, .fa, .fastq, .fq, .aln, .phy, .nex");
+    eprintln!(
+        "Supported input types: .gff3, .gff, .vcf, .fasta, .fa, .fastq, .fq, .aln, .phy, .nex"
+    );
     Ok(())
 }
 
@@ -1256,7 +1328,10 @@ fn require_fasta(fasta_path: &Option<String>, to: &str) -> Result<String> {
     match fasta_path {
         Some(p) => Ok(p.clone()),
         None => {
-            eprintln!("Error: --fasta <reference.fa> is required for '{}' output.", to);
+            eprintln!(
+                "Error: --fasta <reference.fa> is required for '{}' output.",
+                to
+            );
             Err(anyhow::anyhow!("missing --fasta argument"))
         }
     }
@@ -1264,13 +1339,13 @@ fn require_fasta(fasta_path: &Option<String>, to: &str) -> Result<String> {
 
 /// Inner helper for GFF3 → GenBank (keeps the detailed seqid-mismatch reporting).
 fn handle_convert_genbank(
-    gff_path:    &str,
-    fasta_path:  Option<&str>,
-    out_path:    &std::path::Path,
-    organism:    Option<&str>,
+    gff_path: &str,
+    fasta_path: Option<&str>,
+    out_path: &std::path::Path,
+    organism: Option<&str>,
 ) -> Result<()> {
-    use parser::{GFFReader, read_fasta_index};
     use parser::genbank::write_genbank;
+    use parser::{read_fasta_index, GFFReader};
     use std::fs::File;
     use std::io::BufWriter;
 
@@ -1285,7 +1360,9 @@ fn handle_convert_genbank(
     println!("  GFF3:     {}", gff_path);
     println!("  FASTA:    {}", fasta_path);
     println!("  Output:   {}", out_path.display());
-    if let Some(org) = organism { println!("  Organism: {}", org); }
+    if let Some(org) = organism {
+        println!("  Organism: {}", org);
+    }
     println!();
 
     print!("Reading GFF3 annotations... ");
@@ -1334,7 +1411,7 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
     use std::io::{BufRead, BufReader, Write as IoWrite};
 
     let mut output_path = String::new();
-    let mut fix_coords     = false;
+    let mut fix_coords = false;
     let mut remove_orphans = false;
     let mut min_length: u64 = 1;
 
@@ -1364,14 +1441,18 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
     }
 
     if output_path.is_empty() {
-        let p    = PathBuf::from(gff_path);
+        let p = PathBuf::from(gff_path);
         let stem = p.file_stem().unwrap_or_default().to_string_lossy();
-        let ext  = p.extension().unwrap_or_default().to_string_lossy();
-        let dir  = p.parent().unwrap_or(std::path::Path::new("."));
+        let ext = p.extension().unwrap_or_default().to_string_lossy();
+        let dir = p.parent().unwrap_or(std::path::Path::new("."));
         output_path = format!(
             "{}_clean.{}",
             dir.join(&*stem).display(),
-            if ext.is_empty() { "gff3".to_string() } else { ext.to_string() }
+            if ext.is_empty() {
+                "gff3".to_string()
+            } else {
+                ext.to_string()
+            }
         );
     }
 
@@ -1389,7 +1470,9 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
     for (line_num, line_res) in raw_reader.lines().enumerate() {
         let line = line_res?;
         let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') { continue; }
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
 
         // Attempt normal parse first
         match GFFRecord::from_line(trimmed, line_num + 1) {
@@ -1400,14 +1483,26 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
                 if fields.len() == 9 {
                     let swapped = format!(
                         "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-                        fields[0], fields[1], fields[2],
-                        fields[4], fields[3], // swap start/end
-                        fields[5], fields[6], fields[7], fields[8]
+                        fields[0],
+                        fields[1],
+                        fields[2],
+                        fields[4],
+                        fields[3], // swap start/end
+                        fields[5],
+                        fields[6],
+                        fields[7],
+                        fields[8]
                     );
                     match GFFRecord::from_line(&swapped, line_num + 1) {
                         Ok(rec) => {
-                            eprintln!("  🔧 Fixed swapped coords at line {} ({}..{} → {}..{})",
-                                line_num + 1, fields[3], fields[4], fields[4], fields[3]);
+                            eprintln!(
+                                "  🔧 Fixed swapped coords at line {} ({}..{} → {}..{})",
+                                line_num + 1,
+                                fields[3],
+                                fields[4],
+                                fields[4],
+                                fields[3]
+                            );
                             all_records.push(rec);
                         }
                         Err(_) => {
@@ -1424,14 +1519,15 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
         }
     }
 
-    let known_ids: HashSet<String> = all_records.iter()
+    let known_ids: HashSet<String> = all_records
+        .iter()
         .filter_map(|r| r.id().map(|s| s.clone()))
         .collect();
 
     // ── Pass 2: filter and write ──────────────────────────────────────────
-    let mut kept    = 0usize;
+    let mut kept = 0usize;
     let mut removed = 0usize;
-    let mut fixed   = 0usize;
+    let mut fixed = 0usize;
 
     let out_file = std::fs::File::create(&output_path)?;
     let mut writer = std::io::BufWriter::new(out_file);
@@ -1448,8 +1544,11 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
         if remove_orphans {
             if let Some(parent) = rec.parent() {
                 if !known_ids.contains(parent) {
-                    eprintln!("  ✂  Removing orphan {} (parent '{}' not found)",
-                        rec.id().map(|s| s.as_str()).unwrap_or("?"), parent);
+                    eprintln!(
+                        "  ✂  Removing orphan {} (parent '{}' not found)",
+                        rec.id().map(|s| s.as_str()).unwrap_or("?"),
+                        parent
+                    );
                     removed += 1;
                     continue;
                 }
@@ -1471,7 +1570,9 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
     if parse_errors > 0 {
         println!("  Unparseable lines skipped: {}", parse_errors);
     }
-    if fix_coords { println!("  Coords fixed:     {}", fixed); }
+    if fix_coords {
+        println!("  Coords fixed:     {}", fixed);
+    }
     println!("\n✓ Clean GFF3: {}", output_path);
 
     Ok(())
@@ -1482,9 +1583,9 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
-    use view::synteny::{SyntenyConfig, generate_synteny};
     use names::NameResolver;
     use parser::GFFReader;
+    use view::synteny::{generate_synteny, SyntenyConfig};
 
     let mut config = SyntenyConfig {
         gff1: PathBuf::from(gff1),
@@ -1494,7 +1595,7 @@ fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
 
     let mut names_file: Option<String> = None;
     let mut fetch_names = false;
-    let mut taxon_id:   Option<u32> = None;
+    let mut taxon_id: Option<u32> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -1572,13 +1673,17 @@ fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
             resolver.fetch_missing(&all_ids, taxon_id);
         }
 
-        for (k, v) in resolver.to_tsv().lines()
-            .filter_map(|l| { let mut p = l.splitn(2,'\t'); Some((p.next()?.to_string(), p.next()?.to_string())) })
-        {
+        for (k, v) in resolver.to_tsv().lines().filter_map(|l| {
+            let mut p = l.splitn(2, '\t');
+            Some((p.next()?.to_string(), p.next()?.to_string()))
+        }) {
             config.names.insert(k, v);
         }
 
-        println!("   {} gene names loaded for ribbon labels", config.names.len());
+        println!(
+            "   {} gene names loaded for ribbon labels",
+            config.names.len()
+        );
     }
 
     generate_synteny(&config)?;
@@ -1590,10 +1695,10 @@ fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_mask(fasta_path: &str, args: &[String]) -> Result<()> {
-    use mask::{MaskConfig, MaskEngine, run_masking};
+    use mask::{run_masking, MaskConfig, MaskEngine};
 
     let mut config = MaskConfig {
-        input:  std::path::PathBuf::from(fasta_path),
+        input: std::path::PathBuf::from(fasta_path),
         ..MaskConfig::default()
     };
 
@@ -1640,17 +1745,23 @@ fn handle_mask(fasta_path: &str, args: &[String]) -> Result<()> {
     if config.output == PathBuf::new() {
         let p = PathBuf::from(fasta_path);
         let stem = p.file_stem().unwrap_or_default().to_string_lossy();
-        let ext  = p.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
-        let dir  = p.parent().unwrap_or(std::path::Path::new("."));
+        let ext = p
+            .extension()
+            .map(|e| format!(".{}", e.to_string_lossy()))
+            .unwrap_or_default();
+        let dir = p.parent().unwrap_or(std::path::Path::new("."));
         config.output = dir.join(format!("{}_masked{}", stem, ext));
     }
 
-    let stats = run_masking(&config)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let stats = run_masking(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     println!("\n── Masking summary ──────────────────────────────────────────");
     println!("  Total bases   : {}", stats.total_bases);
-    println!("  Masked bases  : {} ({:.1}%)", stats.masked_bases, stats.percent_masked());
+    println!(
+        "  Masked bases  : {} ({:.1}%)",
+        stats.masked_bases,
+        stats.percent_masked()
+    );
     println!("  Repeat regions: {}", stats.repeat_regions);
     println!("  Output FASTA  : {}", config.output.display());
 
@@ -1662,8 +1773,8 @@ fn handle_mask(fasta_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
-    use predict::{PredictConfig, run_prediction};
     use predict::kingdom::Kingdom;
+    use predict::{run_prediction, PredictConfig};
 
     let mut config = PredictConfig {
         masked_fasta: PathBuf::from(fasta_path),
@@ -1725,6 +1836,26 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                 config.genemark_hints = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
+            "--protein-fasta" if i + 1 < args.len() => {
+                config.protein_fasta = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            "--max-intron" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.max_intron = n;
+                }
+                i += 2;
+            }
+            "--ploidy" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u8>() {
+                    config.ploidy = Some(n);
+                }
+                i += 2;
+            }
+            "--weights" if i + 1 < args.len() => {
+                config.weights_file = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
             "--threads" if i + 1 < args.len() => {
                 if let Ok(n) = args[i + 1].parse::<usize>() {
                     config.threads = n;
@@ -1735,15 +1866,23 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
         }
     }
 
-    let (_gff_path, gene_count) = run_prediction(&config)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let (_gff_path, gene_count) = run_prediction(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     println!("\n── Prediction complete ──────────────────────────────────────");
-    println!("  {} genes in {}/consensus.gff3", gene_count, config.out_dir.display());
-    println!("\n  Next step: myconote-cli annotate {}/consensus.gff3 \\",
-        config.out_dir.display());
+    println!(
+        "  {} genes in {}/consensus.gff3",
+        gene_count,
+        config.out_dir.display()
+    );
+    println!(
+        "\n  Next step: myconote-cli annotate {}/consensus.gff3 \\",
+        config.out_dir.display()
+    );
     println!("               --fasta {} \\", fasta_path);
-    println!("               --kingdom {} \\", format!("{:?}", config.kingdom).to_lowercase());
+    println!(
+        "               --kingdom {} \\",
+        format!("{:?}", config.kingdom).to_lowercase()
+    );
     println!("               --locus-prefix {} \\", config.locus_prefix);
     println!("               --interproscan --email <your@email.com>  # optional, very thorough");
 
@@ -1755,7 +1894,7 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
-    use annotate::{AnnotateConfig, run_annotation};
+    use annotate::{run_annotation, AnnotateConfig};
     use predict::kingdom::Kingdom;
 
     let mut config = AnnotateConfig {
@@ -1881,6 +2020,22 @@ fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
                 config.run_merops = true;
                 i += 2;
             }
+            // ── tRNAscan-SE ───────────────────────────────────────────────
+            "--trnascan" | "--trna" => {
+                config.run_trnascan = true;
+                i += 1;
+            }
+            "--trnascan-mode" if i + 1 < args.len() => {
+                config.trnascan_mode = args[i + 1].clone();
+                i += 2;
+            }
+            // ── Genetic code ──────────────────────────────────────────────
+            "--genetic-code" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u8>() {
+                    config.genetic_code = n;
+                }
+                i += 2;
+            }
             "--threads" if i + 1 < args.len() => {
                 if let Ok(n) = args[i + 1].parse::<usize>() {
                     config.threads = n;
@@ -1901,15 +2056,19 @@ fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
     let status = annotate::db::check_status(&config.db_dir);
     status.print();
 
-    let results = run_annotation(&config)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let results = run_annotation(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     println!("\n── Annotation complete ──────────────────────────────────────");
-    println!("  {:.1}% of genes functionally annotated",
-        results.annotated_fraction() * 100.0);
+    println!(
+        "  {:.1}% of genes functionally annotated",
+        results.annotated_fraction() * 100.0
+    );
     if let Some(ref b) = results.busco_summary {
-        println!("  BUSCO completeness: {:.1}% ({})",
-            b.percent_complete(), b.lineage);
+        println!(
+            "  BUSCO completeness: {:.1}% ({})",
+            b.percent_complete(),
+            b.lineage
+        );
     }
     println!("  Output directory: {}", config.out_dir.display());
 
@@ -1940,8 +2099,7 @@ fn handle_annotate_download_dbs(args: &[String]) -> Result<()> {
         }
     }
 
-    download_all(&db_dir, threads)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    download_all(&db_dir, threads).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     Ok(())
 }
@@ -1951,20 +2109,24 @@ fn handle_annotate_download_dbs(args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_sort(input: &str, args: &[String]) -> Result<()> {
-    use sort::{SortConfig, run_sort};
+    use sort::{run_sort, SortConfig};
 
     let mut config = SortConfig {
-        input:  PathBuf::from(input),
+        input: PathBuf::from(input),
         ..SortConfig::default()
     };
 
     // Default output: <stem>_sorted.<ext>
-    let p    = PathBuf::from(input);
+    let p = PathBuf::from(input);
     let stem = p.file_stem().unwrap_or_default().to_string_lossy();
-    let ext  = p.extension().map(|e| format!(".{}", e.to_str().unwrap_or("")))
-                 .unwrap_or_default();
-    config.output = p.parent().unwrap_or(std::path::Path::new("."))
-                     .join(format!("{}_sorted{}", stem, ext));
+    let ext = p
+        .extension()
+        .map(|e| format!(".{}", e.to_str().unwrap_or("")))
+        .unwrap_or_default();
+    config.output = p
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join(format!("{}_sorted{}", stem, ext));
 
     let mut i = 0;
     while i < args.len() {
@@ -2002,7 +2164,10 @@ fn handle_sort(input: &str, args: &[String]) -> Result<()> {
     println!("Sorting genome: {}", input);
     run_sort(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
     println!("\n✓ Sorted FASTA: {}", config.output.display());
-    println!("  Next step: myconote-cli mask {} --engine repeatmodeler", config.output.display());
+    println!(
+        "  Next step: myconote-cli mask {} --engine repeatmodeler",
+        config.output.display()
+    );
     Ok(())
 }
 
@@ -2011,7 +2176,7 @@ fn handle_sort(input: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_train(masked_fasta: &str, args: &[String]) -> Result<()> {
-    use train::{TrainConfig, run_training};
+    use train::{run_training, TrainConfig};
 
     let mut config = TrainConfig {
         masked_fasta: PathBuf::from(masked_fasta),
@@ -2022,19 +2187,22 @@ fn handle_train(masked_fasta: &str, args: &[String]) -> Result<()> {
     while i < args.len() {
         match args[i].as_str() {
             "--left" if i + 1 < args.len() => {
-                config.left_reads = args[i + 1].split(',')
+                config.left_reads = args[i + 1]
+                    .split(',')
                     .map(|p| PathBuf::from(p.trim()))
                     .collect();
                 i += 2;
             }
             "--right" if i + 1 < args.len() => {
-                config.right_reads = args[i + 1].split(',')
+                config.right_reads = args[i + 1]
+                    .split(',')
                     .map(|p| PathBuf::from(p.trim()))
                     .collect();
                 i += 2;
             }
             "--single" if i + 1 < args.len() => {
-                config.single_reads = args[i + 1].split(',')
+                config.single_reads = args[i + 1]
+                    .split(',')
                     .map(|p| PathBuf::from(p.trim()))
                     .collect();
                 i += 2;
@@ -2094,7 +2262,9 @@ fn handle_train(masked_fasta: &str, args: &[String]) -> Result<()> {
         && config.trinity_fasta.is_none()
     {
         eprintln!("Error: RNA-seq reads or a pre-assembled Trinity FASTA are required.");
-        eprintln!("Usage: myconote-cli train <genome.fa> --left R1.fq --right R2.fq --species myorg");
+        eprintln!(
+            "Usage: myconote-cli train <genome.fa> --left R1.fq --right R2.fq --species myorg"
+        );
         eprintln!("       myconote-cli train <genome.fa> --trinity trinity.fasta --species myorg");
         return Ok(());
     }
@@ -2108,7 +2278,7 @@ fn handle_train(masked_fasta: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
-    use update::{UpdateConfig, run_update};
+    use update::{run_update, UpdateConfig};
 
     let mut config = UpdateConfig {
         gff: PathBuf::from(gff_path),
@@ -2178,7 +2348,10 @@ fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
     }
 
     run_update(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
-    println!("\n  Next step: myconote-cli annotate update_out/updated.gff3 --fasta {}", config.fasta.display());
+    println!(
+        "\n  Next step: myconote-cli annotate update_out/updated.gff3 --fasta {}",
+        config.fasta.display()
+    );
     Ok(())
 }
 
@@ -2187,16 +2360,16 @@ fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_setup(args: &[String]) -> Result<()> {
-    use setup::{download_databases, check_databases, list_databases};
+    use setup::{check_databases, download_databases, list_databases};
 
     let db_dir_default = {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         PathBuf::from(home).join(".myconote").join("dbs")
     };
 
-    let mut db_dir  = db_dir_default;
-    let mut keys:   Vec<String> = Vec::new();
-    let mut force   = false;
+    let mut db_dir = db_dir_default;
+    let mut keys: Vec<String> = Vec::new();
+    let mut force = false;
     let mut do_list = false;
     let mut do_check = false;
 
@@ -2214,11 +2387,22 @@ fn handle_setup(args: &[String]) -> Result<()> {
                     i += 1;
                 }
             }
-            "--force" => { force = true; i += 1; }
-            "--list"  => { do_list  = true; i += 1; }
-            "--check" => { do_check = true; i += 1; }
+            "--force" => {
+                force = true;
+                i += 1;
+            }
+            "--list" => {
+                do_list = true;
+                i += 1;
+            }
+            "--check" => {
+                do_check = true;
+                i += 1;
+            }
             // Legacy: myconote annotate --download-dbs
-            "--download-dbs" | "--download" => { i += 1; }
+            "--download-dbs" | "--download" => {
+                i += 1;
+            }
             _ => i += 1,
         }
     }
@@ -2232,8 +2416,7 @@ fn handle_setup(args: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    download_databases(&db_dir, &keys, force)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    download_databases(&db_dir, &keys, force).map_err(|e| anyhow::anyhow!("{}", e))?;
     Ok(())
 }
 
@@ -2242,15 +2425,18 @@ fn handle_setup(args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_fix(gbk_path: &str, args: &[String]) -> Result<()> {
-    use fix::{FixConfig, run_fix};
+    use fix::{run_fix, FixConfig};
 
     let input = PathBuf::from(gbk_path);
     let default_output = {
-        let p    = PathBuf::from(gbk_path);
+        let p = PathBuf::from(gbk_path);
         let stem = p.file_stem().unwrap_or_default().to_string_lossy();
-        let ext  = p.extension().map(|e| format!(".{}", e.to_str().unwrap_or("")))
-                     .unwrap_or_else(|| ".gbk".to_string());
-        p.parent().unwrap_or(std::path::Path::new("."))
+        let ext = p
+            .extension()
+            .map(|e| format!(".{}", e.to_str().unwrap_or("")))
+            .unwrap_or_else(|| ".gbk".to_string());
+        p.parent()
+            .unwrap_or(std::path::Path::new("."))
             .join(format!("{}_fixed{}", stem, ext))
     };
 
@@ -2271,10 +2457,22 @@ fn handle_fix(gbk_path: &str, args: &[String]) -> Result<()> {
                 config.report = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
-            "--dry-run"      => { config.dry_run      = true; i += 1; }
-            "--no-fix-tags"  => { config.fix_dup_tags = false; i += 1; }
-            "--no-fix-product" => { config.fix_product = false; i += 1; }
-            "--no-fix-stops" => { config.fix_stops    = false; i += 1; }
+            "--dry-run" => {
+                config.dry_run = true;
+                i += 1;
+            }
+            "--no-fix-tags" => {
+                config.fix_dup_tags = false;
+                i += 1;
+            }
+            "--no-fix-product" => {
+                config.fix_product = false;
+                i += 1;
+            }
+            "--no-fix-stops" => {
+                config.fix_stops = false;
+                i += 1;
+            }
             _ => i += 1,
         }
     }
@@ -2288,7 +2486,7 @@ fn handle_fix(gbk_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_remote(proteins_fa: &str, args: &[String]) -> Result<()> {
-    use remote::{RemoteConfig, run_remote};
+    use remote::{run_remote, RemoteConfig};
 
     let mut config = RemoteConfig {
         proteins_fa: PathBuf::from(proteins_fa),
@@ -2302,9 +2500,18 @@ fn handle_remote(proteins_fa: &str, args: &[String]) -> Result<()> {
                 config.out_dir = PathBuf::from(&args[i + 1]);
                 i += 2;
             }
-            "--phobius"      => { config.run_phobius  = true; i += 1; }
-            "--interproscan" => { config.run_interpro = true; i += 1; }
-            "--deeploc"      => { config.run_deeploc  = true; i += 1; }
+            "--phobius" => {
+                config.run_phobius = true;
+                i += 1;
+            }
+            "--interproscan" => {
+                config.run_interpro = true;
+                i += 1;
+            }
+            "--deeploc" => {
+                config.run_deeploc = true;
+                i += 1;
+            }
             "--email" if i + 1 < args.len() => {
                 config.email = args[i + 1].clone();
                 i += 2;
@@ -2334,3 +2541,78 @@ fn handle_remote(proteins_fa: &str, args: &[String]) -> Result<()> {
     Ok(())
 }
 
+fn handle_submit(gff_path: &str, args: &[String]) -> Result<()> {
+    let mut config = submit::SubmitConfig {
+        gff: PathBuf::from(gff_path),
+        ..submit::SubmitConfig::default()
+    };
+
+    let mut validate_only = false;
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--fasta" if i + 1 < args.len() => {
+                config.fasta = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            "--output" | "-o" if i + 1 < args.len() => {
+                config.out_dir = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            "--organism" if i + 1 < args.len() => {
+                config.organism = args[i + 1].clone();
+                i += 2;
+            }
+            "--strain" if i + 1 < args.len() => {
+                config.strain = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--bioproject" if i + 1 < args.len() => {
+                config.bioproject = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--biosample" if i + 1 < args.len() => {
+                config.biosample = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--locus-prefix" if i + 1 < args.len() => {
+                config.locus_tag_prefix = args[i + 1].clone();
+                i += 2;
+            }
+            "--genetic-code" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u8>() {
+                    config.genetic_code = n;
+                }
+                i += 2;
+            }
+            "--email" if i + 1 < args.len() => {
+                config.email = args[i + 1].clone();
+                i += 2;
+            }
+            "--validate-only" => {
+                validate_only = true;
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+
+    if config.fasta.as_os_str().is_empty() {
+        return Err(anyhow::anyhow!(
+            "--fasta is required. Run 'myconote-cli submit --help' for usage."
+        ));
+    }
+
+    if validate_only {
+        println!("── NCBI Submission Validation ───────────────────────────────");
+        let result = submit::validate_for_ncbi(&config.gff, &config.fasta)
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        result.print_summary();
+    } else {
+        println!("── NCBI Submission Preparation ──────────────────────────────");
+        submit::run_table2asn(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
+    }
+
+    Ok(())
+}

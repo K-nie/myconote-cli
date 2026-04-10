@@ -20,7 +20,6 @@
 ///   CE   — carbohydrate esterases
 ///   AA   — auxiliary activities
 ///   CBM  — carbohydrate-binding modules
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -34,15 +33,15 @@ use std::process::Command;
 #[derive(Debug, Clone)]
 pub struct CazymeHit {
     /// Gene / protein ID
-    pub gene_id:    String,
+    pub gene_id: String,
     /// CAZyme family (e.g. "GH18", "GT2")
-    pub family:     String,
+    pub family: String,
     /// E-value of best hit
-    pub evalue:     f64,
+    pub evalue: f64,
     /// Coverage of the HMM profile (0.0–1.0) — only for HMMER hits
-    pub coverage:   f64,
+    pub coverage: f64,
     /// Detection method used
-    pub method:     CazymeMethod,
+    pub method: CazymeMethod,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,16 +49,16 @@ pub enum CazymeMethod {
     Diamond,
     HMMER,
     Hotpep,
-    DbCan2,   // majority vote from run_dbcan.py
+    DbCan2, // majority vote from run_dbcan.py
 }
 
 impl std::fmt::Display for CazymeMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CazymeMethod::Diamond  => write!(f, "DIAMOND"),
-            CazymeMethod::HMMER    => write!(f, "HMMER"),
-            CazymeMethod::Hotpep   => write!(f, "Hotpep"),
-            CazymeMethod::DbCan2   => write!(f, "dbCAN2"),
+            CazymeMethod::Diamond => write!(f, "DIAMOND"),
+            CazymeMethod::HMMER => write!(f, "HMMER"),
+            CazymeMethod::Hotpep => write!(f, "Hotpep"),
+            CazymeMethod::DbCan2 => write!(f, "dbCAN2"),
         }
     }
 }
@@ -70,28 +69,31 @@ impl std::fmt::Display for CazymeMethod {
 
 pub fn run_dbcan(
     protein_fasta: &Path,
-    out_dir:       &Path,
-    db_dir:        Option<&Path>,
-    threads:       usize,
+    out_dir: &Path,
+    db_dir: Option<&Path>,
+    threads: usize,
 ) -> Result<PathBuf> {
     std::fs::create_dir_all(out_dir).map_err(MycoNoteError::Io)?;
 
     let mut cmd = Command::new("run_dbcan.py");
     cmd.arg(protein_fasta)
-       .arg("protein")
-       .arg("--out_dir").arg(out_dir)
-       .arg("--cpu").arg(threads.to_string());
+        .arg("protein")
+        .arg("--out_dir")
+        .arg(out_dir)
+        .arg("--cpu")
+        .arg(threads.to_string());
 
     if let Some(db) = db_dir {
         cmd.arg("--db_dir").arg(db);
     }
 
-    let status = cmd.status()
+    let status = cmd
+        .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("run_dbcan.py: {}", e)))?;
 
     if !status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "run_dbcan.py exited with non-zero status".to_string()
+            "run_dbcan.py exited with non-zero status".to_string(),
         ));
     }
 
@@ -99,7 +101,8 @@ pub fn run_dbcan(
 }
 
 pub fn dbcan_available() -> bool {
-    Command::new("which").arg("run_dbcan.py")
+    Command::new("which")
+        .arg("run_dbcan.py")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -111,9 +114,9 @@ pub fn dbcan_available() -> bool {
 
 pub fn run_diamond_cazyme(
     protein_fasta: &Path,
-    diamond_db:    &Path,
-    out_dir:       &Path,
-    threads:       usize,
+    diamond_db: &Path,
+    out_dir: &Path,
+    threads: usize,
     evalue_cutoff: f64,
 ) -> Result<PathBuf> {
     std::fs::create_dir_all(out_dir).map_err(MycoNoteError::Io)?;
@@ -122,22 +125,34 @@ pub fn run_diamond_cazyme(
 
     let status = Command::new("diamond")
         .arg("blastp")
-        .arg("--query").arg(protein_fasta)
-        .arg("--db").arg(diamond_db)
-        .arg("--out").arg(&out_tsv)
-        .arg("--outfmt").arg("6")
-        .arg("qseqid").arg("sseqid").arg("pident").arg("length")
-        .arg("evalue").arg("bitscore").arg("qcovhsp")
-        .arg("--evalue").arg(evalue_cutoff.to_string())
-        .arg("--max-target-seqs").arg("1")
-        .arg("--threads").arg(threads.to_string())
+        .arg("--query")
+        .arg(protein_fasta)
+        .arg("--db")
+        .arg(diamond_db)
+        .arg("--out")
+        .arg(&out_tsv)
+        .arg("--outfmt")
+        .arg("6")
+        .arg("qseqid")
+        .arg("sseqid")
+        .arg("pident")
+        .arg("length")
+        .arg("evalue")
+        .arg("bitscore")
+        .arg("qcovhsp")
+        .arg("--evalue")
+        .arg(evalue_cutoff.to_string())
+        .arg("--max-target-seqs")
+        .arg("1")
+        .arg("--threads")
+        .arg(threads.to_string())
         .arg("--quiet")
         .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("diamond: {}", e)))?;
 
     if !status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "diamond blastp (CAZyme) exited with non-zero status".to_string()
+            "diamond blastp (CAZyme) exited with non-zero status".to_string(),
         ));
     }
 
@@ -151,7 +166,7 @@ pub fn run_diamond_cazyme(
 /// Parse the `overview.txt` produced by run_dbcan.py.
 /// Returns map of gene_id → Vec<CazymeHit> (one entry per family).
 pub fn parse_dbcan_overview(path: &Path) -> Result<HashMap<String, Vec<CazymeHit>>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map: HashMap<String, Vec<CazymeHit>> = HashMap::new();
 
@@ -162,7 +177,9 @@ pub fn parse_dbcan_overview(path: &Path) -> Result<HashMap<String, Vec<CazymeHit
             continue;
         }
         let fields: Vec<&str> = line.split('\t').collect();
-        if fields.len() < 4 { continue; }
+        if fields.len() < 4 {
+            continue;
+        }
 
         let gene_id = fields[0].to_string();
         // Collect unique families from all three columns
@@ -187,7 +204,7 @@ pub fn parse_dbcan_overview(path: &Path) -> Result<HashMap<String, Vec<CazymeHit
             map.entry(gene_id.clone()).or_default().push(CazymeHit {
                 gene_id: gene_id.clone(),
                 family,
-                evalue:   0.0,
+                evalue: 0.0,
                 coverage: 0.0,
                 method,
             });
@@ -198,26 +215,39 @@ pub fn parse_dbcan_overview(path: &Path) -> Result<HashMap<String, Vec<CazymeHit
 }
 
 /// Parse a DIAMOND tabular output from the fallback CAZyme search.
-pub fn parse_diamond_cazyme(path: &Path, evalue_cutoff: f64) -> Result<HashMap<String, Vec<CazymeHit>>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+pub fn parse_diamond_cazyme(
+    path: &Path,
+    evalue_cutoff: f64,
+) -> Result<HashMap<String, Vec<CazymeHit>>> {
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map: HashMap<String, Vec<CazymeHit>> = HashMap::new();
 
     for line_res in reader.lines() {
         let line = line_res.map_err(MycoNoteError::Io)?;
-        if line.trim().is_empty() || line.starts_with('#') { continue; }
+        if line.trim().is_empty() || line.starts_with('#') {
+            continue;
+        }
         let fields: Vec<&str> = line.split('\t').collect();
-        if fields.len() < 5 { continue; }
+        if fields.len() < 5 {
+            continue;
+        }
 
-        let gene_id  = fields[0].to_string();
-        let subject  = fields[1];  // e.g. "GH18_Chitinase|CAZy:GH18"
+        let gene_id = fields[0].to_string();
+        let subject = fields[1]; // e.g. "GH18_Chitinase|CAZy:GH18"
         let evalue: f64 = fields[4].parse().unwrap_or(1.0);
-        if evalue > evalue_cutoff { continue; }
+        if evalue > evalue_cutoff {
+            continue;
+        }
 
         // Extract family name — take the first "|"-delimited token, strip after "_"
         let family = subject
-            .split('|').next().unwrap_or(subject)
-            .split('_').next().unwrap_or(subject)
+            .split('|')
+            .next()
+            .unwrap_or(subject)
+            .split('_')
+            .next()
+            .unwrap_or(subject)
             .to_string();
 
         map.entry(gene_id.clone()).or_default().push(CazymeHit {
@@ -236,10 +266,7 @@ pub fn parse_diamond_cazyme(path: &Path, evalue_cutoff: f64) -> Result<HashMap<S
 // Write CAZyme results
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub fn write_cazyme_table(
-    hits:   &HashMap<String, Vec<CazymeHit>>,
-    output: &Path,
-) -> Result<usize> {
+pub fn write_cazyme_table(hits: &HashMap<String, Vec<CazymeHit>>, output: &Path) -> Result<usize> {
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
     writeln!(out, "gene_id\tcazyme_family\tevalue\tmethod").map_err(MycoNoteError::Io)?;
 
@@ -249,9 +276,12 @@ pub fn write_cazyme_table(
 
     for gene_id in genes {
         for hit in &hits[gene_id] {
-            writeln!(out, "{}\t{}\t{:.2e}\t{}",
-                hit.gene_id, hit.family, hit.evalue, hit.method)
-                .map_err(MycoNoteError::Io)?;
+            writeln!(
+                out,
+                "{}\t{}\t{:.2e}\t{}",
+                hit.gene_id, hit.family, hit.evalue, hit.method
+            )
+            .map_err(MycoNoteError::Io)?;
             total += 1;
         }
     }
@@ -278,23 +308,31 @@ pub fn print_cazyme_summary(hits: &HashMap<String, Vec<CazymeHit>>) {
 }
 
 fn cazyme_class(family: &str) -> &'static str {
-    if family.starts_with("GH") { "GH" }
-    else if family.starts_with("GT") { "GT" }
-    else if family.starts_with("PL") { "PL" }
-    else if family.starts_with("CE") { "CE" }
-    else if family.starts_with("AA") { "AA" }
-    else if family.starts_with("CBM") { "CBM" }
-    else { "Other" }
+    if family.starts_with("GH") {
+        "GH"
+    } else if family.starts_with("GT") {
+        "GT"
+    } else if family.starts_with("PL") {
+        "PL"
+    } else if family.starts_with("CE") {
+        "CE"
+    } else if family.starts_with("AA") {
+        "AA"
+    } else if family.starts_with("CBM") {
+        "CBM"
+    } else {
+        "Other"
+    }
 }
 
 fn cazyme_class_name(cls: &str) -> &'static str {
     match cls {
-        "GH"  => "Glycoside Hydrolases (GH) — cell wall degradation",
-        "GT"  => "Glycosyltransferases (GT) — cell wall biosynthesis",
-        "PL"  => "Polysaccharide Lyases (PL) — pectin degradation",
-        "CE"  => "Carbohydrate Esterases (CE) — de-acetylation",
-        "AA"  => "Auxiliary Activities (AA) — redox enzymes (LPMO, laccase)",
+        "GH" => "Glycoside Hydrolases (GH) — cell wall degradation",
+        "GT" => "Glycosyltransferases (GT) — cell wall biosynthesis",
+        "PL" => "Polysaccharide Lyases (PL) — pectin degradation",
+        "CE" => "Carbohydrate Esterases (CE) — de-acetylation",
+        "AA" => "Auxiliary Activities (AA) — redox enzymes (LPMO, laccase)",
         "CBM" => "Carbohydrate-Binding Modules (CBM) — substrate binding",
-        _     => "Other CAZymes",
+        _ => "Other CAZymes",
     }
 }

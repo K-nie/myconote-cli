@@ -1,3 +1,4 @@
+use crate::update::{UpdateConfig, UpdateResult};
 /// PASA-based gene model update
 ///
 /// PASA (Program to Assemble Spliced Alignments) builds a transcript alignment
@@ -6,16 +7,15 @@
 ///
 /// http://pasapipeline.github.io/
 /// Install: conda install -c bioconda pasa
-
 use crate::utils::error::{MycoNoteError, Result};
-use crate::update::{UpdateConfig, UpdateResult};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Check if PASA Launch_PASA_pipeline.pl is in PATH
 pub fn pasa_available() -> bool {
-    Command::new("Launch_PASA_pipeline.pl").arg("--version")
+    Command::new("Launch_PASA_pipeline.pl")
+        .arg("--version")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -23,8 +23,8 @@ pub fn pasa_available() -> bool {
 
 /// Full PASA-based update workflow.
 pub fn run_pasa_update(
-    config:      &UpdateConfig,
-    _bam_path:   &Path,   // BAM used only for lightweight fallback; PASA re-aligns internally
+    config: &UpdateConfig,
+    _bam_path: &Path, // BAM used only for lightweight fallback; PASA re-aligns internally
     transcripts: Option<&Path>,
 ) -> Result<UpdateResult> {
     let pasa_dir = config.out_dir.join("pasa_update");
@@ -33,15 +33,20 @@ pub fn run_pasa_update(
     // PASA needs a transcript FASTA
     let tx_fa = match transcripts {
         Some(p) => p.to_path_buf(),
-        None => return Err(MycoNoteError::InvalidFormat(
-            "PASA update requires a transcript FASTA (--transcripts)".to_string()
-        )),
+        None => {
+            return Err(MycoNoteError::InvalidFormat(
+                "PASA update requires a transcript FASTA (--transcripts)".to_string(),
+            ))
+        }
     };
 
     // ── Write PASA config file ────────────────────────────────────────────────
-    let db_name = config.pasa_db.clone()
-        .unwrap_or_else(|| pasa_dir.join("pasa_db.sqlite")
-            .to_string_lossy().to_string());
+    let db_name = config.pasa_db.clone().unwrap_or_else(|| {
+        pasa_dir
+            .join("pasa_db.sqlite")
+            .to_string_lossy()
+            .to_string()
+    });
 
     let conf_path = pasa_dir.join("pasa.config");
     write_pasa_config(&conf_path, &db_name, config)?;
@@ -49,13 +54,18 @@ pub fn run_pasa_update(
     // ── Step 1: Load transcripts into PASA (align + assemble) ───────────────
     let load_status = Command::new("Launch_PASA_pipeline.pl")
         .args([
-            "-c",  conf_path.to_str().unwrap_or(""),
-            "-C",  // create new database
-            "-R",  // run pipeline
-            "-g",  config.fasta.to_str().unwrap_or(""),
-            "-t",  tx_fa.to_str().unwrap_or(""),
-            "--ALIGNERS", "minimap2",
-            "--CPU", &config.threads.to_string(),
+            "-c",
+            conf_path.to_str().unwrap_or(""),
+            "-C", // create new database
+            "-R", // run pipeline
+            "-g",
+            config.fasta.to_str().unwrap_or(""),
+            "-t",
+            tx_fa.to_str().unwrap_or(""),
+            "--ALIGNERS",
+            "minimap2",
+            "--CPU",
+            &config.threads.to_string(),
         ])
         .current_dir(&pasa_dir)
         .status()
@@ -63,7 +73,7 @@ pub fn run_pasa_update(
 
     if !load_status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "PASA pipeline failed during transcript loading".to_string()
+            "PASA pipeline failed during transcript loading".to_string(),
         ));
     }
 
@@ -71,14 +81,20 @@ pub fn run_pasa_update(
     let ann_compare_out = pasa_dir.join("annotation_compare.txt");
     let update_status = Command::new("Launch_PASA_pipeline.pl")
         .args([
-            "-c",   conf_path.to_str().unwrap_or(""),
-            "-A",   // annotation comparison mode
-            "-g",   config.fasta.to_str().unwrap_or(""),
-            "-t",   tx_fa.to_str().unwrap_or(""),
+            "-c",
+            conf_path.to_str().unwrap_or(""),
+            "-A", // annotation comparison mode
+            "-g",
+            config.fasta.to_str().unwrap_or(""),
+            "-t",
+            tx_fa.to_str().unwrap_or(""),
             "--TRANSDECODER",
-            "--annots", config.gff.to_str().unwrap_or(""),
-            "--CPU",    &config.threads.to_string(),
-            "--out",    ann_compare_out.to_str().unwrap_or(""),
+            "--annots",
+            config.gff.to_str().unwrap_or(""),
+            "--CPU",
+            &config.threads.to_string(),
+            "--out",
+            ann_compare_out.to_str().unwrap_or(""),
         ])
         .current_dir(&pasa_dir)
         .status()
@@ -86,7 +102,7 @@ pub fn run_pasa_update(
 
     if !update_status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "PASA annotation comparison/update failed".to_string()
+            "PASA annotation comparison/update failed".to_string(),
         ));
     }
 
@@ -95,21 +111,20 @@ pub fn run_pasa_update(
     let updated_gff = find_pasa_output_gff(&pasa_dir)?;
 
     // ── Parse change statistics from PASA log ────────────────────────────────
-    let (n_total, n_updated, n_utr5, n_utr3, n_iso) =
-        parse_pasa_stats(&ann_compare_out);
+    let (n_total, n_updated, n_utr5, n_utr3, n_iso) = parse_pasa_stats(&ann_compare_out);
 
     // Copy updated GFF to canonical output location
     let out_gff = config.out_dir.join("updated.gff3");
     std::fs::copy(&updated_gff, &out_gff).map_err(MycoNoteError::Io)?;
 
     Ok(UpdateResult {
-        output_gff:       out_gff,
-        n_genes_total:    n_total,
-        n_genes_updated:  n_updated,
-        n_utr5_added:     n_utr5,
-        n_utr3_added:     n_utr3,
+        output_gff: out_gff,
+        n_genes_total: n_total,
+        n_genes_updated: n_updated,
+        n_utr5_added: n_utr5,
+        n_utr3_added: n_utr3,
         n_isoforms_added: n_iso,
-        pasa_used:        true,
+        pasa_used: true,
     })
 }
 
@@ -123,7 +138,7 @@ fn write_pasa_config(conf: &Path, db_name: &str, config: &UpdateConfig) -> Resul
 
     writeln!(f, "# PASA configuration - generated by myconote").map_err(MycoNoteError::Io)?;
     writeln!(f, "DATABASE={}", db_name).map_err(MycoNoteError::Io)?;
-    writeln!(f, "MYSQLDB={}",  db_name).map_err(MycoNoteError::Io)?;  // PASA compat
+    writeln!(f, "MYSQLDB={}", db_name).map_err(MycoNoteError::Io)?; // PASA compat
     writeln!(f, "ORGANISM_NAME={}", org).map_err(MycoNoteError::Io)?;
     writeln!(f, "MAX_INTRON_LENGTH=10000").map_err(MycoNoteError::Io)?;
     writeln!(f, "MIN_PERCENT_ALIGNED=75").map_err(MycoNoteError::Io)?;
@@ -145,20 +160,22 @@ fn find_pasa_output_gff(pasa_dir: &Path) -> Result<PathBuf> {
     let entries2 = std::fs::read_dir(pasa_dir).map_err(MycoNoteError::Io)?;
     for entry in entries2.flatten() {
         let s = entry.file_name().to_string_lossy().to_string();
-        if s.ends_with(".gff3") { return Ok(entry.path()); }
+        if s.ends_with(".gff3") {
+            return Ok(entry.path());
+        }
     }
     Err(MycoNoteError::InvalidFormat(
-        "Could not find PASA updated GFF3 output".to_string()
+        "Could not find PASA updated GFF3 output".to_string(),
     ))
 }
 
 fn parse_pasa_stats(log: &Path) -> (usize, usize, usize, usize, usize) {
     use std::io::BufRead;
-    let mut n_total  = 0usize;
+    let mut n_total = 0usize;
     let mut n_updated = 0usize;
-    let mut n_utr5   = 0usize;
-    let mut n_utr3   = 0usize;
-    let mut n_iso    = 0usize;
+    let mut n_utr5 = 0usize;
+    let mut n_utr3 = 0usize;
+    let mut n_iso = 0usize;
 
     if let Ok(file) = std::fs::File::open(log) {
         for line in std::io::BufReader::new(file).lines().flatten() {

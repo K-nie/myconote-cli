@@ -19,7 +19,6 @@
 ///   bgc_id      — antiSMASH cluster ID
 ///   bgc_mibig   — closest MIBiG hit (if any)
 ///   bgc_product — predicted product (if available)
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -33,23 +32,23 @@ use std::process::Command;
 #[derive(Debug, Clone)]
 pub struct BgcCluster {
     /// antiSMASH cluster ID (e.g. "ctg1_c1")
-    pub cluster_id:  String,
+    pub cluster_id: String,
     /// Sequence / contig ID
-    pub seq_id:      String,
+    pub seq_id: String,
     /// Cluster start (1-based)
-    pub start:       u64,
+    pub start: u64,
     /// Cluster end (1-based, inclusive)
-    pub end:         u64,
+    pub end: u64,
     /// BGC type(s) — comma-separated if hybrid (e.g. "T1PKS-NRPS")
-    pub bgc_type:    String,
+    pub bgc_type: String,
     /// Closest known cluster from MIBiG (if similarity > threshold)
-    pub mibig_hit:   Option<String>,
+    pub mibig_hit: Option<String>,
     /// Predicted product (if known)
-    pub product:     Option<String>,
+    pub product: Option<String>,
     /// Genes within this cluster
-    pub gene_ids:    Vec<String>,
+    pub gene_ids: Vec<String>,
     /// Similarity to closest known cluster (0–100)
-    pub similarity:  f32,
+    pub similarity: f32,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,7 +56,8 @@ pub struct BgcCluster {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn antismash_available() -> bool {
-    Command::new("which").arg("antismash")
+    Command::new("which")
+        .arg("antismash")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -66,14 +66,14 @@ pub fn antismash_available() -> bool {
 /// Run antiSMASH on a GenBank file and return the output directory.
 pub fn run_antismash(
     genbank_file: &Path,
-    out_dir:      &Path,
-    taxon:        &str,   // "fungi" | "bacteria" | "plants"
-    threads:      usize,
-    extra_args:   &[&str],
+    out_dir: &Path,
+    taxon: &str, // "fungi" | "bacteria" | "plants"
+    threads: usize,
+    extra_args: &[&str],
 ) -> Result<PathBuf> {
     if !antismash_available() {
         return Err(MycoNoteError::ExternalTool(
-            "antiSMASH not found. Install: conda install -c bioconda antismash".to_string()
+            "antiSMASH not found. Install: conda install -c bioconda antismash".to_string(),
         ));
     }
 
@@ -81,28 +81,34 @@ pub fn run_antismash(
 
     let mut cmd = Command::new("antismash");
     cmd.arg(genbank_file)
-       .arg("--taxon").arg(taxon)
-       .arg("--output-dir").arg(out_dir)
-       .arg("--cpus").arg(threads.to_string())
-       .arg("--genefinding-tool").arg("none")  // we have our own gene calls
-       .arg("--output-basename").arg("antismash");
+        .arg("--taxon")
+        .arg(taxon)
+        .arg("--output-dir")
+        .arg(out_dir)
+        .arg("--cpus")
+        .arg(threads.to_string())
+        .arg("--genefinding-tool")
+        .arg("none") // we have our own gene calls
+        .arg("--output-basename")
+        .arg("antismash");
 
     // Common useful flags
-    cmd.arg("--cb-general")    // ClusterBlast vs GenBank
-       .arg("--cb-knownclusters") // ClusterBlast vs MIBiG
-       .arg("--asf")           // active site finder
-       .arg("--pfam2go");      // Pfam → GO (useful for integration)
+    cmd.arg("--cb-general") // ClusterBlast vs GenBank
+        .arg("--cb-knownclusters") // ClusterBlast vs MIBiG
+        .arg("--asf") // active site finder
+        .arg("--pfam2go"); // Pfam → GO (useful for integration)
 
     for arg in extra_args {
         cmd.arg(arg);
     }
 
-    let status = cmd.status()
+    let status = cmd
+        .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("antismash: {}", e)))?;
 
     if !status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "antiSMASH exited with non-zero status".to_string()
+            "antiSMASH exited with non-zero status".to_string(),
         ));
     }
 
@@ -121,9 +127,11 @@ pub fn parse_antismash_gff(out_dir: &Path) -> Result<Vec<BgcCluster>> {
     let entries = std::fs::read_dir(out_dir).map_err(MycoNoteError::Io)?;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("gff") { continue; }
+        if path.extension().and_then(|e| e.to_str()) != Some("gff") {
+            continue;
+        }
 
-        let file   = match std::fs::File::open(&path) {
+        let file = match std::fs::File::open(&path) {
             Ok(f) => f,
             Err(_) => continue,
         };
@@ -132,22 +140,33 @@ pub fn parse_antismash_gff(out_dir: &Path) -> Result<Vec<BgcCluster>> {
         for line_res in reader.lines() {
             let line = line_res.map_err(MycoNoteError::Io)?;
             let trimmed = line.trim();
-            if trimmed.starts_with('#') || trimmed.is_empty() { continue; }
+            if trimmed.starts_with('#') || trimmed.is_empty() {
+                continue;
+            }
 
             let fields: Vec<&str> = trimmed.split('\t').collect();
-            if fields.len() < 9 { continue; }
+            if fields.len() < 9 {
+                continue;
+            }
 
             // antiSMASH uses "region" or "cluster" as feature type
-            if fields[2] != "region" && fields[2] != "cluster" { continue; }
+            if fields[2] != "region" && fields[2] != "cluster" {
+                continue;
+            }
 
             let seq_id = fields[0].to_string();
             let start: u64 = fields[3].parse().unwrap_or(0);
-            let end:   u64 = fields[4].parse().unwrap_or(0);
+            let end: u64 = fields[4].parse().unwrap_or(0);
             let attrs = parse_attrs(fields[8]);
 
-            let bgc_type  = attrs.get("product").or(attrs.get("rules"))
-                .cloned().unwrap_or_else(|| "unknown".to_string());
-            let cluster_id = attrs.get("ID").cloned()
+            let bgc_type = attrs
+                .get("product")
+                .or(attrs.get("rules"))
+                .cloned()
+                .unwrap_or_else(|| "unknown".to_string());
+            let cluster_id = attrs
+                .get("ID")
+                .cloned()
                 .unwrap_or_else(|| format!("{}_{}-{}", seq_id, start, end));
 
             clusters.push(BgcCluster {
@@ -157,8 +176,8 @@ pub fn parse_antismash_gff(out_dir: &Path) -> Result<Vec<BgcCluster>> {
                 end,
                 bgc_type,
                 mibig_hit: attrs.get("knownclusterblast").cloned(),
-                product:   attrs.get("product").cloned(),
-                gene_ids:  vec![],
+                product: attrs.get("product").cloned(),
+                gene_ids: vec![],
                 similarity: 0.0,
             });
         }
@@ -185,14 +204,11 @@ fn parse_attrs(attr_str: &str) -> HashMap<String, String> {
 /// gene that falls within a BGC cluster to that cluster's gene_ids list.
 pub fn assign_genes_to_clusters(
     clusters: &mut Vec<BgcCluster>,
-    genes:    &[(String, String, u64, u64)], // (id, seqid, start, end)
+    genes: &[(String, String, u64, u64)], // (id, seqid, start, end)
 ) {
     for (gene_id, seqid, g_start, g_end) in genes {
         for cluster in clusters.iter_mut() {
-            if &cluster.seq_id == seqid
-                && *g_start >= cluster.start
-                && *g_end   <= cluster.end
-            {
+            if &cluster.seq_id == seqid && *g_start >= cluster.start && *g_end <= cluster.end {
                 cluster.gene_ids.push(gene_id.clone());
             }
         }
@@ -216,11 +232,16 @@ pub fn gene_to_cluster_map(clusters: &[BgcCluster]) -> HashMap<String, &BgcClust
 
 pub fn write_bgc_table(clusters: &[BgcCluster], output: &Path) -> Result<usize> {
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
-    writeln!(out, "cluster_id\tseq_id\tstart\tend\tbgc_type\tgenes\tmibig_hit\tproduct\tsimilarity")
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        out,
+        "cluster_id\tseq_id\tstart\tend\tbgc_type\tgenes\tmibig_hit\tproduct\tsimilarity"
+    )
+    .map_err(MycoNoteError::Io)?;
 
     for c in clusters {
-        writeln!(out, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.1}",
+        writeln!(
+            out,
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.1}",
             c.cluster_id,
             c.seq_id,
             c.start,
@@ -230,7 +251,8 @@ pub fn write_bgc_table(clusters: &[BgcCluster], output: &Path) -> Result<usize> 
             c.mibig_hit.as_deref().unwrap_or("-"),
             c.product.as_deref().unwrap_or("-"),
             c.similarity,
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
     }
 
     Ok(clusters.len())
@@ -252,16 +274,16 @@ pub fn print_bgc_summary(clusters: &[BgcCluster]) {
 
 fn bgc_type_description(t: &str) -> String {
     let desc = match t {
-        "T1PKS"    => "Type I polyketide synthase",
-        "T2PKS"    => "Type II polyketide synthase",
-        "T3PKS"    => "Type III polyketide synthase",
-        "NRPS"     => "Non-ribosomal peptide synthetase",
-        "terpene"  => "Terpene cluster",
-        "indole"   => "Indole alkaloid",
-        "RiPP"     => "Ribosomally synthesised & post-translationally modified peptide",
+        "T1PKS" => "Type I polyketide synthase",
+        "T2PKS" => "Type II polyketide synthase",
+        "T3PKS" => "Type III polyketide synthase",
+        "NRPS" => "Non-ribosomal peptide synthetase",
+        "terpene" => "Terpene cluster",
+        "indole" => "Indole alkaloid",
+        "RiPP" => "Ribosomally synthesised & post-translationally modified peptide",
         "siderophore" => "Siderophore",
-        "betalactone"  => "Beta-lactone",
-        _          => t,
+        "betalactone" => "Beta-lactone",
+        _ => t,
     };
     format!("[{}] {}", t, desc)
 }

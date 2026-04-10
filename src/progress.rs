@@ -2,8 +2,7 @@
 ///
 /// Provides consistent, pre-styled progress indicators used across
 /// the mask, predict, and annotate pipelines.
-
-use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::time::Duration;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -11,9 +10,10 @@ use std::time::Duration;
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SPINNER_TEMPLATE: &str = "  {spinner:.cyan} {msg}";
-const BAR_TEMPLATE:     &str = "  {msg}\n  [{bar:40.cyan/blue}] {pos}/{len} ({eta})";
+const BAR_TEMPLATE: &str = "  {msg}\n  [{bar:40.cyan/blue}] {pos}/{len} ({eta})";
 #[allow(dead_code)]
-const BYTES_TEMPLATE:   &str = "  {msg}\n  [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})";
+const BYTES_TEMPLATE: &str =
+    "  {msg}\n  [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Spinner — for tasks of unknown duration
@@ -26,7 +26,7 @@ pub fn spinner(msg: impl Into<String>) -> ProgressBar {
     pb.set_style(
         ProgressStyle::with_template(SPINNER_TEMPLATE)
             .unwrap_or_else(|_| ProgressStyle::default_spinner())
-            .tick_strings(&["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"])
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
     pb.set_message(msg.into());
     pb.enable_steady_tick(Duration::from_millis(80));
@@ -37,7 +37,7 @@ pub fn spinner(msg: impl Into<String>) -> ProgressBar {
 pub fn finish_spinner(pb: &ProgressBar, msg: impl Into<String>) {
     pb.set_style(
         ProgressStyle::with_template("  ✓ {msg}")
-            .unwrap_or_else(|_| ProgressStyle::default_spinner())
+            .unwrap_or_else(|_| ProgressStyle::default_spinner()),
     );
     pb.finish_with_message(msg.into());
 }
@@ -46,7 +46,7 @@ pub fn finish_spinner(pb: &ProgressBar, msg: impl Into<String>) {
 pub fn warn_spinner(pb: &ProgressBar, msg: impl Into<String>) {
     pb.set_style(
         ProgressStyle::with_template("  ⚠ {msg}")
-            .unwrap_or_else(|_| ProgressStyle::default_spinner())
+            .unwrap_or_else(|_| ProgressStyle::default_spinner()),
     );
     pb.finish_with_message(msg.into());
 }
@@ -61,7 +61,7 @@ pub fn count_bar(total: u64, msg: impl Into<String>) -> ProgressBar {
     pb.set_style(
         ProgressStyle::with_template(BAR_TEMPLATE)
             .unwrap_or_else(|_| ProgressStyle::default_bar())
-            .progress_chars("█▓░")
+            .progress_chars("█▓░"),
     );
     pb.set_message(msg.into());
     pb
@@ -81,7 +81,7 @@ pub fn add_spinner(multi: &MultiProgress, msg: impl Into<String>) -> ProgressBar
     pb.set_style(
         ProgressStyle::with_template(SPINNER_TEMPLATE)
             .unwrap_or_else(|_| ProgressStyle::default_spinner())
-            .tick_strings(&["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"])
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
     pb.set_message(msg.into());
     pb.enable_steady_tick(Duration::from_millis(80));

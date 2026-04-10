@@ -16,7 +16,6 @@
 ///   4. Parse and merge results
 ///
 /// Results are cached in <out_dir>/remote_cache/ so re-runs are fast.
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -30,20 +29,20 @@ use std::time::Duration;
 
 #[derive(Debug, Clone, Default)]
 pub struct PhobiusResult {
-    pub query_id:       String,
+    pub query_id: String,
     pub signal_peptide: bool,
-    pub signal_end:     Option<u32>,    // position of signal peptide cleavage
-    pub tm_count:       u32,
-    pub topology:       String,         // e.g. "i", "o", "iXXXXo" (inside/outside)
+    pub signal_end: Option<u32>, // position of signal peptide cleavage
+    pub tm_count: u32,
+    pub topology: String, // e.g. "i", "o", "iXXXXo" (inside/outside)
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct RemoteAnnotation {
-    pub phobius:    Option<PhobiusResult>,
+    pub phobius: Option<PhobiusResult>,
     /// InterProScan result: IPR accessions
-    pub ipr_accs:   Vec<String>,
+    pub ipr_accs: Vec<String>,
     /// InterProScan GO terms
-    pub go_terms:   Vec<String>,
+    pub go_terms: Vec<String>,
     /// Subcellular localisation from DeepLoc (e.g. "Extracellular", "Nucleus")
     pub localisation: Option<String>,
 }
@@ -54,33 +53,33 @@ pub struct RemoteAnnotation {
 
 #[derive(Debug, Clone)]
 pub struct RemoteConfig {
-    pub proteins_fa:    PathBuf,
-    pub out_dir:        PathBuf,
-    pub run_phobius:    bool,
-    pub run_interpro:   bool,
-    pub run_deeploc:    bool,
+    pub proteins_fa: PathBuf,
+    pub out_dir: PathBuf,
+    pub run_phobius: bool,
+    pub run_interpro: bool,
+    pub run_deeploc: bool,
     /// EBI email (required for InterProScan)
-    pub email:          String,
+    pub email: String,
     /// Max proteins per batch
-    pub batch_size:     usize,
+    pub batch_size: usize,
     /// Seconds between API polls
-    pub poll_interval:  u64,
+    pub poll_interval: u64,
     /// Maximum retry attempts per batch
-    pub max_retries:    usize,
+    pub max_retries: usize,
 }
 
 impl Default for RemoteConfig {
     fn default() -> Self {
         Self {
-            proteins_fa:   PathBuf::new(),
-            out_dir:       PathBuf::from("remote_out"),
-            run_phobius:   true,
-            run_interpro:  false,
-            run_deeploc:   false,
-            email:         String::new(),
-            batch_size:    100,
+            proteins_fa: PathBuf::new(),
+            out_dir: PathBuf::from("remote_out"),
+            run_phobius: true,
+            run_interpro: false,
+            run_deeploc: false,
+            email: String::new(),
+            batch_size: 100,
             poll_interval: 30,
-            max_retries:   10,
+            max_retries: 10,
         }
     }
 }
@@ -92,7 +91,8 @@ impl Default for RemoteConfig {
 pub fn run_remote(config: &RemoteConfig) -> Result<HashMap<String, RemoteAnnotation>> {
     if !config.proteins_fa.exists() {
         return Err(MycoNoteError::InvalidFormat(format!(
-            "Protein FASTA not found: {}", config.proteins_fa.display()
+            "Protein FASTA not found: {}",
+            config.proteins_fa.display()
         )));
     }
 
@@ -123,7 +123,8 @@ pub fn run_remote(config: &RemoteConfig) -> Result<HashMap<String, RemoteAnnotat
         };
 
         let n_signal: usize = phobius_map.values().filter(|r| r.signal_peptide).count();
-        println!("    Phobius: {} signal peptides, {} TM proteins",
+        println!(
+            "    Phobius: {} signal peptides, {} TM proteins",
             n_signal,
             phobius_map.values().filter(|r| r.tm_count > 0).count(),
         );
@@ -150,12 +151,20 @@ pub fn run_remote(config: &RemoteConfig) -> Result<HashMap<String, RemoteAnnotat
             };
 
             let n_with_hits = ipr_map.values().filter(|v| !v.is_empty()).count();
-            println!("    InterProScan: {}/{} proteins with domain hits", n_with_hits, proteins.len());
+            println!(
+                "    InterProScan: {}/{} proteins with domain hits",
+                n_with_hits,
+                proteins.len()
+            );
 
             for (id, ipr_hits) in ipr_map {
                 let entry = results.entry(id).or_default();
-                entry.ipr_accs.extend(ipr_hits.iter().map(|(acc, _)| acc.clone()));
-                entry.go_terms.extend(ipr_hits.iter().flat_map(|(_, gos)| gos.clone()));
+                entry
+                    .ipr_accs
+                    .extend(ipr_hits.iter().map(|(acc, _)| acc.clone()));
+                entry
+                    .go_terms
+                    .extend(ipr_hits.iter().flat_map(|(_, gos)| gos.clone()));
             }
         }
     }
@@ -191,8 +200,8 @@ pub fn run_remote(config: &RemoteConfig) -> Result<HashMap<String, RemoteAnnotat
 const PHOBIUS_URL: &str = "https://phobius.sbc.su.se/cgi-bin/predict.pl";
 
 fn run_phobius_remote(
-    proteins:  &HashMap<String, String>,
-    config:    &RemoteConfig,
+    proteins: &HashMap<String, String>,
+    config: &RemoteConfig,
     cache_out: &Path,
 ) -> Result<HashMap<String, PhobiusResult>> {
     // Phobius accepts FASTA via HTTP POST, returns text
@@ -202,11 +211,16 @@ fn run_phobius_remote(
     let ids: Vec<&String> = proteins.keys().collect();
 
     for (batch_idx, chunk) in ids.chunks(config.batch_size).enumerate() {
-        println!("    Phobius batch {}/{}…", batch_idx + 1,
-            (ids.len() + config.batch_size - 1) / config.batch_size);
+        println!(
+            "    Phobius batch {}/{}…",
+            batch_idx + 1,
+            (ids.len() + config.batch_size - 1) / config.batch_size
+        );
 
         // Write batch FASTA to temp file
-        let tmp_fa = config.out_dir.join(format!("phobius_batch_{}.fa", batch_idx));
+        let tmp_fa = config
+            .out_dir
+            .join(format!("phobius_batch_{}.fa", batch_idx));
         {
             let mut f = std::fs::File::create(&tmp_fa).map_err(MycoNoteError::Io)?;
             for id in chunk {
@@ -221,14 +235,22 @@ fn run_phobius_remote(
         }
 
         // Submit to Phobius via curl
-        let tmp_out = config.out_dir.join(format!("phobius_out_{}.txt", batch_idx));
+        let tmp_out = config
+            .out_dir
+            .join(format!("phobius_out_{}.txt", batch_idx));
         let ok = submit_with_retry(
             &[
-                "curl", "-s", "-X", "POST",
-                "-F", &format!("protseq=@{}", tmp_fa.to_str().unwrap_or("")),
-                "-F", "format=short",
+                "curl",
+                "-s",
+                "-X",
+                "POST",
+                "-F",
+                &format!("protseq=@{}", tmp_fa.to_str().unwrap_or("")),
+                "-F",
+                "format=short",
                 PHOBIUS_URL,
-                "-o", tmp_out.to_str().unwrap_or(""),
+                "-o",
+                tmp_out.to_str().unwrap_or(""),
             ],
             config.max_retries,
             config.poll_interval,
@@ -238,7 +260,10 @@ fn run_phobius_remote(
             let batch_results = parse_phobius_output(&tmp_out)?;
             all_results.extend(batch_results);
         } else {
-            eprintln!("    ⚠  Phobius batch {} failed after retries", batch_idx + 1);
+            eprintln!(
+                "    ⚠  Phobius batch {} failed after retries",
+                batch_idx + 1
+            );
         }
 
         let _ = std::fs::remove_file(&tmp_fa);
@@ -259,7 +284,9 @@ fn submit_with_retry(args: &[&str], max_retries: usize, interval_secs: u64) -> b
         }
         if let Some((prog, rest)) = args.split_first() {
             if let Ok(status) = Command::new(prog).args(rest).status() {
-                if status.success() { return true; }
+                if status.success() {
+                    return true;
+                }
             }
         }
     }
@@ -271,66 +298,81 @@ fn parse_phobius_output(path: &Path) -> Result<HashMap<String, PhobiusResult>> {
     //   ID  TM  SP  PREDICTION
     //   GENE0001  0  Y  SIGNAL
     //   GENE0002  2  N  TM
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map = HashMap::new();
 
     for line in reader.lines().flatten() {
         let t = line.trim();
-        if t.is_empty() || t.starts_with("ID") || t.starts_with("//") { continue; }
+        if t.is_empty() || t.starts_with("ID") || t.starts_with("//") {
+            continue;
+        }
         let cols: Vec<&str> = t.split_whitespace().collect();
-        if cols.len() < 3 { continue; }
+        if cols.len() < 3 {
+            continue;
+        }
 
-        let id      = cols[0].to_string();
+        let id = cols[0].to_string();
         let tm: u32 = cols[1].parse().unwrap_or(0);
-        let sp      = cols[2].to_uppercase() == "Y";
+        let sp = cols[2].to_uppercase() == "Y";
         let topology = cols.get(3).unwrap_or(&"").to_string();
 
-        map.insert(id.clone(), PhobiusResult {
-            query_id:       id,
-            signal_peptide: sp,
-            signal_end:     None,
-            tm_count:       tm,
-            topology,
-        });
+        map.insert(
+            id.clone(),
+            PhobiusResult {
+                query_id: id,
+                signal_peptide: sp,
+                signal_end: None,
+                tm_count: tm,
+                topology,
+            },
+        );
     }
 
     Ok(map)
 }
 
-fn write_phobius_cache(
-    results: &HashMap<String, PhobiusResult>,
-    path:    &Path,
-) -> Result<()> {
+fn write_phobius_cache(results: &HashMap<String, PhobiusResult>, path: &Path) -> Result<()> {
     let mut f = std::fs::File::create(path).map_err(MycoNoteError::Io)?;
-    writeln!(f, "query_id\ttm_count\tsignal_peptide\ttopology")
-        .map_err(MycoNoteError::Io)?;
+    writeln!(f, "query_id\ttm_count\tsignal_peptide\ttopology").map_err(MycoNoteError::Io)?;
     for r in results.values() {
-        writeln!(f, "{}\t{}\t{}\t{}",
-            r.query_id, r.tm_count,
+        writeln!(
+            f,
+            "{}\t{}\t{}\t{}",
+            r.query_id,
+            r.tm_count,
             if r.signal_peptide { "Y" } else { "N" },
             r.topology,
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
     }
     Ok(())
 }
 
 fn parse_phobius_tsv(path: &Path) -> Result<HashMap<String, PhobiusResult>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map = HashMap::new();
 
     for line in reader.lines().flatten().skip(1) {
         let cols: Vec<&str> = line.trim().split('\t').collect();
-        if cols.len() < 4 { continue; }
-        let id      = cols[0].to_string();
+        if cols.len() < 4 {
+            continue;
+        }
+        let id = cols[0].to_string();
         let tm: u32 = cols[1].parse().unwrap_or(0);
-        let sp      = cols[2].to_uppercase() == "Y";
+        let sp = cols[2].to_uppercase() == "Y";
         let topology = cols[3].to_string();
-        map.insert(id.clone(), PhobiusResult {
-            query_id: id, signal_peptide: sp, signal_end: None,
-            tm_count: tm, topology,
-        });
+        map.insert(
+            id.clone(),
+            PhobiusResult {
+                query_id: id,
+                signal_peptide: sp,
+                signal_end: None,
+                tm_count: tm,
+                topology,
+            },
+        );
     }
 
     Ok(map)
@@ -343,8 +385,8 @@ fn parse_phobius_tsv(path: &Path) -> Result<HashMap<String, PhobiusResult>> {
 const EBI_IPRSCAN_URL: &str = "https://www.ebi.ac.uk/Tools/services/rest/iprscan5";
 
 fn run_interproscan_remote(
-    proteins:  &HashMap<String, String>,
-    config:    &RemoteConfig,
+    proteins: &HashMap<String, String>,
+    config: &RemoteConfig,
     cache_out: &Path,
 ) -> Result<HashMap<String, Vec<(String, Vec<String>)>>> {
     let mut all: HashMap<String, Vec<(String, Vec<String>)>> = HashMap::new();
@@ -352,9 +394,11 @@ fn run_interproscan_remote(
 
     for (batch_idx, chunk) in ids.chunks(config.batch_size.min(30)).enumerate() {
         // EBI limits to 30 sequences per job
-        println!("    InterProScan batch {}/{}…",
+        println!(
+            "    InterProScan batch {}/{}…",
             batch_idx + 1,
-            (ids.len() + 29) / 30);
+            (ids.len() + 29) / 30
+        );
 
         // Build FASTA payload
         let mut fa = String::new();
@@ -371,15 +415,16 @@ fn run_interproscan_remote(
         let job_id = match job_id {
             Some(id) => id,
             None => {
-                eprintln!("    ⚠  InterProScan submission failed for batch {}", batch_idx + 1);
+                eprintln!(
+                    "    ⚠  InterProScan submission failed for batch {}",
+                    batch_idx + 1
+                );
                 continue;
             }
         };
 
         // Poll for result
-        let result_tsv = poll_interpro_result(
-            &job_id, config.poll_interval, config.max_retries
-        );
+        let result_tsv = poll_interpro_result(&job_id, config.poll_interval, config.max_retries);
 
         match result_tsv {
             Some(tsv_text) => {
@@ -405,30 +450,40 @@ fn submit_interpro_job(fasta: &str, email: &str, _retries: usize) -> Option<Stri
 
     // Write FASTA to temp file
     let tmp = std::env::temp_dir().join("iprscan_input.fa");
-    if std::fs::write(&tmp, fasta).is_err() { return None; }
+    if std::fs::write(&tmp, fasta).is_err() {
+        return None;
+    }
 
     // curl POST to EBI
     let output = Command::new("curl")
-        .args(["-s", "-X", "POST",
-               &format!("{}/run", EBI_IPRSCAN_URL),
-               "-F", &format!("email={}", email),
-               "-F", "title=myconote",
-               "-F", "goterms=true",
-               "-F", "pathways=false",
-               "-F", &format!("sequence=@{}", tmp.to_str().unwrap_or("")),
+        .args([
+            "-s",
+            "-X",
+            "POST",
+            &format!("{}/run", EBI_IPRSCAN_URL),
+            "-F",
+            &format!("email={}", email),
+            "-F",
+            "title=myconote",
+            "-F",
+            "goterms=true",
+            "-F",
+            "pathways=false",
+            "-F",
+            &format!("sequence=@{}", tmp.to_str().unwrap_or("")),
         ])
         .output()
         .ok()?;
 
     let job_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if job_id.contains("iprscan5") { Some(job_id) } else { None }
+    if job_id.contains("iprscan5") {
+        Some(job_id)
+    } else {
+        None
+    }
 }
 
-fn poll_interpro_result(
-    job_id:   &str,
-    interval: u64,
-    max_tries: usize,
-) -> Option<String> {
+fn poll_interpro_result(job_id: &str, interval: u64, max_tries: usize) -> Option<String> {
     use std::process::Command;
     use std::time::Duration;
 
@@ -467,13 +522,19 @@ fn parse_interpro_tsv_text(text: &str) -> HashMap<String, Vec<(String, Vec<Strin
 
     for line in text.lines() {
         let t = line.trim();
-        if t.is_empty() || t.starts_with('#') { continue; }
+        if t.is_empty() || t.starts_with('#') {
+            continue;
+        }
         let cols: Vec<&str> = t.split('\t').collect();
-        if cols.len() < 12 { continue; }
+        if cols.len() < 12 {
+            continue;
+        }
 
         let protein_id = cols[0].to_string();
-        let ipr_acc    = cols[11].to_string();
-        if ipr_acc.is_empty() || ipr_acc == "-" { continue; }
+        let ipr_acc = cols[11].to_string();
+        if ipr_acc.is_empty() || ipr_acc == "-" {
+            continue;
+        }
 
         let go_terms: Vec<String> = if cols.len() > 13 && !cols[13].is_empty() && cols[13] != "-" {
             cols[13].split('|').map(|s| s.to_string()).collect()
@@ -489,29 +550,30 @@ fn parse_interpro_tsv_text(text: &str) -> HashMap<String, Vec<(String, Vec<Strin
 
 fn write_interpro_cache(
     results: &HashMap<String, Vec<(String, Vec<String>)>>,
-    path:    &Path,
+    path: &Path,
 ) -> Result<()> {
     let mut f = std::fs::File::create(path).map_err(MycoNoteError::Io)?;
     writeln!(f, "protein_id\tipr_acc\tgo_terms").map_err(MycoNoteError::Io)?;
     for (pid, hits) in results {
         for (acc, gos) in hits {
-            writeln!(f, "{}\t{}\t{}", pid, acc, gos.join("|"))
-                .map_err(MycoNoteError::Io)?;
+            writeln!(f, "{}\t{}\t{}", pid, acc, gos.join("|")).map_err(MycoNoteError::Io)?;
         }
     }
     Ok(())
 }
 
 fn parse_interpro_tsv(path: &Path) -> Result<HashMap<String, Vec<(String, Vec<String>)>>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map: HashMap<String, Vec<(String, Vec<String>)>> = HashMap::new();
 
     for line in reader.lines().flatten().skip(1) {
         let cols: Vec<&str> = line.trim().split('\t').collect();
-        if cols.len() < 3 { continue; }
-        let pid  = cols[0].to_string();
-        let acc  = cols[1].to_string();
+        if cols.len() < 3 {
+            continue;
+        }
+        let pid = cols[0].to_string();
+        let acc = cols[1].to_string();
         let gos: Vec<String> = if cols[2].is_empty() {
             vec![]
         } else {
@@ -534,8 +596,10 @@ fn run_deeploc_local(proteins_fa: &Path, out_dir: &Path) -> Result<HashMap<Strin
 
     let ok = Command::new("deeploc2")
         .args([
-            "--fasta",  proteins_fa.to_str().unwrap_or(""),
-            "--output", out_dir.to_str().unwrap_or(""),
+            "--fasta",
+            proteins_fa.to_str().unwrap_or(""),
+            "--output",
+            out_dir.to_str().unwrap_or(""),
         ])
         .status()
         .map(|s| s.success())
@@ -543,7 +607,7 @@ fn run_deeploc_local(proteins_fa: &Path, out_dir: &Path) -> Result<HashMap<Strin
 
     if !ok {
         return Err(MycoNoteError::ExternalTool(
-            "deeploc2 not found. Install: pip install deeploc2".to_string()
+            "deeploc2 not found. Install: pip install deeploc2".to_string(),
         ));
     }
 
@@ -551,16 +615,20 @@ fn run_deeploc_local(proteins_fa: &Path, out_dir: &Path) -> Result<HashMap<Strin
 }
 
 fn parse_deeploc_csv(path: &Path) -> Result<HashMap<String, String>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map = HashMap::new();
 
     for line in reader.lines().flatten().skip(1) {
         let cols: Vec<&str> = line.split(',').collect();
-        if cols.len() < 2 { continue; }
-        let id  = cols[0].trim().trim_matches('"').to_string();
+        if cols.len() < 2 {
+            continue;
+        }
+        let id = cols[0].trim().trim_matches('"').to_string();
         let loc = cols[1].trim().trim_matches('"').to_string();
-        if !id.is_empty() { map.insert(id, loc); }
+        if !id.is_empty() {
+            map.insert(id, loc);
+        }
     }
 
     Ok(map)
@@ -572,24 +640,39 @@ fn parse_deeploc_csv(path: &Path) -> Result<HashMap<String, String>> {
 
 fn write_remote_tsv(path: &Path, results: &HashMap<String, RemoteAnnotation>) -> Result<()> {
     let mut f = std::fs::File::create(path).map_err(MycoNoteError::Io)?;
-    writeln!(f, "gene_id\tsignal_peptide\ttm_count\tipr_accessions\tgo_terms\tlocalisation")
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "gene_id\tsignal_peptide\ttm_count\tipr_accessions\tgo_terms\tlocalisation"
+    )
+    .map_err(MycoNoteError::Io)?;
 
     let mut ids: Vec<&String> = results.keys().collect();
     ids.sort();
 
     for id in ids {
         let ann = &results[id];
-        let (sp, tm) = ann.phobius.as_ref()
-            .map(|p| (if p.signal_peptide { "Y" } else { "N" }, p.tm_count.to_string()))
+        let (sp, tm) = ann
+            .phobius
+            .as_ref()
+            .map(|p| {
+                (
+                    if p.signal_peptide { "Y" } else { "N" },
+                    p.tm_count.to_string(),
+                )
+            })
             .unwrap_or(("", "".to_string()));
 
-        writeln!(f, "{}\t{}\t{}\t{}\t{}\t{}",
-            id, sp, tm,
+        writeln!(
+            f,
+            "{}\t{}\t{}\t{}\t{}\t{}",
+            id,
+            sp,
+            tm,
             ann.ipr_accs.join("|"),
             ann.go_terms.join("|"),
             ann.localisation.as_deref().unwrap_or(""),
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
     }
 
     Ok(())
@@ -600,7 +683,7 @@ fn write_remote_tsv(path: &Path, results: &HashMap<String, RemoteAnnotation>) ->
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn read_fasta_sequences(path: &Path) -> Result<HashMap<String, String>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut map: HashMap<String, String> = HashMap::new();
     let mut current_id = String::new();
@@ -612,7 +695,7 @@ fn read_fasta_sequences(path: &Path) -> Result<HashMap<String, String>> {
             if !current_id.is_empty() {
                 map.insert(current_id.clone(), current_seq.clone());
             }
-            current_id  = t[1..].split_whitespace().next().unwrap_or("").to_string();
+            current_id = t[1..].split_whitespace().next().unwrap_or("").to_string();
             current_seq = String::new();
         } else {
             current_seq.push_str(t);

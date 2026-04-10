@@ -1,3 +1,4 @@
+use super::ViewConfig;
 /// JBrowse2 visualisation output
 ///
 /// Generates a self-contained HTML file that loads JBrowse2 from the
@@ -9,10 +10,8 @@
 /// from the maximum coordinate seen in the GFF3.  When a FASTA path is
 /// supplied the config references it via an `IndexedFastaAdapter` (the
 /// `.fai` index must already exist alongside the FASTA).
-
 use crate::parser::gff::GFFReader;
 use crate::utils::error::Result;
-use super::ViewConfig;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -45,9 +44,9 @@ fn percent_encode_chrom_sizes(sizes: &HashMap<String, u64>) -> String {
         .map(|c| match c {
             '\t' => "%09".to_string(),
             '\n' => "%0A".to_string(),
-            ' '  => "%20".to_string(),
-            '#'  => "%23".to_string(),
-            _    => c.to_string(),
+            ' ' => "%20".to_string(),
+            '#' => "%23".to_string(),
+            _ => c.to_string(),
         })
         .collect()
 }
@@ -56,7 +55,7 @@ fn strand_to_int(c: char) -> i8 {
     match c {
         '+' => 1,
         '-' => -1,
-        _   => 0,
+        _ => 0,
     }
 }
 
@@ -77,27 +76,28 @@ fn parse_gff(
 
     for result in reader {
         let record = match result {
-            Ok(r)  => r,
-            Err(_) => continue,   // skip malformed lines
+            Ok(r) => r,
+            Err(_) => continue, // skip malformed lines
         };
 
         // Track chromosome max position
         let max = chrom_sizes.entry(record.seqid.clone()).or_insert(0);
-        if record.end > *max { *max = record.end; }
+        if record.end > *max {
+            *max = record.end;
+        }
 
         // Determine a stable unique ID
-        let id = record.id()
-            .cloned()
-            .unwrap_or_else(|| {
-                id_counter += 1;
-                format!("feat_{}_{}", record.feature_type, id_counter)
-            });
+        let id = record.id().cloned().unwrap_or_else(|| {
+            id_counter += 1;
+            format!("feat_{}_{}", record.feature_type, id_counter)
+        });
 
         // Human-readable display name — resolution priority:
         //   1. names map (from --names file or API fetch)
         //   2. GFF3 Name / gene / gene_name attribute
         //   3. Feature ID (fallback)
-        let name: Option<String> = names.get(&id)
+        let name: Option<String> = names
+            .get(&id)
             .cloned()
             .or_else(|| record.attributes.get("Name").cloned())
             .or_else(|| record.attributes.get("gene").cloned())
@@ -120,7 +120,7 @@ fn parse_gff(
 
         match parent {
             Some(p) => children_of.entry(p).or_default().push(id),
-            None    => top_level_ids.push(id),
+            None => top_level_ids.push(id),
         }
     }
 
@@ -159,7 +159,11 @@ fn parse_gff(
         features.push(feat);
     }
 
-    Ok(ParsedGFF { features, chrom_sizes, total_count })
+    Ok(ParsedGFF {
+        features,
+        chrom_sizes,
+        total_count,
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +178,7 @@ fn build_assembly(
     let track_id = format!("{}-ReferenceSequenceTrack", name);
 
     let adapter = if let Some(fa) = fasta_path {
-        let fa_str  = fa.to_string_lossy();
+        let fa_str = fa.to_string_lossy();
         let fai_str = format!("{}.fai", fa_str);
         json!({
             "type": "IndexedFastaAdapter",
@@ -203,7 +207,7 @@ fn build_assembly(
 }
 
 fn build_annotation_track(assembly_name: &str, features: Vec<Value>) -> Value {
-    let track_id   = format!("{}-annotations", assembly_name);
+    let track_id = format!("{}-annotations", assembly_name);
     let display_id = format!("{}-LinearBasicDisplay", track_id);
     json!({
         "type":          "FeatureTrack",
@@ -241,7 +245,7 @@ fn build_default_session(
         (default_ref.to_string(), 0, default_end)
     };
 
-    let track_id   = format!("{}-annotations", assembly_name);
+    let track_id = format!("{}-annotations", assembly_name);
     let display_id = format!("{}-LinearBasicDisplay", track_id);
 
     json!({
@@ -274,7 +278,7 @@ fn parse_region_str(r: &str) -> Option<(String, u64, u64)> {
     let (seq, coords) = r.split_once(':')?;
     let (s, e) = coords.split_once('-')?;
     let start: u64 = s.replace(',', "").parse().ok()?;
-    let end:   u64 = e.replace(',', "").parse().ok()?;
+    let end: u64 = e.replace(',', "").parse().ok()?;
     Some((seq.to_string(), start.saturating_sub(1), end))
 }
 
@@ -286,7 +290,7 @@ fn render_html(title: &str, config_json: &str) -> String {
     // Escape </script> inside the JSON blob to avoid breaking the HTML parser
     let safe_json = config_json.replace("</script>", "<\\/script>");
     format!(
-r#"<!DOCTYPE html>
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -451,15 +455,13 @@ pub fn generate_jbrowse_html(config: &ViewConfig) -> Result<()> {
         );
     }
 
-    let assembly_name = config
-        .assembly_name
-        .clone()
-        .unwrap_or_else(|| {
-            config.gff_path
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_else(|| "genome".to_string())
-        });
+    let assembly_name = config.assembly_name.clone().unwrap_or_else(|| {
+        config
+            .gff_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "genome".to_string())
+    });
 
     let title = config
         .title
@@ -472,7 +474,7 @@ pub fn generate_jbrowse_html(config: &ViewConfig) -> Result<()> {
         &parsed.chrom_sizes,
         config.fasta_path.as_deref(),
     );
-    let track   = build_annotation_track(&assembly_name, parsed.features);
+    let track = build_annotation_track(&assembly_name, parsed.features);
     let session = build_default_session(
         &assembly_name,
         &parsed.chrom_sizes,
@@ -493,11 +495,15 @@ pub fn generate_jbrowse_html(config: &ViewConfig) -> Result<()> {
     std::fs::write(&config.output, html)?;
 
     // User-facing summary
-    let abs = config.output.canonicalize().unwrap_or_else(|_| config.output.clone());
+    let abs = config
+        .output
+        .canonicalize()
+        .unwrap_or_else(|_| config.output.clone());
     println!("✓ JBrowse2 HTML saved:  {}", abs.display());
     println!("  Open in browser:      file://{}", abs.display());
     println!();
-    println!("  {} chromosomes/contigs  •  {} top-level features",
+    println!(
+        "  {} chromosomes/contigs  •  {} top-level features",
         parsed.chrom_sizes.len(),
         parsed.total_count,
     );

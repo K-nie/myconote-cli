@@ -1,24 +1,20 @@
 /// SNAP HMM training wrapper
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn snap_available() -> bool {
-    Command::new("which").arg("snap")
+    Command::new("which")
+        .arg("snap")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
-pub fn train_snap(
-    training_gff3: &Path,
-    genome_fasta:  &Path,
-    out_dir:       &Path,
-) -> Result<PathBuf> {
+pub fn train_snap(training_gff3: &Path, genome_fasta: &Path, out_dir: &Path) -> Result<PathBuf> {
     if !snap_available() {
         return Err(MycoNoteError::ExternalTool(
-            "SNAP not found. Install: conda install -c bioconda snap".to_string()
+            "SNAP not found. Install: conda install -c bioconda snap".to_string(),
         ));
     }
 
@@ -57,14 +53,16 @@ pub fn train_snap(
         .map_err(|e| MycoNoteError::ExternalTool(format!("snap -train: {}", e)))?;
 
     if !status.success() {
-        return Err(MycoNoteError::ExternalTool("SNAP training failed".to_string()));
+        return Err(MycoNoteError::ExternalTool(
+            "SNAP training failed".to_string(),
+        ));
     }
 
     // SNAP writes HMM to the current directory
     let hmm_out = snap_dir.join("HMM");
     if !hmm_out.exists() {
         return Err(MycoNoteError::ExternalTool(
-            "SNAP training completed but HMM file not found".to_string()
+            "SNAP training completed but HMM file not found".to_string(),
         ));
     }
 
@@ -78,16 +76,11 @@ pub fn train_snap(
 /// Minimal GFF3 → ZFF conversion (fallback if gff3_to_zff.pl not available).
 /// ZFF format: lines starting with '>' are sequence names;
 /// feature lines are tab-separated: type start end strand [optional]
-fn convert_gff3_to_zff(
-    gff3:    &Path,
-    _genome: &Path,
-    zff_out: &Path,
-    _dna:    &Path,
-) -> Result<()> {
-    use std::io::{BufRead, BufReader, Write};
+fn convert_gff3_to_zff(gff3: &Path, _genome: &Path, zff_out: &Path, _dna: &Path) -> Result<()> {
     use std::collections::HashMap;
+    use std::io::{BufRead, BufReader, Write};
 
-    let file   = std::fs::File::open(gff3).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(gff3).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
     let mut out = std::fs::File::create(zff_out).map_err(MycoNoteError::Io)?;
 
@@ -97,19 +90,28 @@ fn convert_gff3_to_zff(
     for line_res in reader.lines() {
         let line = line_res.map_err(MycoNoteError::Io)?;
         let t = line.trim();
-        if t.starts_with('#') || t.is_empty() { continue; }
+        if t.starts_with('#') || t.is_empty() {
+            continue;
+        }
 
         let fields: Vec<&str> = t.split('\t').collect();
-        if fields.len() < 9 { continue; }
-        if fields[2] != "CDS" { continue; }
+        if fields.len() < 9 {
+            continue;
+        }
+        if fields[2] != "CDS" {
+            continue;
+        }
 
-        let seqid  = fields[0].to_string();
+        let seqid = fields[0].to_string();
         let start: u64 = fields[3].parse().unwrap_or(0);
-        let end:   u64 = fields[4].parse().unwrap_or(0);
+        let end: u64 = fields[4].parse().unwrap_or(0);
         let strand: char = fields[6].chars().next().unwrap_or('+');
         let feat_type = "Exon".to_string();
 
-        by_seq.entry(seqid).or_default().push((feat_type, start, end, strand));
+        by_seq
+            .entry(seqid)
+            .or_default()
+            .push((feat_type, start, end, strand));
     }
 
     for (seqid, features) in &by_seq {

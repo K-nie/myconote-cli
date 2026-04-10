@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use myconote-cli in your research, please cite it as below."
+type: software
+title: "myconote-cli: Blazing-fast genome annotation pipeline"
+version: 0.1.0
+date-released: 2026-04-09
+authors:
+  - family-names: "Narh-Madey"
+    given-names: "Benjamin"
+    email: "narhmadey@wisc.edu"
+    affiliation: "Hittinger Lab, Laboratory of Genetics, University of Wisconsin-Madison"
+    orcid: ""
+repository-code: "https://github.com/K-nie/myconote-cli"
+license: MIT
+keywords:
+  - bioinformatics
+  - genome annotation
+  - gene prediction
+  - fungi
+  - mycology
+  - phylogenetics
+  - Rust
+abstract: >-
+  myconote-cli is a high-performance genome annotation pipeline written
+  in Rust, designed for eukaryotic genomes with particular strength in
+  fungal biology. It integrates 30+ bioinformatics tools for gene
+  prediction, functional annotation, comparative genomics, and NCBI
+  submission preparation, all accessible through a single CLI.

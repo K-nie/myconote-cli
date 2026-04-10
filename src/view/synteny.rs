@@ -11,7 +11,6 @@
 ///
 /// The output is a single .html file with no external dependencies
 /// (D3.js loaded from CDN, graceful offline error message).
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::Write;
@@ -41,16 +40,16 @@ pub struct SyntenyConfig {
 impl Default for SyntenyConfig {
     fn default() -> Self {
         Self {
-            gff1:          PathBuf::new(),
-            gff2:          PathBuf::new(),
-            fasta1:        None,
-            fasta2:        None,
-            output:        PathBuf::from("synteny.html"),
-            label1:        "Genome A".to_string(),
-            label2:        "Genome B".to_string(),
+            gff1: PathBuf::new(),
+            gff2: PathBuf::new(),
+            fasta1: None,
+            fasta2: None,
+            output: PathBuf::from("synteny.html"),
+            label1: "Genome A".to_string(),
+            label2: "Genome B".to_string(),
             min_block_len: 1_000,
-            names:         HashMap::new(),
-            taxon_id:      None,
+            names: HashMap::new(),
+            taxon_id: None,
         }
     }
 }
@@ -62,17 +61,17 @@ impl Default for SyntenyConfig {
 /// One syntenic block parsed from a PAF line.
 #[derive(Debug, Clone)]
 pub struct SyntenyBlock {
-    pub query_name:  String,
+    pub query_name: String,
     pub query_start: u64,
-    pub query_end:   u64,
-    pub query_len:   u64,
+    pub query_end: u64,
+    pub query_len: u64,
     pub target_name: String,
     pub target_start: u64,
-    pub target_end:  u64,
-    pub target_len:  u64,
-    pub strand:      char,    // '+' or '-'
-    pub identity:    f64,     // 0.0–1.0
-    pub block_len:   u64,
+    pub target_end: u64,
+    pub target_len: u64,
+    pub strand: char,  // '+' or '-'
+    pub identity: f64, // 0.0–1.0
+    pub block_len: u64,
 }
 
 /// Chromosome size map keyed by seqid.
@@ -92,29 +91,39 @@ fn parse_paf(paf_path: &Path, min_len: u64) -> Result<Vec<SyntenyBlock>> {
     for line in reader.lines() {
         let line = line.map_err(MycoNoteError::Io)?;
         let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 12 { continue; }
+        if f.len() < 12 {
+            continue;
+        }
 
-        let query_len:   u64 = f[1].parse().unwrap_or(0);
+        let query_len: u64 = f[1].parse().unwrap_or(0);
         let query_start: u64 = f[2].parse().unwrap_or(0);
-        let query_end:   u64 = f[3].parse().unwrap_or(0);
-        let strand_char       = f[4].chars().next().unwrap_or('+');
-        let target_len:  u64 = f[6].parse().unwrap_or(0);
-        let target_start:u64 = f[7].parse().unwrap_or(0);
-        let target_end:  u64 = f[8].parse().unwrap_or(0);
+        let query_end: u64 = f[3].parse().unwrap_or(0);
+        let strand_char = f[4].chars().next().unwrap_or('+');
+        let target_len: u64 = f[6].parse().unwrap_or(0);
+        let target_start: u64 = f[7].parse().unwrap_or(0);
+        let target_end: u64 = f[8].parse().unwrap_or(0);
         let residue_matches: u64 = f[9].parse().unwrap_or(0);
-        let block_len:   u64 = f[10].parse().unwrap_or(0);
+        let block_len: u64 = f[10].parse().unwrap_or(0);
 
-        if block_len < min_len { continue; }
+        if block_len < min_len {
+            continue;
+        }
 
         let identity = if block_len > 0 {
             residue_matches as f64 / block_len as f64
-        } else { 0.0 };
+        } else {
+            0.0
+        };
 
         blocks.push(SyntenyBlock {
-            query_name:   f[0].to_string(),
-            query_start,  query_end, query_len,
-            target_name:  f[5].to_string(),
-            target_start, target_end, target_len,
+            query_name: f[0].to_string(),
+            query_start,
+            query_end,
+            query_len,
+            target_name: f[5].to_string(),
+            target_start,
+            target_end,
+            target_len,
             strand: strand_char,
             identity,
             block_len,
@@ -134,7 +143,8 @@ fn run_minimap2(fasta1: &Path, fasta2: &Path, out_dir: &Path) -> Result<PathBuf>
     let mm2 = which::which("minimap2").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "minimap2 not found in PATH. Install it with: conda install -c bioconda minimap2\n\
-             or: brew install minimap2".to_string()
+             or: brew install minimap2"
+                .to_string(),
         )
     })?;
 
@@ -143,9 +153,11 @@ fn run_minimap2(fasta1: &Path, fasta2: &Path, out_dir: &Path) -> Result<PathBuf>
     println!("  Running minimap2 asm-to-asm alignment…");
     let status = Command::new(&mm2)
         .args([
-            "-cx", "asm5",          // asm-to-asm preset (≥5% divergence)
-            "--cs",                  // include cs tag for identity calculation
-            "-t", "4",              // 4 threads
+            "-cx",
+            "asm5", // asm-to-asm preset (≥5% divergence)
+            "--cs", // include cs tag for identity calculation
+            "-t",
+            "4", // 4 threads
             fasta1.to_str().unwrap_or(""),
             fasta2.to_str().unwrap_or(""),
         ])
@@ -156,7 +168,7 @@ fn run_minimap2(fasta1: &Path, fasta2: &Path, out_dir: &Path) -> Result<PathBuf>
 
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(
-            "minimap2 alignment failed. Check the FASTA files are valid.".to_string()
+            "minimap2 alignment failed. Check the FASTA files are valid.".to_string(),
         ));
     }
 
@@ -174,7 +186,9 @@ fn chrom_sizes_from_gff(gff_path: &Path) -> Result<ChromSizes> {
     for result in GFFReader::from_path(gff_path)? {
         if let Ok(rec) = result {
             let max = sizes.entry(rec.seqid).or_insert(0);
-            if rec.end > *max { *max = rec.end; }
+            if rec.end > *max {
+                *max = rec.end;
+            }
         }
     }
     Ok(sizes)
@@ -188,7 +202,8 @@ fn chrom_sizes_from_gff(gff_path: &Path) -> Result<ChromSizes> {
 fn chrom_sizes_to_js(sizes: &ChromSizes, label: &str) -> String {
     let mut sorted: Vec<(&String, &u64)> = sizes.iter().collect();
     sorted.sort_by(|a, b| a.0.cmp(b.0));
-    let inner: String = sorted.iter()
+    let inner: String = sorted
+        .iter()
         .map(|(k, v)| format!("\"{}\":{}", k, v))
         .collect::<Vec<_>>()
         .join(",");
@@ -197,20 +212,25 @@ fn chrom_sizes_to_js(sizes: &ChromSizes, label: &str) -> String {
 
 /// Serialise blocks to a JS array of objects.
 fn blocks_to_js(blocks: &[SyntenyBlock]) -> String {
-    let items: Vec<String> = blocks.iter().map(|b| {
-        format!(
+    let items: Vec<String> =
+        blocks
+            .iter()
+            .map(|b| {
+                format!(
             "{{qn:\"{}\",qs:{},qe:{},ql:{},tn:\"{}\",ts:{},te:{},tl:{},st:\"{}\",id:{:.4}}}",
             b.query_name, b.query_start, b.query_end, b.query_len,
             b.target_name, b.target_start, b.target_end, b.target_len,
             b.strand, b.identity
         )
-    }).collect();
+            })
+            .collect();
     format!("const synBlocks = [{}];", items.join(","))
 }
 
 /// Serialise the names map to JS: `{id: name, ...}`
 fn names_to_js(names: &HashMap<String, String>) -> String {
-    let inner: String = names.iter()
+    let inner: String = names
+        .iter()
         .map(|(k, v)| {
             let v_esc = v.replace('"', "\\\"");
             format!("\"{}\":\"{}\"", k, v_esc)
@@ -221,23 +241,24 @@ fn names_to_js(names: &HashMap<String, String>) -> String {
 }
 
 fn render_synteny_html(
-    blocks:  &[SyntenyBlock],
-    sizes1:  &ChromSizes,
-    sizes2:  &ChromSizes,
-    config:  &SyntenyConfig,
+    blocks: &[SyntenyBlock],
+    sizes1: &ChromSizes,
+    sizes2: &ChromSizes,
+    config: &SyntenyConfig,
 ) -> String {
     let label1 = &config.label1;
     let label2 = &config.label2;
 
-    let js_sizes1  = chrom_sizes_to_js(sizes1, "A");
-    let js_sizes2  = chrom_sizes_to_js(sizes2, "B");
-    let js_blocks  = blocks_to_js(blocks);
-    let js_names   = names_to_js(&config.names);
+    let js_sizes1 = chrom_sizes_to_js(sizes1, "A");
+    let js_sizes2 = chrom_sizes_to_js(sizes2, "B");
+    let js_blocks = blocks_to_js(blocks);
+    let js_names = names_to_js(&config.names);
 
     let block_count = blocks.len();
     let title = format!("MycoNote — Synteny: {} vs {}", label1, label2);
 
-    format!(r#"<!DOCTYPE html>
+    format!(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -458,7 +479,7 @@ else {{ setTimeout(() => {{ if (typeof d3 !== 'undefined') draw(); }}, 500); }}
         js_sizes1 = js_sizes1,
         js_sizes2 = js_sizes2,
         js_blocks = js_blocks,
-        js_names  = js_names,
+        js_names = js_names,
     )
 }
 
@@ -480,7 +501,11 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
         std::fs::create_dir_all(&tmp_dir).map_err(MycoNoteError::Io)?;
         let paf_path = run_minimap2(fa1, fa2, &tmp_dir)?;
         let blocks = parse_paf(&paf_path, config.min_block_len)?;
-        println!("   {} syntenic blocks ≥ {} bp", blocks.len(), config.min_block_len);
+        println!(
+            "   {} syntenic blocks ≥ {} bp",
+            blocks.len(),
+            config.min_block_len
+        );
         blocks
     } else {
         eprintln!("  ℹ  No FASTA files provided — rendering chromosome layout only (no ribbons).");

@@ -1,3 +1,7 @@
+pub mod augustus;
+pub mod evidence;
+pub mod genemark;
+pub mod glimmer;
 /// Gene prediction pipeline
 ///
 /// Orchestrates the full predict workflow:
@@ -9,17 +13,14 @@
 /// External tools used (all optional — graceful fallback):
 ///   - augustus   (conda install -c bioconda augustus)
 ///   - snap        (conda install -c bioconda snap)
-
 pub mod kingdom;
-pub mod augustus;
+pub mod ploidy;
+pub mod protein_evidence;
 pub mod snap;
-pub mod evidence;
 pub mod train;
-pub mod glimmer;
-pub mod genemark;
 
-use crate::utils::error::{MycoNoteError, Result};
 use crate::progress;
+use crate::utils::error::{MycoNoteError, Result};
 use kingdom::Kingdom;
 use std::path::{Path, PathBuf};
 
@@ -50,38 +51,50 @@ pub struct PredictConfig {
     /// Evidence weights (None = use defaults: augustus=10, snap=3, protein=20)
     pub weights: Option<evidence::EvidenceWeights>,
     /// Auto-train Augustus on a high-confidence subset before predicting
-    pub self_train:      bool,
+    pub self_train: bool,
     /// Species name for trained model (default: "<locus_prefix>_trained")
-    pub train_species:   Option<String>,
+    pub train_species: Option<String>,
     /// Run GlimmerHMM (adds a third ab initio predictor)
-    pub use_glimmerhmm:  bool,
+    pub use_glimmerhmm: bool,
     /// GlimmerHMM training directory (None = auto-detect from kingdom)
-    pub glimmer_dir:     Option<PathBuf>,
+    pub glimmer_dir: Option<PathBuf>,
     /// Run GeneMark-ES (self-training, no pre-existing model needed)
-    pub use_genemark:    bool,
+    pub use_genemark: bool,
     /// Use GeneMark-ET (RNA-seq intron hints file in GFF format)
-    pub genemark_hints:  Option<PathBuf>,
+    pub genemark_hints: Option<PathBuf>,
+    /// Protein FASTA for protein→genome evidence (miniprot/exonerate)
+    pub protein_fasta: Option<PathBuf>,
+    /// Maximum intron size for protein alignment
+    pub max_intron: usize,
+    /// Ploidy level (None = auto-detect or haploid)
+    pub ploidy: Option<u8>,
+    /// Evidence weights TOML file (None = use defaults)
+    pub weights_file: Option<PathBuf>,
 }
 
 impl Default for PredictConfig {
     fn default() -> Self {
         Self {
-            masked_fasta:     PathBuf::new(),
-            out_dir:          PathBuf::from("predict_out"),
-            kingdom:          Kingdom::Fungi,
+            masked_fasta: PathBuf::new(),
+            out_dir: PathBuf::from("predict_out"),
+            kingdom: Kingdom::Fungi,
             augustus_species: None,
-            use_snap:         true,
-            snap_hmm:         None,
+            use_snap: true,
+            snap_hmm: None,
             protein_evidence: None,
-            locus_prefix:     "GENE".to_string(),
-            threads:          4,
-            weights:          None,
-            self_train:       false,
-            train_species:    None,
-            use_glimmerhmm:   false,
-            glimmer_dir:      None,
-            use_genemark:     false,
-            genemark_hints:   None,
+            locus_prefix: "GENE".to_string(),
+            threads: 4,
+            weights: None,
+            self_train: false,
+            train_species: None,
+            use_glimmerhmm: false,
+            glimmer_dir: None,
+            use_genemark: false,
+            genemark_hints: None,
+            protein_fasta: None,
+            max_intron: 10_000,
+            ploidy: None,
+            weights_file: None,
         }
     }
 }
@@ -92,10 +105,10 @@ impl Default for PredictConfig {
 
 fn default_snap_hmm(k: &Kingdom) -> &'static str {
     match k {
-        Kingdom::Fungi   => "fungal",
-        Kingdom::Plant   => "worm",    // closest available for plants
-        Kingdom::Animal  => "human",
-        Kingdom::Insect  => "fly",
+        Kingdom::Fungi => "fungal",
+        Kingdom::Plant => "worm", // closest available for plants
+        Kingdom::Animal => "human",
+        Kingdom::Insect => "fly",
         Kingdom::Protist => "fungal",
     }
 }
@@ -116,8 +129,7 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     }
 
     // ── Create output directory ───────────────────────────────────────────────
-    std::fs::create_dir_all(&config.out_dir)
-        .map_err(MycoNoteError::Io)?;
+    std::fs::create_dir_all(&config.out_dir).map_err(MycoNoteError::Io)?;
 
     println!("── Gene prediction ──────────────────────────────────────────");
     println!("  Kingdom : {}", config.kingdom.display_name());
@@ -125,7 +137,29 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     println!("  Output  : {}", config.out_dir.display());
 
     let mut prediction_inputs: Vec<(PathBuf, &'static str, f64)> = Vec::new();
-    let weights = config.weights.clone().unwrap_or_default();
+
+    // Load weights from file if specified, otherwise use config or defaults
+    let weights = if let Some(ref wf) = config.weights_file {
+        match evidence::EvidenceWeights::from_toml(wf) {
+            Ok(w) => {
+                println!("  Weights loaded from: {}", wf.display());
+                w
+            }
+            Err(e) => {
+                eprintln!(
+                    "  Warning: failed to load weights file: {}. Using defaults.",
+                    e
+                );
+                config.weights.clone().unwrap_or_default()
+            }
+        }
+    } else {
+        config.weights.clone().unwrap_or_default()
+    };
+
+    // Save weights used for reproducibility
+    let weights_out = config.out_dir.join("evidence_weights.toml");
+    let _ = weights.write_toml(&weights_out);
 
     // ── 0. Optional self-training ─────────────────────────────────────────────
     let trained_species: Option<String> = if config.self_train {
@@ -150,7 +184,8 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     // ── 1. Augustus ───────────────────────────────────────────────────────────
     let aug_gff = config.out_dir.join("augustus.gff3");
     // Use trained species if available, otherwise configured/default species
-    let aug_species_owned = trained_species.clone()
+    let aug_species_owned = trained_species
+        .clone()
         .or_else(|| config.augustus_species.clone())
         .unwrap_or_else(|| config.kingdom.default_augustus_species().to_string());
     let aug_species = aug_species_owned.as_str();
@@ -166,18 +201,25 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     };
 
     let aug_cfg = augustus::AugustusConfig {
-        species:    aug_species.to_string(),
-        threads:    config.threads,
-        utr:        config.kingdom.augustus_utr(),
+        species: aug_species.to_string(),
+        threads: config.threads,
+        utr: config.kingdom.augustus_utr(),
         hints_file: hints_path,
         extra_args: Vec::new(),
     };
 
-    progress::step(step_offset + 1, step_offset + 3, &format!("Augustus ({})…", aug_species));
+    progress::step(
+        step_offset + 1,
+        step_offset + 3,
+        &format!("Augustus ({})…", aug_species),
+    );
     let pb_aug = progress::spinner(format!("Running augustus --species={}…", aug_species));
     match augustus::run(&config.masked_fasta, &aug_gff, &aug_cfg) {
         Ok(()) => {
-            progress::finish_spinner(&pb_aug, format!("Augustus complete → {}", aug_gff.display()));
+            progress::finish_spinner(
+                &pb_aug,
+                format!("Augustus complete → {}", aug_gff.display()),
+            );
             prediction_inputs.push((aug_gff, "Augustus", weights.augustus));
         }
         Err(e) => {
@@ -189,11 +231,13 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     // ── 2. SNAP (optional) ────────────────────────────────────────────────────
     if config.use_snap {
         let snap_gff = config.out_dir.join("snap.gff3");
-        let hmm = config.snap_hmm.as_deref()
+        let hmm = config
+            .snap_hmm
+            .as_deref()
             .unwrap_or_else(|| default_snap_hmm(&config.kingdom));
 
         let snap_cfg = snap::SnapConfig {
-            hmm:     hmm.to_string(),
+            hmm: hmm.to_string(),
             threads: config.threads,
         };
 
@@ -210,16 +254,54 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         }
     }
 
+    // ── 2b. Protein evidence (miniprot / exonerate) ─────────────────────────
+    if let Some(ref prot_fa) = config.protein_fasta {
+        if prot_fa.exists() {
+            let prot_cfg = protein_evidence::ProteinEvidenceConfig {
+                proteins: prot_fa.clone(),
+                genome: config.masked_fasta.clone(),
+                out_dir: config.out_dir.join("protein_evidence"),
+                threads: config.threads,
+                max_intron: config.max_intron,
+                ..protein_evidence::ProteinEvidenceConfig::default()
+            };
+
+            println!(
+                "  Running protein-to-genome alignment ({})...",
+                prot_fa.display()
+            );
+            match protein_evidence::generate_protein_evidence(&prot_cfg) {
+                Ok(result) => {
+                    println!(
+                        "  {} proteins aligned to {} loci ({})",
+                        result.n_aligned, result.n_loci, result.tool
+                    );
+                    prediction_inputs.push((result.evidence_gff, "Protein", weights.protein));
+                }
+                Err(e) => {
+                    eprintln!("  Warning: protein evidence alignment failed: {}", e);
+                }
+            }
+        } else {
+            eprintln!("  Warning: protein FASTA not found: {}", prot_fa.display());
+        }
+    }
+
     // ── Guard: at least one predictor must have succeeded ─────────────────────
     if prediction_inputs.is_empty() {
         return Err(MycoNoteError::InvalidFormat(
             "All gene predictors failed. Check that Augustus (and optionally SNAP) \
-             are installed and that the species model is correct.".to_string()
+             are installed and that the species model is correct."
+                .to_string(),
         ));
     }
 
     // ── 3. Evidence Modeler consensus ─────────────────────────────────────────
-    progress::step(step_offset + 3, step_offset + 3, "Merging predictions (Evidence Modeler)…");
+    progress::step(
+        step_offset + 3,
+        step_offset + 3,
+        "Merging predictions (Evidence Modeler)…",
+    );
     let consensus_gff = config.out_dir.join("consensus.gff3");
 
     let inputs_ref: Vec<(&Path, &str, f64)> = prediction_inputs
@@ -227,11 +309,8 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         .map(|(p, s, w)| (p.as_path(), *s, *w))
         .collect();
 
-    let gene_count = evidence::merge_predictions(
-        &inputs_ref,
-        &consensus_gff,
-        &config.locus_prefix,
-    )?;
+    let gene_count =
+        evidence::merge_predictions(&inputs_ref, &consensus_gff, &config.locus_prefix)?;
 
     println!("  ✓  Consensus GFF3 → {}", consensus_gff.display());
     println!("     {} genes called", gene_count);
@@ -264,8 +343,14 @@ fn write_summary(
     writeln!(f, "").map_err(MycoNoteError::Io)?;
     writeln!(f, "Predictors used:").map_err(MycoNoteError::Io)?;
     for (path, source, weight) in inputs {
-        writeln!(f, "  {:<12} weight={:.0}  → {}", source, weight, path.display())
-            .map_err(MycoNoteError::Io)?;
+        writeln!(
+            f,
+            "  {:<12} weight={:.0}  → {}",
+            source,
+            weight,
+            path.display()
+        )
+        .map_err(MycoNoteError::Io)?;
     }
     writeln!(f, "").map_err(MycoNoteError::Io)?;
     writeln!(f, "Final gene count : {}", gene_count).map_err(MycoNoteError::Io)?;
@@ -284,31 +369,35 @@ fn run_self_training(config: &PredictConfig) -> Result<String> {
     let train_dir = config.out_dir.join("training");
     std::fs::create_dir_all(&train_dir).map_err(MycoNoteError::Io)?;
 
-    let default_species = config.augustus_species.as_deref()
+    let default_species = config
+        .augustus_species
+        .as_deref()
         .unwrap_or_else(|| config.kingdom.default_augustus_species());
 
     // First-pass Augustus prediction for training material
     let first_pass_gff = train_dir.join("first_pass.gff3");
     let aug_cfg = augustus::AugustusConfig {
-        species:    default_species.to_string(),
-        threads:    config.threads,
-        utr:        false,  // no UTR for training pass
+        species: default_species.to_string(),
+        threads: config.threads,
+        utr: false, // no UTR for training pass
         hints_file: None,
         extra_args: Vec::new(),
     };
     augustus::run(&config.masked_fasta, &first_pass_gff, &aug_cfg)?;
 
     // Train a custom species from the first-pass predictions
-    let species_name = config.train_species.clone()
+    let species_name = config
+        .train_species
+        .clone()
         .unwrap_or_else(|| format!("{}_trained", config.locus_prefix.to_lowercase()));
 
     let train_config = train::TrainConfig {
-        gff:          first_pass_gff,
-        fasta:        config.masked_fasta.clone(),
+        gff: first_pass_gff,
+        fasta: config.masked_fasta.clone(),
         species_name: species_name.clone(),
-        out_dir:      train_dir,
-        optimize:     false,  // skip optimization for speed
-        threads:      config.threads,
+        out_dir: train_dir,
+        optimize: false, // skip optimization for speed
+        threads: config.threads,
         ..train::TrainConfig::default()
     };
 

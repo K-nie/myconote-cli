@@ -1,33 +1,34 @@
+use super::TrainConfig;
 /// PASA (Program to Assemble Spliced Alignments) wrapper
 ///
 /// PASA aligns Trinity transcripts to the genome, assembles overlapping
 /// alignments, and builds a database of transcript assemblies.
 /// High-confidence complete models (with start + stop codon) are then
 /// used as the gold-standard training set for Augustus/SNAP.
-
 use crate::utils::error::{MycoNoteError, Result};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::io::Write;
-use super::TrainConfig;
 
 pub fn pasa_available() -> bool {
-    Command::new("which").arg("Launch_PASA_pipeline.pl")
+    Command::new("which")
+        .arg("Launch_PASA_pipeline.pl")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
 pub fn run_pasa(
-    config:       &TrainConfig,
-    transcripts:  &Path,
-    db_path:      &Path,
-    gff3_output:  &Path,
+    config: &TrainConfig,
+    transcripts: &Path,
+    db_path: &Path,
+    gff3_output: &Path,
 ) -> Result<usize> {
     if !pasa_available() {
         return Err(MycoNoteError::ExternalTool(
             "PASA (Launch_PASA_pipeline.pl) not found.\n  \
-             Install: conda install -c bioconda pasa".to_string()
+             Install: conda install -c bioconda pasa"
+                .to_string(),
         ));
     }
 
@@ -40,20 +41,27 @@ pub fn run_pasa(
 
     // Run PASA pipeline
     let status = Command::new("Launch_PASA_pipeline.pl")
-        .arg("--config").arg(&conf_path)
-        .arg("--genome").arg(&config.masked_fasta)
-        .arg("--transcripts").arg(transcripts)
-        .arg("--CPU").arg(config.threads.to_string())
-        .arg("--ALIGNERS").arg("minimap2")
-        .arg("--stringent_alignment_overlap").arg("30.0")
-        .arg("--transcript_db").arg(db_path)
+        .arg("--config")
+        .arg(&conf_path)
+        .arg("--genome")
+        .arg(&config.masked_fasta)
+        .arg("--transcripts")
+        .arg(transcripts)
+        .arg("--CPU")
+        .arg(config.threads.to_string())
+        .arg("--ALIGNERS")
+        .arg("minimap2")
+        .arg("--stringent_alignment_overlap")
+        .arg("30.0")
+        .arg("--transcript_db")
+        .arg(db_path)
         .current_dir(&pasa_dir)
         .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("PASA: {}", e)))?;
 
     if !status.success() {
         return Err(MycoNoteError::ExternalTool(
-            "PASA pipeline exited with non-zero status".to_string()
+            "PASA pipeline exited with non-zero status".to_string(),
         ));
     }
 
@@ -85,14 +93,17 @@ fn find_pasa_gff3(pasa_dir: &Path) -> Result<PathBuf> {
         }
     }
     Err(MycoNoteError::ExternalTool(
-        "PASA GFF3 output file not found".to_string()
+        "PASA GFF3 output file not found".to_string(),
     ))
 }
 
 fn count_gff3_genes(gff3: &Path) -> usize {
     use std::io::{BufRead, BufReader};
-    let Ok(f) = std::fs::File::open(gff3) else { return 0 };
-    BufReader::new(f).lines()
+    let Ok(f) = std::fs::File::open(gff3) else {
+        return 0;
+    };
+    BufReader::new(f)
+        .lines()
         .filter_map(|l| l.ok())
         .filter(|l| {
             let fields: Vec<&str> = l.split('\t').collect();

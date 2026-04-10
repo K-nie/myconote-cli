@@ -4,7 +4,6 @@
 /// Provides both sequential iteration and random-access via a
 /// `HashMap<String, FastaRecord>` keyed on the bare sequence ID
 /// (first whitespace-delimited token of the header line).
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::fs::File;
@@ -53,20 +52,24 @@ impl FastaRecord {
 
     /// Reverse-complement of the whole sequence (DNA only).
     pub fn reverse_complement(&self) -> String {
-        self.sequence
-            .chars()
-            .rev()
-            .map(complement_base)
-            .collect()
+        self.sequence.chars().rev().map(complement_base).collect()
     }
 }
 
 fn complement_base(c: char) -> char {
     match c {
-        'A' => 'T', 'T' => 'A', 'G' => 'C', 'C' => 'G',
-        'a' => 't', 't' => 'a', 'g' => 'c', 'c' => 'g',
-        'N' => 'N', 'n' => 'n',
-        'U' => 'A', 'u' => 'a', // RNA
+        'A' => 'T',
+        'T' => 'A',
+        'G' => 'C',
+        'C' => 'G',
+        'a' => 't',
+        't' => 'a',
+        'g' => 'c',
+        'c' => 'g',
+        'N' => 'N',
+        'n' => 'n',
+        'U' => 'A',
+        'u' => 'a', // RNA
         other => other,
     }
 }
@@ -85,9 +88,7 @@ pub struct FastaReader {
 
 impl FastaReader {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(path.as_ref()).map_err(|e| {
-            MycoNoteError::Io(e)
-        })?;
+        let file = File::open(path.as_ref()).map_err(|e| MycoNoteError::Io(e))?;
         Ok(FastaReader {
             lines: BufReader::new(file).lines(),
             pending_header: None,
@@ -130,10 +131,11 @@ impl Iterator for FastaReader {
                     } else if current_header.is_some() {
                         // Sequence line — strip all whitespace and uppercase
                         seq_lines.push(
-                            trimmed.chars()
+                            trimmed
+                                .chars()
                                 .filter(|c| !c.is_whitespace())
                                 .flat_map(|c| c.to_uppercase())
-                                .collect()
+                                .collect(),
                         );
                     }
                     // Lines before any header are silently ignored.
@@ -150,7 +152,11 @@ fn build_record(header: String, seq_lines: Vec<String>) -> FastaRecord {
         .unwrap_or(&header)
         .to_string();
     let sequence = seq_lines.concat();
-    FastaRecord { header, id, sequence }
+    FastaRecord {
+        header,
+        id,
+        sequence,
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,9 +172,7 @@ pub fn read_fasta<P: AsRef<Path>>(path: P) -> Result<Vec<FastaRecord>> {
 ///
 /// If two sequences share the same bare ID, the later one wins
 /// (this mirrors `biopython` behaviour).
-pub fn read_fasta_index<P: AsRef<Path>>(
-    path: P,
-) -> Result<HashMap<String, FastaRecord>> {
+pub fn read_fasta_index<P: AsRef<Path>>(path: P) -> Result<HashMap<String, FastaRecord>> {
     let records = read_fasta(path)?;
     let mut map = HashMap::with_capacity(records.len());
     for rec in records {

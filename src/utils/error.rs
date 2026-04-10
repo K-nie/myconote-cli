@@ -1,26 +1,23 @@
-use thiserror::Error;
 use std::io;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum MycoNoteError {
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
-    
+
     #[error("Parse error at line {line}: {message}")]
-    ParseError {
-        line: usize,
-        message: String,
-    },
-    
+    ParseError { line: usize, message: String },
+
     #[error("Invalid GFF format: {0}")]
     InvalidFormat(String),
-    
+
     #[error("Feature error: {0}")]
     FeatureError(String),
-    
+
     #[error("Unsupported file format: {0}")]
     UnsupportedFormat(String),
-    
+
     #[error("Plotting error: {0}")]
     PlottingError(String),
 
@@ -31,8 +28,12 @@ pub enum MycoNoteError {
     JsonError(#[from] serde_json::Error),
 }
 
-impl From<plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>> for MycoNoteError {
-    fn from(err: plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>) -> Self {
+impl From<plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>>
+    for MycoNoteError
+{
+    fn from(
+        err: plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>,
+    ) -> Self {
         MycoNoteError::PlottingError(format!("{}", err))
     }
 }

@@ -11,7 +11,6 @@
 ///   1. AUGUSTUS_CONFIG_PATH environment variable
 ///   2. `augustus --species=help` output
 ///   3. Common install locations (/opt/conda, /usr/share, etc.)
-
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -22,10 +21,10 @@ use std::process::Command;
 
 #[derive(Debug, Clone)]
 pub struct AugustusSpecies {
-    pub name:        String,
-    pub display:     String,  // from meta/*.cfg
-    pub complete:    bool,    // has parameters.cfg + all HMM files
-    pub user_trained: bool,   // found in user config dir, not system
+    pub name: String,
+    pub display: String,    // from meta/*.cfg
+    pub complete: bool,     // has parameters.cfg + all HMM files
+    pub user_trained: bool, // found in user config dir, not system
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,22 +58,30 @@ pub fn list_species(filter: Option<&str>) {
 
     for (dir, is_user) in &config_dirs {
         let species_dir = dir.join("species");
-        if !species_dir.exists() { continue; }
+        if !species_dir.exists() {
+            continue;
+        }
 
         if let Ok(entries) = std::fs::read_dir(&species_dir) {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                if seen.contains_key(&name) { continue; }
-                if name.starts_with('.') { continue; }
+                if seen.contains_key(&name) {
+                    continue;
+                }
+                if name.starts_with('.') {
+                    continue;
+                }
 
                 let sp_path = entry.path();
-                if !sp_path.is_dir() { continue; }
+                if !sp_path.is_dir() {
+                    continue;
+                }
 
                 let complete = check_species_complete(&sp_path);
-                let display  = read_display_name(&sp_path, &name);
+                let display = read_display_name(&sp_path, &name);
 
                 all_species.push(AugustusSpecies {
-                    name:         name.clone(),
+                    name: name.clone(),
                     display,
                     complete,
                     user_trained: *is_user,
@@ -86,40 +93,55 @@ pub fn list_species(filter: Option<&str>) {
 
     // Sort: user species first, then alphabetical
     all_species.sort_by(|a, b| {
-        b.user_trained.cmp(&a.user_trained)
+        b.user_trained
+            .cmp(&a.user_trained)
             .then(a.name.cmp(&b.name))
     });
 
     // Apply filter
     let filtered: Vec<&AugustusSpecies> = if let Some(f) = filter {
         let f_lower = f.to_lowercase();
-        all_species.iter()
-            .filter(|s| s.name.to_lowercase().contains(&f_lower)
-                     || s.display.to_lowercase().contains(&f_lower))
+        all_species
+            .iter()
+            .filter(|s| {
+                s.name.to_lowercase().contains(&f_lower)
+                    || s.display.to_lowercase().contains(&f_lower)
+            })
             .collect()
     } else {
         all_species.iter().collect()
     };
 
     if filtered.is_empty() {
-        println!("No Augustus species found matching {:?}", filter.unwrap_or(""));
+        println!(
+            "No Augustus species found matching {:?}",
+            filter.unwrap_or("")
+        );
         return;
     }
 
     // Print table
     println!("\nAvailable Augustus species ({} total):", filtered.len());
     println!("{}", "─".repeat(78));
-    println!("{:<35} {:<8} {:<8} {}", "Species name", "Status", "Source", "Description");
+    println!(
+        "{:<35} {:<8} {:<8} {}",
+        "Species name", "Status", "Source", "Description"
+    );
     println!("{}", "─".repeat(78));
 
     for sp in &filtered {
         let status = if sp.complete { "✓" } else { "⚠ incomplete" };
         let source = if sp.user_trained { "user" } else { "system" };
-        println!("  {:<33} {:<8} {:<8} {}",
+        println!(
+            "  {:<33} {:<8} {:<8} {}",
             sp.name,
             status,
             source,
-            if sp.display == sp.name { "" } else { &sp.display },
+            if sp.display == sp.name {
+                ""
+            } else {
+                &sp.display
+            },
         );
     }
 
@@ -134,54 +156,60 @@ pub fn list_species(filter: Option<&str>) {
 
 pub fn list_species_grouped() {
     let groups: &[(&str, &[&str])] = &[
-        ("Fungi (recommended for myconote)", &[
-            "aspergillus_fumigatus",
-            "aspergillus_nidulans",
-            "aspergillus_oryzae",
-            "aspergillus_terreus",
-            "botrytis_cinerea",
-            "candida_albicans",
-            "candida_guilliermondii",
-            "candida_tropicalis",
-            "chaetomium_globosum",
-            "coccidioides_immitis",
-            "coprinus_cinereus",
-            "cryptococcus_neoformans_gattii",
-            "cryptococcus_neoformans_neoformans_B",
-            "encephalitozoon_cuniculi_GB",
-            "fusarium_graminearum",
-            "histoplasma_capsulatum",
-            "neurospora_crassa",
-            "pneumocystis_jirovecii",
-            "rhizopus_oryzae",
-            "saccharomyces_cerevisiae_S288C",
-            "schizosaccharomyces_pombe",
-            "ustilago_maydis",
-            "yarrowia_lipolytica",
-        ]),
-        ("Plants", &[
-            "arabidopsis",
-            "maize",
-            "maize5",
-            "rice",
-            "tomato",
-            "wheat",
-            "Solanaceae",
-        ]),
-        ("Animals / Metazoa", &[
-            "fly",
-            "honeybee1",
-            "human",
-            "mouse",
-            "zebrafish",
-            "nematode",
-            "caenorhabditis",
-            "Drosophila",
-        ]),
-        ("Oomycetes / Protists", &[
-            "phytophthora",
-            "Chlamydomonas",
-        ]),
+        (
+            "Fungi (recommended for myconote)",
+            &[
+                "aspergillus_fumigatus",
+                "aspergillus_nidulans",
+                "aspergillus_oryzae",
+                "aspergillus_terreus",
+                "botrytis_cinerea",
+                "candida_albicans",
+                "candida_guilliermondii",
+                "candida_tropicalis",
+                "chaetomium_globosum",
+                "coccidioides_immitis",
+                "coprinus_cinereus",
+                "cryptococcus_neoformans_gattii",
+                "cryptococcus_neoformans_neoformans_B",
+                "encephalitozoon_cuniculi_GB",
+                "fusarium_graminearum",
+                "histoplasma_capsulatum",
+                "neurospora_crassa",
+                "pneumocystis_jirovecii",
+                "rhizopus_oryzae",
+                "saccharomyces_cerevisiae_S288C",
+                "schizosaccharomyces_pombe",
+                "ustilago_maydis",
+                "yarrowia_lipolytica",
+            ],
+        ),
+        (
+            "Plants",
+            &[
+                "arabidopsis",
+                "maize",
+                "maize5",
+                "rice",
+                "tomato",
+                "wheat",
+                "Solanaceae",
+            ],
+        ),
+        (
+            "Animals / Metazoa",
+            &[
+                "fly",
+                "honeybee1",
+                "human",
+                "mouse",
+                "zebrafish",
+                "nematode",
+                "caenorhabditis",
+                "Drosophila",
+            ],
+        ),
+        ("Oomycetes / Protists", &["phytophthora", "Chlamydomonas"]),
     ];
 
     println!("\nAugustus species — grouped by kingdom");
@@ -206,13 +234,19 @@ fn find_augustus_config_dirs() -> Vec<(PathBuf, bool)> {
     // 1. Environment variable
     if let Ok(v) = std::env::var("AUGUSTUS_CONFIG_PATH") {
         let p = PathBuf::from(&v);
-        if p.exists() { dirs.push((p, false)); }
+        if p.exists() {
+            dirs.push((p, false));
+        }
     }
 
     // 2. User-trained species (~/.myconote/augustus_config)
     if let Ok(home) = std::env::var("HOME") {
-        let user_cfg = PathBuf::from(home).join(".myconote").join("augustus_config");
-        if user_cfg.exists() { dirs.push((user_cfg, true)); }
+        let user_cfg = PathBuf::from(home)
+            .join(".myconote")
+            .join("augustus_config");
+        if user_cfg.exists() {
+            dirs.push((user_cfg, true));
+        }
     }
 
     // 3. Ask augustus
@@ -261,7 +295,9 @@ fn read_display_name(sp_path: &Path, fallback: &str) -> String {
                 if line.trim_start().starts_with("Species") || line.contains("organism") {
                     if let Some(val) = line.split('=').nth(1) {
                         let v = val.trim().to_string();
-                        if !v.is_empty() { return v; }
+                        if !v.is_empty() {
+                            return v;
+                        }
                     }
                 }
             }
@@ -278,7 +314,9 @@ fn read_display_name(sp_path: &Path, fallback: &str) -> String {
                         if line.to_lowercase().contains("name") && line.contains('=') {
                             if let Some(val) = line.split('=').nth(1) {
                                 let v = val.trim().trim_matches('"').to_string();
-                                if !v.is_empty() { return v; }
+                                if !v.is_empty() {
+                                    return v;
+                                }
                             }
                         }
                     }

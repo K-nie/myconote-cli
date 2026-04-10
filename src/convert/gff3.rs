@@ -1,3 +1,4 @@
+use crate::parser::gff::{GFFReader, GFFRecord};
 /// GFF3 conversion utilities
 ///
 /// Supported output formats:
@@ -7,9 +8,7 @@
 ///   BEDGraph   — per-feature coverage depth track
 ///   TSV table  — flat feature table (all attributes expanded)
 ///   Protein    — translated CDS sequences as FASTA (.faa)
-
 use crate::utils::error::{MycoNoteError, Result};
-use crate::parser::gff::{GFFReader, GFFRecord};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
@@ -44,14 +43,14 @@ pub fn gff3_to_gtf(input: &Path, output: &Path) -> Result<usize> {
 
     for rec in &records {
         let gtf_feature = match rec.feature_type.as_str() {
-            "mRNA" | "transcript"      => "transcript",
-            "five_prime_UTR"           => "5UTR",
-            "three_prime_UTR"          => "3UTR",
-            "region" | "chromosome"    => continue,   // skip assembly regions
-            other                      => other,
+            "mRNA" | "transcript" => "transcript",
+            "five_prime_UTR" => "5UTR",
+            "three_prime_UTR" => "3UTR",
+            "region" | "chromosome" => continue, // skip assembly regions
+            other => other,
         };
 
-        let id     = rec.id().map(|s| s.as_str()).unwrap_or("");
+        let id = rec.id().map(|s| s.as_str()).unwrap_or("");
         let parent = rec.parent().map(|s| s.as_str()).unwrap_or("");
 
         // Resolve gene_id and transcript_id for every feature type
@@ -67,25 +66,39 @@ pub fn gff3_to_gtf(input: &Path, output: &Path) -> Result<usize> {
         };
 
         // Build attribute string
-        let mut attrs = format!("gene_id \"{}\"; transcript_id \"{}\";", gene_id, transcript_id);
+        let mut attrs = format!(
+            "gene_id \"{}\"; transcript_id \"{}\";",
+            gene_id, transcript_id
+        );
         if let Some(name) = rec.attributes.get("Name") {
             attrs.push_str(&format!(" gene_name \"{}\";", name));
         }
-        if let Some(biotype) = rec.attributes.get("gene_biotype")
-            .or_else(|| rec.attributes.get("biotype")) {
+        if let Some(biotype) = rec
+            .attributes
+            .get("gene_biotype")
+            .or_else(|| rec.attributes.get("biotype"))
+        {
             attrs.push_str(&format!(" gene_biotype \"{}\";", biotype));
         }
         if let Some(product) = rec.attributes.get("product") {
             attrs.push_str(&format!(" product \"{}\";", product));
         }
 
-        let score = rec.score.map(|s| format!("{}", s)).unwrap_or_else(|| ".".into());
-        let phase = rec.phase.map(|p| format!("{}", p)).unwrap_or_else(|| ".".into());
+        let score = rec
+            .score
+            .map(|s| format!("{}", s))
+            .unwrap_or_else(|| ".".into());
+        let phase = rec
+            .phase
+            .map(|p| format!("{}", p))
+            .unwrap_or_else(|| ".".into());
 
-        writeln!(out, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            rec.seqid, rec.source, gtf_feature,
-            rec.start, rec.end, score, rec.strand, phase, attrs
-        ).map_err(MycoNoteError::Io)?;
+        writeln!(
+            out,
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            rec.seqid, rec.source, gtf_feature, rec.start, rec.end, score, rec.strand, phase, attrs
+        )
+        .map_err(MycoNoteError::Io)?;
 
         count += 1;
     }
@@ -101,11 +114,7 @@ pub fn gff3_to_gtf(input: &Path, output: &Path) -> Result<usize> {
 ///
 /// If `feature_types` is empty, all features are converted.
 /// Coordinates are converted from GFF3 1-based inclusive to BED 0-based half-open.
-pub fn gff3_to_bed(
-    input:         &Path,
-    output:        &Path,
-    feature_types: &[&str],
-) -> Result<usize> {
+pub fn gff3_to_bed(input: &Path, output: &Path, feature_types: &[&str]) -> Result<usize> {
     let filter: std::collections::HashSet<&str> = feature_types.iter().copied().collect();
     let filter_all = filter.is_empty();
 
@@ -113,23 +122,37 @@ pub fn gff3_to_bed(
     let mut count = 0;
 
     for rec_res in GFFReader::from_path(input)? {
-        let rec = match rec_res { Ok(r) => r, Err(_) => continue };
+        let rec = match rec_res {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
 
-        if !filter_all && !filter.contains(rec.feature_type.as_str()) { continue; }
+        if !filter_all && !filter.contains(rec.feature_type.as_str()) {
+            continue;
+        }
 
-        let name = rec.id()
+        let name = rec
+            .id()
             .or_else(|| rec.attributes.get("Name"))
             .map(|s| s.as_str())
             .unwrap_or(".");
-        let score = rec.score.map(|s| format!("{:.0}", s)).unwrap_or_else(|| "0".into());
+        let score = rec
+            .score
+            .map(|s| format!("{:.0}", s))
+            .unwrap_or_else(|| "0".into());
 
         // GFF3: 1-based inclusive → BED: 0-based half-open
-        writeln!(out, "{}\t{}\t{}\t{}\t{}\t{}",
+        writeln!(
+            out,
+            "{}\t{}\t{}\t{}\t{}\t{}",
             rec.seqid,
             rec.start - 1,
             rec.end,
-            name, score, rec.strand,
-        ).map_err(MycoNoteError::Io)?;
+            name,
+            score,
+            rec.strand,
+        )
+        .map_err(MycoNoteError::Io)?;
 
         count += 1;
     }
@@ -148,18 +171,23 @@ pub fn gff3_to_bed12(input: &Path, output: &Path) -> Result<usize> {
         .filter_map(|r| r.ok())
         .collect();
 
-    let mut transcripts: HashMap<String, GFFRecord>          = HashMap::new();
-    let mut tx_exons:    HashMap<String, Vec<(u64, u64)>>    = HashMap::new();
-    let mut tx_cds:      HashMap<String, (u64, u64)>         = HashMap::new();
+    let mut transcripts: HashMap<String, GFFRecord> = HashMap::new();
+    let mut tx_exons: HashMap<String, Vec<(u64, u64)>> = HashMap::new();
+    let mut tx_cds: HashMap<String, (u64, u64)> = HashMap::new();
 
     for rec in &records {
         match rec.feature_type.as_str() {
             "mRNA" | "transcript" => {
-                if let Some(id) = rec.id() { transcripts.insert(id.clone(), rec.clone()); }
+                if let Some(id) = rec.id() {
+                    transcripts.insert(id.clone(), rec.clone());
+                }
             }
             "exon" => {
                 if let Some(p) = rec.parent() {
-                    tx_exons.entry(p.clone()).or_default().push((rec.start, rec.end));
+                    tx_exons
+                        .entry(p.clone())
+                        .or_default()
+                        .push((rec.start, rec.end));
                 }
             }
             "CDS" => {
@@ -181,18 +209,27 @@ pub fn gff3_to_bed12(input: &Path, output: &Path) -> Result<usize> {
 
     for id in ids {
         let tx = &transcripts[id];
-        let chrom_start = tx.start - 1;  // 0-based
-        let chrom_end   = tx.end;
+        let chrom_start = tx.start - 1; // 0-based
+        let chrom_end = tx.end;
 
-        let (thick_start, thick_end) = tx_cds.get(id)
+        let (thick_start, thick_end) = tx_cds
+            .get(id)
             .map(|&(s, e)| (s - 1, e))
-            .unwrap_or((chrom_start, chrom_start));  // no CDS → thickStart = thickEnd
+            .unwrap_or((chrom_start, chrom_start)); // no CDS → thickStart = thickEnd
 
-        let name  = tx.attributes.get("Name").map(|s| s.as_str()).unwrap_or(id.as_str());
-        let score = tx.score.map(|s| format!("{:.0}", s)).unwrap_or_else(|| "0".into());
+        let name = tx
+            .attributes
+            .get("Name")
+            .map(|s| s.as_str())
+            .unwrap_or(id.as_str());
+        let score = tx
+            .score
+            .map(|s| format!("{:.0}", s))
+            .unwrap_or_else(|| "0".into());
 
         // Build exon blocks (0-based coordinates, sorted)
-        let blocks: Vec<(u64, u64)> = tx_exons.get(id)
+        let blocks: Vec<(u64, u64)> = tx_exons
+            .get(id)
             .map(|exons| {
                 let mut b: Vec<(u64, u64)> = exons.iter().map(|&(s, e)| (s - 1, e)).collect();
                 b.sort_by_key(|&(s, _)| s);
@@ -200,19 +237,29 @@ pub fn gff3_to_bed12(input: &Path, output: &Path) -> Result<usize> {
             })
             .unwrap_or_else(|| vec![(chrom_start, chrom_end)]);
 
-        let block_count  = blocks.len();
-        let block_sizes: Vec<String>  = blocks.iter().map(|(s, e)| (e - s).to_string()).collect();
-        let block_starts: Vec<String> = blocks.iter().map(|(s, _)| (s - chrom_start).to_string()).collect();
+        let block_count = blocks.len();
+        let block_sizes: Vec<String> = blocks.iter().map(|(s, e)| (e - s).to_string()).collect();
+        let block_starts: Vec<String> = blocks
+            .iter()
+            .map(|(s, _)| (s - chrom_start).to_string())
+            .collect();
 
-        writeln!(out,
+        writeln!(
+            out,
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t0\t{}\t{},\t{},",
-            tx.seqid, chrom_start, chrom_end,
-            name, score, tx.strand,
-            thick_start, thick_end,
+            tx.seqid,
+            chrom_start,
+            chrom_end,
+            name,
+            score,
+            tx.strand,
+            thick_start,
+            thick_end,
             block_count,
             block_sizes.join(","),
             block_starts.join(","),
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
 
         count += 1;
     }
@@ -226,23 +273,27 @@ pub fn gff3_to_bed12(input: &Path, output: &Path) -> Result<usize> {
 
 /// Produce a BEDGraph track with value = 1 for each feature interval.
 /// Useful for visualising gene density in IGV or UCSC browser.
-pub fn gff3_to_bedgraph(
-    input:        &Path,
-    output:       &Path,
-    feature_type: &str,
-) -> Result<usize> {
+pub fn gff3_to_bedgraph(input: &Path, output: &Path, feature_type: &str) -> Result<usize> {
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
-    writeln!(out, "track type=bedGraph name=\"{}\" visibility=full",
-        feature_type).map_err(MycoNoteError::Io)?;
+    writeln!(
+        out,
+        "track type=bedGraph name=\"{}\" visibility=full",
+        feature_type
+    )
+    .map_err(MycoNoteError::Io)?;
     let mut count = 0;
 
     for rec_res in GFFReader::from_path(input)? {
-        let rec = match rec_res { Ok(r) => r, Err(_) => continue };
-        if rec.feature_type != feature_type { continue; }
+        let rec = match rec_res {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        if rec.feature_type != feature_type {
+            continue;
+        }
 
-        writeln!(out, "{}\t{}\t{}\t1",
-            rec.seqid, rec.start - 1, rec.end
-        ).map_err(MycoNoteError::Io)?;
+        writeln!(out, "{}\t{}\t{}\t1", rec.seqid, rec.start - 1, rec.end)
+            .map_err(MycoNoteError::Io)?;
         count += 1;
     }
 
@@ -257,31 +308,55 @@ pub fn gff3_to_bedgraph(
 /// Standard columns + all attribute key=value pairs as the last column.
 pub fn gff3_to_table(input: &Path, output: &Path) -> Result<usize> {
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
-    writeln!(out, "seqid\tsource\ttype\tstart\tend\tscore\tstrand\tphase\tID\tParent\tName\tattributes")
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        out,
+        "seqid\tsource\ttype\tstart\tend\tscore\tstrand\tphase\tID\tParent\tName\tattributes"
+    )
+    .map_err(MycoNoteError::Io)?;
 
     let mut count = 0;
     for rec_res in GFFReader::from_path(input)? {
-        let rec = match rec_res { Ok(r) => r, Err(_) => continue };
+        let rec = match rec_res {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
 
-        let id     = rec.attributes.get("ID").map(|s| s.as_str()).unwrap_or("");
-        let parent = rec.attributes.get("Parent").map(|s| s.as_str()).unwrap_or("");
-        let name   = rec.attributes.get("Name").map(|s| s.as_str()).unwrap_or("");
+        let id = rec.attributes.get("ID").map(|s| s.as_str()).unwrap_or("");
+        let parent = rec
+            .attributes
+            .get("Parent")
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        let name = rec.attributes.get("Name").map(|s| s.as_str()).unwrap_or("");
 
-        let extra: Vec<String> = rec.attributes.iter()
+        let extra: Vec<String> = rec
+            .attributes
+            .iter()
             .filter(|(k, _)| !matches!(k.as_str(), "ID" | "Parent" | "Name"))
             .map(|(k, v)| format!("{}={}", k, v))
             .collect();
 
-        writeln!(out, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            rec.seqid, rec.source, rec.feature_type,
-            rec.start, rec.end,
-            rec.score.map(|s| format!("{}", s)).unwrap_or_else(|| ".".into()),
+        writeln!(
+            out,
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            rec.seqid,
+            rec.source,
+            rec.feature_type,
+            rec.start,
+            rec.end,
+            rec.score
+                .map(|s| format!("{}", s))
+                .unwrap_or_else(|| ".".into()),
             rec.strand,
-            rec.phase.map(|p| format!("{}", p)).unwrap_or_else(|| ".".into()),
-            id, parent, name,
+            rec.phase
+                .map(|p| format!("{}", p))
+                .unwrap_or_else(|| ".".into()),
+            id,
+            parent,
+            name,
             extra.join(";"),
-        ).map_err(MycoNoteError::Io)?;
+        )
+        .map_err(MycoNoteError::Io)?;
 
         count += 1;
     }
@@ -303,8 +378,8 @@ pub fn gff3_to_protein(gff_path: &Path, fasta_path: &Path, output: &Path) -> Res
         .filter_map(|r| r.ok())
         .collect();
 
-    let mut mrna_cds:    HashMap<String, Vec<GFFRecord>> = HashMap::new();
-    let mut mrna_to_gene: HashMap<String, String>        = HashMap::new();
+    let mut mrna_cds: HashMap<String, Vec<GFFRecord>> = HashMap::new();
+    let mut mrna_to_gene: HashMap<String, String> = HashMap::new();
 
     for rec in &records {
         match rec.feature_type.as_str() {
@@ -330,7 +405,7 @@ pub fn gff3_to_protein(gff_path: &Path, fasta_path: &Path, output: &Path) -> Res
 
         let seq_rec = match fasta_index.get(&cds_list[0].seqid) {
             Some(s) => s,
-            None    => continue,
+            None => continue,
         };
 
         let strand = cds_list[0].strand;
@@ -343,9 +418,14 @@ pub fn gff3_to_protein(gff_path: &Path, fasta_path: &Path, output: &Path) -> Res
         }
 
         let protein = translate_dna(&cds_seq);
-        if protein.len() < 10 { continue; }
+        if protein.len() < 10 {
+            continue;
+        }
 
-        let gene_id = mrna_to_gene.get(&mrna_id).map(|s| s.as_str()).unwrap_or(mrna_id.as_str());
+        let gene_id = mrna_to_gene
+            .get(&mrna_id)
+            .map(|s| s.as_str())
+            .unwrap_or(mrna_id.as_str());
         writeln!(out, ">{} gene={}", mrna_id, gene_id).map_err(MycoNoteError::Io)?;
         for chunk in protein.as_bytes().chunks(60) {
             writeln!(out, "{}", std::str::from_utf8(chunk).unwrap_or(""))
@@ -366,39 +446,43 @@ pub fn translate_dna(dna: &str) -> String {
     let mut prot = String::with_capacity(bytes.len() / 3);
     let mut i = 0;
     while i + 2 < bytes.len() {
-        let codon = [bytes[i].to_ascii_uppercase(),
-                     bytes[i+1].to_ascii_uppercase(),
-                     bytes[i+2].to_ascii_uppercase()];
+        let codon = [
+            bytes[i].to_ascii_uppercase(),
+            bytes[i + 1].to_ascii_uppercase(),
+            bytes[i + 2].to_ascii_uppercase(),
+        ];
         prot.push(codon_to_aa(&codon));
         i += 3;
     }
-    if prot.ends_with('*') { prot.pop(); }
+    if prot.ends_with('*') {
+        prot.pop();
+    }
     prot
 }
 
 fn codon_to_aa(c: &[u8; 3]) -> char {
     match c {
-        b"TTT"|b"TTC"                                     => 'F',
-        b"TTA"|b"TTG"|b"CTT"|b"CTC"|b"CTA"|b"CTG"        => 'L',
-        b"ATT"|b"ATC"|b"ATA"                              => 'I',
-        b"ATG"                                             => 'M',
-        b"GTT"|b"GTC"|b"GTA"|b"GTG"                       => 'V',
-        b"TCT"|b"TCC"|b"TCA"|b"TCG"|b"AGT"|b"AGC"         => 'S',
-        b"CCT"|b"CCC"|b"CCA"|b"CCG"                       => 'P',
-        b"ACT"|b"ACC"|b"ACA"|b"ACG"                       => 'T',
-        b"GCT"|b"GCC"|b"GCA"|b"GCG"                       => 'A',
-        b"TAT"|b"TAC"                                     => 'Y',
-        b"TAA"|b"TAG"|b"TGA"                              => '*',
-        b"CAT"|b"CAC"                                     => 'H',
-        b"CAA"|b"CAG"                                     => 'Q',
-        b"AAT"|b"AAC"                                     => 'N',
-        b"AAA"|b"AAG"                                     => 'K',
-        b"GAT"|b"GAC"                                     => 'D',
-        b"GAA"|b"GAG"                                     => 'E',
-        b"TGT"|b"TGC"                                     => 'C',
-        b"TGG"                                            => 'W',
-        b"CGT"|b"CGC"|b"CGA"|b"CGG"|b"AGA"|b"AGG"         => 'R',
-        b"GGT"|b"GGC"|b"GGA"|b"GGG"                       => 'G',
-        _                                                  => 'X',
+        b"TTT" | b"TTC" => 'F',
+        b"TTA" | b"TTG" | b"CTT" | b"CTC" | b"CTA" | b"CTG" => 'L',
+        b"ATT" | b"ATC" | b"ATA" => 'I',
+        b"ATG" => 'M',
+        b"GTT" | b"GTC" | b"GTA" | b"GTG" => 'V',
+        b"TCT" | b"TCC" | b"TCA" | b"TCG" | b"AGT" | b"AGC" => 'S',
+        b"CCT" | b"CCC" | b"CCA" | b"CCG" => 'P',
+        b"ACT" | b"ACC" | b"ACA" | b"ACG" => 'T',
+        b"GCT" | b"GCC" | b"GCA" | b"GCG" => 'A',
+        b"TAT" | b"TAC" => 'Y',
+        b"TAA" | b"TAG" | b"TGA" => '*',
+        b"CAT" | b"CAC" => 'H',
+        b"CAA" | b"CAG" => 'Q',
+        b"AAT" | b"AAC" => 'N',
+        b"AAA" | b"AAG" => 'K',
+        b"GAT" | b"GAC" => 'D',
+        b"GAA" | b"GAG" => 'E',
+        b"TGT" | b"TGC" => 'C',
+        b"TGG" => 'W',
+        b"CGT" | b"CGC" | b"CGA" | b"CGG" | b"AGA" | b"AGG" => 'R',
+        b"GGT" | b"GGC" | b"GGA" | b"GGG" => 'G',
+        _ => 'X',
     }
 }

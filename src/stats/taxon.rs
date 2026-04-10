@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,11 +11,16 @@ pub struct TaxonReference {
 }
 
 impl TaxonReference {
-    pub fn new(name: &str, 
-               gene_min: usize, gene_max: usize,
-               length_min: f64, length_max: f64,
-               exons_min: f64, exons_max: f64,
-               description: &str) -> Self {
+    pub fn new(
+        name: &str,
+        gene_min: usize,
+        gene_max: usize,
+        length_min: f64,
+        length_max: f64,
+        exons_min: f64,
+        exons_max: f64,
+        description: &str,
+    ) -> Self {
         Self {
             name: name.to_string(),
             expected_gene_count: (gene_min, gene_max),
@@ -29,7 +34,7 @@ impl TaxonReference {
 lazy_static::lazy_static! {
     pub static ref TAXON_DATABASE: HashMap<String, TaxonReference> = {
         let mut m = HashMap::new();
-        
+
         // Fungi
         m.insert("fungi".to_string(), TaxonReference::new(
             "Fungi",
@@ -38,7 +43,7 @@ lazy_static::lazy_static! {
             2.0, 5.0,         // exons per gene range
             "Fungal genomes typically have compact gene structures with few introns"
         ));
-        
+
         // Ascomycota (a fungal subdivision)
         m.insert("ascomycota".to_string(), TaxonReference::new(
             "Ascomycota",
@@ -47,7 +52,7 @@ lazy_static::lazy_static! {
             2.0, 4.0,
             "Ascomycete fungi like yeast and molds"
         ));
-        
+
         // Basidiomycota
         m.insert("basidiomycota".to_string(), TaxonReference::new(
             "Basidiomycota",
@@ -56,7 +61,7 @@ lazy_static::lazy_static! {
             3.0, 6.0,
             "Basidiomycete fungi like mushrooms and rusts"
         ));
-        
+
         // Plants
         m.insert("plants".to_string(), TaxonReference::new(
             "Plants",
@@ -65,7 +70,7 @@ lazy_static::lazy_static! {
             4.0, 8.0,
             "Plant genomes often have larger genes with more exons"
         ));
-        
+
         // Animals
         m.insert("animals".to_string(), TaxonReference::new(
             "Animals",
@@ -74,7 +79,7 @@ lazy_static::lazy_static! {
             5.0, 12.0,
             "Animal genomes have variable gene structures"
         ));
-        
+
         // Mammals
         m.insert("mammals".to_string(), TaxonReference::new(
             "Mammals",
@@ -83,16 +88,16 @@ lazy_static::lazy_static! {
             6.0, 15.0,
             "Mammalian genes often have many exons due to alternative splicing"
         ));
-        
+
         m
     };
 }
 
 pub fn get_taxon_warning(stats: &super::GenomeStatistics, taxon: &str) -> Option<String> {
     let db = TAXON_DATABASE.get(taxon)?;
-    
+
     let mut warnings = Vec::new();
-    
+
     // Check gene count
     if stats.total_genes < db.expected_gene_count.0 {
         warnings.push(format!(
@@ -105,7 +110,7 @@ pub fn get_taxon_warning(stats: &super::GenomeStatistics, taxon: &str) -> Option
             stats.total_genes, db.name, db.expected_gene_count.0, db.expected_gene_count.1
         ));
     }
-    
+
     // Check gene length
     let mean_len = stats.mean_gene_length();
     if mean_len < db.expected_gene_length.0 {
@@ -119,7 +124,7 @@ pub fn get_taxon_warning(stats: &super::GenomeStatistics, taxon: &str) -> Option
             mean_len, db.name, db.expected_gene_length.0, db.expected_gene_length.1
         ));
     }
-    
+
     // Check exons per gene (if we have exon data)
     if stats.total_genes > 0 && stats.total_exons > 0 {
         let mean_exons = stats.total_exons as f64 / stats.total_genes as f64;
@@ -135,9 +140,12 @@ pub fn get_taxon_warning(stats: &super::GenomeStatistics, taxon: &str) -> Option
             ));
         }
     }
-    
+
     if warnings.is_empty() {
-        Some(format!("✓ Genome statistics are within expected range for {}", db.name))
+        Some(format!(
+            "✓ Genome statistics are within expected range for {}",
+            db.name
+        ))
     } else {
         Some(format!(
             "⚠️  Taxonomic Benchmark Warning for {}:\n  {}\n  {}",

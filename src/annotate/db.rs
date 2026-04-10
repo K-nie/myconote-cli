@@ -6,7 +6,6 @@
 ///
 /// All databases are stored in ~/.myconote/dbs/ by default.
 /// Run once with: myconote annotate --download-dbs
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -18,8 +17,7 @@ use std::process::Command;
 const SWISSPROT_URL: &str =
     "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz";
 
-const PFAM_URL: &str =
-    "https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz";
+const PFAM_URL: &str = "https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Status report
@@ -28,20 +26,27 @@ const PFAM_URL: &str =
 #[derive(Debug)]
 pub struct DbStatus {
     pub swissprot_ready: bool,
-    pub pfam_ready:      bool,
-    pub db_dir:          PathBuf,
+    pub pfam_ready: bool,
+    pub db_dir: PathBuf,
 }
 
 impl DbStatus {
     pub fn print(&self) {
         println!("  Database directory: {}", self.db_dir.display());
-        println!("  Swiss-Prot (MMseqs2) : {}", status_str(self.swissprot_ready));
+        println!(
+            "  Swiss-Prot (MMseqs2) : {}",
+            status_str(self.swissprot_ready)
+        );
         println!("  Pfam-A (hmmscan)     : {}", status_str(self.pfam_ready));
     }
 }
 
 fn status_str(ready: bool) -> &'static str {
-    if ready { "✓ ready" } else { "✗ not found — run: myconote annotate --download-dbs" }
+    if ready {
+        "✓ ready"
+    } else {
+        "✗ not found — run: myconote annotate --download-dbs"
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,13 +54,13 @@ fn status_str(ready: bool) -> &'static str {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn check_status(db_dir: &Path) -> DbStatus {
-    let sp_db  = db_dir.join("swissprot").join("swissprot");
-    let pfam   = db_dir.join("pfam").join("Pfam-A.hmm");
+    let sp_db = db_dir.join("swissprot").join("swissprot");
+    let pfam = db_dir.join("pfam").join("Pfam-A.hmm");
 
     DbStatus {
         swissprot_ready: sp_db.exists(),
-        pfam_ready:      pfam.exists(),
-        db_dir:          db_dir.to_path_buf(),
+        pfam_ready: pfam.exists(),
+        db_dir: db_dir.to_path_buf(),
     }
 }
 
@@ -83,7 +88,7 @@ pub fn download_all(db_dir: &Path, threads: usize) -> Result<()> {
 
 fn download_swissprot(db_dir: &Path, threads: usize) -> Result<()> {
     let sp_dir = db_dir.join("swissprot");
-    let sp_db  = sp_dir.join("swissprot");
+    let sp_db = sp_dir.join("swissprot");
 
     if sp_db.exists() {
         println!("  Swiss-Prot MMseqs2 database already present — skipping download.");
@@ -92,8 +97,8 @@ fn download_swissprot(db_dir: &Path, threads: usize) -> Result<()> {
 
     std::fs::create_dir_all(&sp_dir).map_err(MycoNoteError::Io)?;
 
-    let gz_path  = sp_dir.join("uniprot_sprot.fasta.gz");
-    let fa_path  = sp_dir.join("uniprot_sprot.fasta");
+    let gz_path = sp_dir.join("uniprot_sprot.fasta.gz");
+    let fa_path = sp_dir.join("uniprot_sprot.fasta");
 
     // Download
     println!("  Downloading Swiss-Prot FASTA from UniProt…");
@@ -167,7 +172,8 @@ fn curl_download(url: &str, dest: &Path) -> Result<()> {
 
     if !downloader.success() {
         return Err(MycoNoteError::InvalidFormat(format!(
-            "Failed to download {}. Check your internet connection.", url
+            "Failed to download {}. Check your internet connection.",
+            url
         )));
     }
     Ok(())
@@ -181,9 +187,7 @@ fn gunzip(gz: &Path, dest: &Path) -> Result<()> {
         .map_err(MycoNoteError::Io)?;
 
     if !status.success() {
-        return Err(MycoNoteError::InvalidFormat(
-            "gunzip failed.".to_string()
-        ));
+        return Err(MycoNoteError::InvalidFormat("gunzip failed.".to_string()));
     }
     Ok(())
 }
@@ -191,7 +195,7 @@ fn gunzip(gz: &Path, dest: &Path) -> Result<()> {
 fn mmseqs_createdb(fasta: &Path, db_out: &Path, threads: usize) -> Result<()> {
     let mmseqs = which::which("mmseqs").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
-            "mmseqs not found in PATH. Install with: conda install -c bioconda mmseqs2".to_string()
+            "mmseqs not found in PATH. Install with: conda install -c bioconda mmseqs2".to_string(),
         )
     })?;
 
@@ -199,10 +203,17 @@ fn mmseqs_createdb(fasta: &Path, db_out: &Path, threads: usize) -> Result<()> {
 
     // createdb
     let s1 = Command::new(&mmseqs)
-        .args(["createdb", fasta.to_str().unwrap_or(""), db_out.to_str().unwrap_or("")])
-        .status().map_err(MycoNoteError::Io)?;
+        .args([
+            "createdb",
+            fasta.to_str().unwrap_or(""),
+            db_out.to_str().unwrap_or(""),
+        ])
+        .status()
+        .map_err(MycoNoteError::Io)?;
     if !s1.success() {
-        return Err(MycoNoteError::InvalidFormat("mmseqs createdb failed.".to_string()));
+        return Err(MycoNoteError::InvalidFormat(
+            "mmseqs createdb failed.".to_string(),
+        ));
     }
 
     // createindex for faster search
@@ -211,9 +222,11 @@ fn mmseqs_createdb(fasta: &Path, db_out: &Path, threads: usize) -> Result<()> {
             "createindex",
             db_out.to_str().unwrap_or(""),
             tmp_dir.path().to_str().unwrap_or("/tmp"),
-            "--threads", &threads.to_string(),
+            "--threads",
+            &threads.to_string(),
         ])
-        .status().map_err(MycoNoteError::Io)?;
+        .status()
+        .map_err(MycoNoteError::Io)?;
     if !s2.success() {
         eprintln!("  ⚠  mmseqs createindex failed (non-fatal — search will still work)");
     }
@@ -224,7 +237,7 @@ fn mmseqs_createdb(fasta: &Path, db_out: &Path, threads: usize) -> Result<()> {
 fn press_hmm(hmm: &Path) -> Result<()> {
     let hmmpress = which::which("hmmpress").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
-            "hmmpress not found. Install with: conda install -c bioconda hmmer".to_string()
+            "hmmpress not found. Install with: conda install -c bioconda hmmer".to_string(),
         )
     })?;
 

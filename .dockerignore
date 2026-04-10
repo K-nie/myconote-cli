@@ -1,0 +1,11 @@
+target/
+HMM/
+pipeline_test/
+annotate_out/
+brettanomyces_test/
+.git/
+.github/
+docs/paper/
+*.sif
+*.tar.gz
+myconote-cli

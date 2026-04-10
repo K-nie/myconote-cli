@@ -1,10 +1,10 @@
+use crate::utils::error::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::utils::error::Result;
 
 pub mod jbrowse;
-pub mod ucsc;
 pub mod synteny;
+pub mod ucsc;
 
 /// Which genome browser backend to use for visualisation
 #[derive(Debug, Clone, PartialEq)]
@@ -17,9 +17,9 @@ pub enum BrowserType {
 impl BrowserType {
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "ucsc"  => BrowserType::UCSC,
-            "ncbi"  => BrowserType::NCBI,
-            _       => BrowserType::JBrowse2,
+            "ucsc" => BrowserType::UCSC,
+            "ncbi" => BrowserType::NCBI,
+            _ => BrowserType::JBrowse2,
         }
     }
 }

@@ -1,3 +1,4 @@
+pub mod fungidb;
 /// Gene name resolver
 ///
 /// Maps gene IDs (PromBase, FungiDB, NCBI, etc.) to human-readable gene names.
@@ -9,10 +10,8 @@
 ///
 /// The cache is a plain TSV: `gene_id\tgene_name\tsource\ttimestamp`
 /// Once an ID is resolved it is never re-fetched (unless the cache is cleared).
-
 pub mod ncbi;
 pub mod uniprot;
-pub mod fungidb;
 
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -38,20 +37,20 @@ impl std::fmt::Display for NameSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             NameSource::LocalFile => write!(f, "local"),
-            NameSource::Cache    => write!(f, "cache"),
-            NameSource::Ncbi     => write!(f, "ncbi"),
-            NameSource::UniProt  => write!(f, "uniprot"),
-            NameSource::FungiDb  => write!(f, "fungidb"),
-            NameSource::Unknown  => write!(f, "unknown"),
+            NameSource::Cache => write!(f, "cache"),
+            NameSource::Ncbi => write!(f, "ncbi"),
+            NameSource::UniProt => write!(f, "uniprot"),
+            NameSource::FungiDb => write!(f, "fungidb"),
+            NameSource::Unknown => write!(f, "unknown"),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct ResolvedName {
-    pub gene_id:   String,
+    pub gene_id: String,
     pub gene_name: String,
-    pub source:    NameSource,
+    pub source: NameSource,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,9 +70,9 @@ impl NameResolver {
     pub fn new() -> Self {
         let cache_path = cache_file_path();
         let mut resolver = NameResolver {
-            map:        HashMap::new(),
+            map: HashMap::new(),
             cache_path: cache_path.clone(),
-            dirty:      false,
+            dirty: false,
         };
         if cache_path.exists() {
             resolver.load_tsv(&cache_path, NameSource::Cache);
@@ -105,14 +104,20 @@ impl NameResolver {
     /// Tries NCBI, then UniProt, then FungiDB in order.
     /// Results are stored in the map and the cache is written.
     pub fn fetch_missing(&mut self, ids: &[String], organism_taxon: Option<u32>) {
-        let missing: Vec<String> = ids.iter()
+        let missing: Vec<String> = ids
+            .iter()
             .filter(|id| !self.map.contains_key(id.as_str()))
             .cloned()
             .collect();
 
-        if missing.is_empty() { return; }
+        if missing.is_empty() {
+            return;
+        }
 
-        eprintln!("  🔍 Fetching names for {} unresolved IDs...", missing.len());
+        eprintln!(
+            "  🔍 Fetching names for {} unresolved IDs...",
+            missing.len()
+        );
 
         // Try NCBI Gene
         let ncbi_results = ncbi::fetch_gene_names(&missing, organism_taxon);
@@ -121,7 +126,8 @@ impl NameResolver {
         }
 
         // Remaining unresolved → UniProt
-        let still_missing: Vec<String> = missing.iter()
+        let still_missing: Vec<String> = missing
+            .iter()
             .filter(|id| !self.map.contains_key(id.as_str()))
             .cloned()
             .collect();
@@ -134,7 +140,8 @@ impl NameResolver {
         }
 
         // Remaining → FungiDB
-        let still_missing2: Vec<String> = missing.iter()
+        let still_missing2: Vec<String> = missing
+            .iter()
             .filter(|id| !self.map.contains_key(id.as_str()))
             .cloned()
             .collect();
@@ -150,7 +157,10 @@ impl NameResolver {
             self.flush_cache();
         }
 
-        let resolved = ids.iter().filter(|id| self.map.contains_key(id.as_str())).count();
+        let resolved = ids
+            .iter()
+            .filter(|id| self.map.contains_key(id.as_str()))
+            .count();
         eprintln!("  ✓ Resolved {}/{} gene names", resolved, ids.len());
     }
 
@@ -158,14 +168,21 @@ impl NameResolver {
     fn insert(&mut self, id: &str, name: &str, source: NameSource) {
         // Local file > cache > remote — don't overwrite higher-priority entries
         if let Some(existing) = self.map.get(id) {
-            if existing.source == NameSource::LocalFile { return; }
-            if existing.source == NameSource::Cache && source != NameSource::LocalFile { return; }
+            if existing.source == NameSource::LocalFile {
+                return;
+            }
+            if existing.source == NameSource::Cache && source != NameSource::LocalFile {
+                return;
+            }
         }
-        self.map.insert(id.to_string(), ResolvedName {
-            gene_id:   id.to_string(),
-            gene_name: name.to_string(),
-            source,
-        });
+        self.map.insert(
+            id.to_string(),
+            ResolvedName {
+                gene_id: id.to_string(),
+                gene_name: name.to_string(),
+                source,
+            },
+        );
         self.dirty = true;
     }
 
@@ -188,16 +205,21 @@ impl NameResolver {
 
     /// Export the current map as a TSV string (for embedding in HTML).
     pub fn to_tsv(&self) -> String {
-        self.map.values()
+        self.map
+            .values()
             .map(|r| format!("{}\t{}", r.gene_id, r.gene_name))
             .collect::<Vec<_>>()
             .join("\n")
     }
 
     /// Number of resolved names currently loaded.
-    pub fn len(&self) -> usize { self.map.len() }
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
 
-    pub fn is_empty(&self) -> bool { self.map.is_empty() }
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────
 
@@ -205,7 +227,9 @@ impl NameResolver {
         let Ok(file) = File::open(path) else { return };
         for line in BufReader::new(file).lines().flatten() {
             let t = line.trim();
-            if t.is_empty() || t.starts_with('#') { continue; }
+            if t.is_empty() || t.starts_with('#') {
+                continue;
+            }
             let mut cols = t.splitn(3, '\t');
             if let (Some(id), Some(name)) = (cols.next(), cols.next()) {
                 let s = source.clone();
@@ -221,7 +245,9 @@ impl NameResolver {
 
 impl Drop for NameResolver {
     fn drop(&mut self) {
-        if self.dirty { self.flush_cache(); }
+        if self.dirty {
+            self.flush_cache();
+        }
     }
 }
 

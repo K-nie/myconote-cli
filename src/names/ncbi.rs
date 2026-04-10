@@ -5,12 +5,11 @@
 ///
 /// Rate limit: 3 requests/second without API key, 10/sec with one.
 /// We batch IDs and sleep between requests to stay compliant.
-
 use std::collections::HashMap;
 
 const ESEARCH_URL: &str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi";
 const ESUMMARY_URL: &str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi";
-const BATCH_SIZE:  usize = 50;
+const BATCH_SIZE: usize = 50;
 
 /// Fetch official gene names from NCBI Gene for a list of IDs/symbols.
 ///
@@ -19,10 +18,7 @@ const BATCH_SIZE:  usize = 50;
 ///
 /// Returns a map of `input_id → official_name`.
 /// IDs that cannot be resolved are absent from the map.
-pub fn fetch_gene_names(
-    ids: &[String],
-    taxon_id: Option<u32>,
-) -> HashMap<String, String> {
+pub fn fetch_gene_names(ids: &[String], taxon_id: Option<u32>) -> HashMap<String, String> {
     let mut result = HashMap::new();
 
     for chunk in ids.chunks(BATCH_SIZE) {
@@ -52,13 +48,13 @@ fn fetch_chunk(
         // Build esearch query: gene symbol + optional taxon filter
         let query = match taxon_id {
             Some(txid) => format!("{}[Gene Name] AND {}[Taxonomy ID]", id, txid),
-            None       => format!("{}[Gene Name]", id),
+            None => format!("{}[Gene Name]", id),
         };
 
         let search_url = format!(
             "{}?db=gene&term={}&retmode=json&retmax=1",
             ESEARCH_URL,
-            urlencoding(& query)
+            urlencoding(&query)
         );
 
         let search_resp: serde_json::Value = client.get(&search_url).send()?.json()?;
@@ -69,16 +65,17 @@ fn fetch_chunk(
             .cloned()
             .unwrap_or_default();
 
-        if uid_list.is_empty() { continue; }
+        if uid_list.is_empty() {
+            continue;
+        }
 
         let uid = uid_list[0].as_str().unwrap_or("").to_string();
-        if uid.is_empty() { continue; }
+        if uid.is_empty() {
+            continue;
+        }
 
         // Fetch gene summary for this UID
-        let summary_url = format!(
-            "{}?db=gene&id={}&retmode=json",
-            ESUMMARY_URL, uid
-        );
+        let summary_url = format!("{}?db=gene&id={}&retmode=json", ESUMMARY_URL, uid);
 
         let summary_resp: serde_json::Value = client.get(&summary_url).send()?.json()?;
 
@@ -87,9 +84,11 @@ fn fetch_chunk(
         let name = summary_resp
             .pointer(&format!("/result/{}/description", uid))
             .and_then(|v| v.as_str())
-            .or_else(|| summary_resp
-                .pointer(&format!("/result/{}/name", uid))
-                .and_then(|v| v.as_str()))
+            .or_else(|| {
+                summary_resp
+                    .pointer(&format!("/result/{}/name", uid))
+                    .and_then(|v| v.as_str())
+            })
             .unwrap_or("")
             .to_string();
 
@@ -104,9 +103,11 @@ fn fetch_chunk(
 }
 
 fn urlencoding(s: &str) -> String {
-    s.chars().map(|c| match c {
-        'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
-        ' ' => "+".to_string(),
-        _ => format!("%{:02X}", c as u32),
-    }).collect()
+    s.chars()
+        .map(|c| match c {
+            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
+            ' ' => "+".to_string(),
+            _ => format!("%{:02X}", c as u32),
+        })
+        .collect()
 }

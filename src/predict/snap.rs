@@ -5,7 +5,6 @@
 /// Modeler consensus alongside Augustus.
 ///
 /// Install: conda install -c bioconda snap
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::path::Path;
 use std::process::Command;
@@ -21,7 +20,7 @@ pub struct SnapConfig {
 impl Default for SnapConfig {
     fn default() -> Self {
         Self {
-            hmm:     "fungal".to_string(),
+            hmm: "fungal".to_string(),
             threads: 4,
         }
     }
@@ -29,15 +28,12 @@ impl Default for SnapConfig {
 
 /// Run SNAP and convert output to GFF3.
 /// Returns path to the GFF3 output file.
-pub fn run(
-    masked_fasta: &Path,
-    output_gff:   &Path,
-    config:       &SnapConfig,
-) -> Result<()> {
+pub fn run(masked_fasta: &Path, output_gff: &Path, config: &SnapConfig) -> Result<()> {
     let snap = which::which("snap").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "snap not found in PATH.\n\
-             Install with: conda install -c bioconda snap".to_string()
+             Install with: conda install -c bioconda snap"
+                .to_string(),
         )
     })?;
 
@@ -50,7 +46,7 @@ pub fn run(
         .args([
             &config.hmm,
             masked_fasta.to_str().unwrap_or(""),
-            "-gff",   // output GFF format directly
+            "-gff", // output GFF format directly
         ])
         .output()
         .map_err(MycoNoteError::Io)?;
@@ -58,7 +54,8 @@ pub fn run(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(MycoNoteError::InvalidFormat(format!(
-            "SNAP failed: {}", stderr
+            "SNAP failed: {}",
+            stderr
         )));
     }
 
@@ -84,17 +81,21 @@ fn convert_snap_to_gff3(snap_output: &str) -> String {
     let mut mrna_counter = 0u64;
 
     for line in snap_output.lines() {
-        if line.starts_with('#') || line.trim().is_empty() { continue; }
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
         let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 9 { continue; }
+        if f.len() < 9 {
+            continue;
+        }
 
-        let seqid   = f[0];
-        let ftype   = f[2];
-        let start   = f[3];
-        let end     = f[4];
-        let score   = f[5];
-        let strand  = f[6];
-        let phase   = f[7];
+        let seqid = f[0];
+        let ftype = f[2];
+        let start = f[3];
+        let end = f[4];
+        let score = f[5];
+        let strand = f[6];
+        let phase = f[7];
         let gene_id = f[8].trim();
 
         // Map SNAP feature types to GFF3

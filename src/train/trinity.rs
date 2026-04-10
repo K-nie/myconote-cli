@@ -1,12 +1,12 @@
+use super::TrainConfig;
 /// Trinity transcript assembler wrapper
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use super::TrainConfig;
 
 pub fn trinity_available() -> bool {
-    Command::new("which").arg("Trinity")
+    Command::new("which")
+        .arg("Trinity")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -17,7 +17,8 @@ pub fn check_trinity() -> Result<()> {
         return Err(MycoNoteError::ExternalTool(
             "Trinity not found in PATH.\n  \
              Install: conda install -c bioconda trinity\n  \
-             Or download from: https://github.com/trinityrnaseq/trinityrnaseq".to_string()
+             Or download from: https://github.com/trinityrnaseq/trinityrnaseq"
+                .to_string(),
         ));
     }
     Ok(())
@@ -30,10 +31,14 @@ pub fn run_trinity(config: &TrainConfig, output: &Path) -> Result<PathBuf> {
 
     // Input reads
     if !config.left_reads.is_empty() {
-        let left: Vec<String> = config.left_reads.iter()
+        let left: Vec<String> = config
+            .left_reads
+            .iter()
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
-        let right: Vec<String> = config.right_reads.iter()
+        let right: Vec<String> = config
+            .right_reads
+            .iter()
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
         cmd.arg("--left").arg(left.join(","));
@@ -42,31 +47,39 @@ pub fn run_trinity(config: &TrainConfig, output: &Path) -> Result<PathBuf> {
             cmd.arg("--seqType").arg("fq");
         }
     } else if !config.single_reads.is_empty() {
-        let singles: Vec<String> = config.single_reads.iter()
+        let singles: Vec<String> = config
+            .single_reads
+            .iter()
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
         cmd.arg("--single").arg(singles.join(","));
         cmd.arg("--seqType").arg("fq");
     } else {
         return Err(MycoNoteError::ExternalTool(
-            "No RNA-seq reads provided. Use --left/--right or --single.".to_string()
+            "No RNA-seq reads provided. Use --left/--right or --single.".to_string(),
         ));
     }
 
     // Genome-guided mode
-    cmd.arg("--genome_guided_bam").arg(config.out_dir.join("trinity_aligned.bam"));
-    cmd.arg("--genome_guided_max_intron").arg(config.max_intron.to_string());
+    cmd.arg("--genome_guided_bam")
+        .arg(config.out_dir.join("trinity_aligned.bam"));
+    cmd.arg("--genome_guided_max_intron")
+        .arg(config.max_intron.to_string());
 
-    cmd.arg("--output").arg(&trinity_dir)
-       .arg("--CPU").arg(config.threads.to_string())
-       .arg("--max_memory").arg(&config.trinity_memory)
-       .arg("--full_cleanup");
+    cmd.arg("--output")
+        .arg(&trinity_dir)
+        .arg("--CPU")
+        .arg(config.threads.to_string())
+        .arg("--max_memory")
+        .arg(&config.trinity_memory)
+        .arg("--full_cleanup");
 
     if !config.strand.is_empty() {
         cmd.arg("--SS_lib_type").arg(&config.strand);
     }
 
-    let status = cmd.status()
+    let status = cmd
+        .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("Trinity: {}", e)))?;
 
     if !status.success() {
@@ -84,7 +97,7 @@ pub fn run_trinity(config: &TrainConfig, output: &Path) -> Result<PathBuf> {
             std::fs::copy(&dn_fasta, output).map_err(MycoNoteError::Io)?;
         } else {
             return Err(MycoNoteError::ExternalTool(
-                "Trinity output FASTA not found".to_string()
+                "Trinity output FASTA not found".to_string(),
             ));
         }
     }

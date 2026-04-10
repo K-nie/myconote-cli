@@ -14,14 +14,11 @@
 /// yeast species.
 ///
 /// API: https://veupathdb.org/veupathdb/service/record-types/gene/records
-
 use std::collections::HashMap;
 
-const VEUPATHDB_RECORDS: &str =
-    "https://veupathdb.org/veupathdb/service/record-types/gene/records";
+const VEUPATHDB_RECORDS: &str = "https://veupathdb.org/veupathdb/service/record-types/gene/records";
 
-const ENSEMBL_LOOKUP: &str =
-    "https://rest.ensembl.org/lookup/id";
+const ENSEMBL_LOOKUP: &str = "https://rest.ensembl.org/lookup/id";
 
 const BATCH_SIZE: usize = 20;
 
@@ -31,8 +28,8 @@ pub fn fetch_gene_names(ids: &[String]) -> HashMap<String, String> {
     let mut result = HashMap::new();
 
     // Split IDs: Ensembl-style vs VEuPathDB-style
-    let (ensembl_ids, veupathdb_ids): (Vec<_>, Vec<_>) = ids.iter()
-        .partition(|id| is_ensembl_id(id));
+    let (ensembl_ids, veupathdb_ids): (Vec<_>, Vec<_>) =
+        ids.iter().partition(|id| is_ensembl_id(id));
 
     // VEuPathDB batch
     for chunk in veupathdb_ids.chunks(BATCH_SIZE) {
@@ -60,9 +57,7 @@ fn is_ensembl_id(id: &str) -> bool {
     id.starts_with("ENS")
 }
 
-fn fetch_veupathdb(
-    ids: &[&String],
-) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+fn fetch_veupathdb(ids: &[&String]) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     use serde_json::json;
 
     let client = reqwest::blocking::Client::builder()
@@ -86,10 +81,13 @@ fn fetch_veupathdb(
             .send();
 
         let Ok(resp) = resp else { continue };
-        let Ok(json): Result<serde_json::Value, _> = resp.json() else { continue };
+        let Ok(json): Result<serde_json::Value, _> = resp.json() else {
+            continue;
+        };
 
         // Gene name is in attributes.gene_name or attributes.display_name
-        let name = json.pointer("/attributes/gene_name/value")
+        let name = json
+            .pointer("/attributes/gene_name/value")
             .or_else(|| json.pointer("/attributes/display_name/value"))
             .or_else(|| json.pointer("/displayName"))
             .and_then(|v| v.as_str())
@@ -106,9 +104,7 @@ fn fetch_veupathdb(
     Ok(results)
 }
 
-fn fetch_ensembl(
-    ids: &[&String],
-) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+fn fetch_ensembl(ids: &[&String]) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     use serde_json::json;
 
     let client = reqwest::blocking::Client::builder()
@@ -133,13 +129,17 @@ fn fetch_ensembl(
     for id in ids {
         if let Some(entry) = json.get(id.as_str()) {
             // Ensembl returns display_name and description
-            let name = entry.get("display_name")
+            let name = entry
+                .get("display_name")
                 .and_then(|v| v.as_str())
                 .filter(|s| !s.is_empty())
-                .or_else(|| entry.get("description")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.split('[').next().unwrap_or(s).trim())
-                    .filter(|s| !s.is_empty()))
+                .or_else(|| {
+                    entry
+                        .get("description")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.split('[').next().unwrap_or(s).trim())
+                        .filter(|s| !s.is_empty())
+                })
                 .map(str::to_string);
 
             if let Some(n) = name {

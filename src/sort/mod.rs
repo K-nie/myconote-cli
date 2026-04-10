@@ -9,7 +9,6 @@
 ///
 /// This should be run before `myconote mask` to ensure consistent,
 /// clean sequence identifiers throughout the whole pipeline.
-
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -22,13 +21,13 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub struct SortConfig {
     /// Input FASTA (raw assembly)
-    pub input:      PathBuf,
+    pub input: PathBuf,
     /// Output FASTA (sorted, renamed)
-    pub output:     PathBuf,
+    pub output: PathBuf,
     /// Discard contigs shorter than this (bp). Default: 0 (keep all)
     pub min_length: usize,
     /// Prefix for renamed headers. Default: "scaffold"
-    pub prefix:     String,
+    pub prefix: String,
     /// Strip everything after first whitespace in the original header
     pub strip_desc: bool,
     /// Write old→new rename table to this path (TSV)
@@ -40,11 +39,11 @@ pub struct SortConfig {
 impl Default for SortConfig {
     fn default() -> Self {
         Self {
-            input:        PathBuf::new(),
-            output:       PathBuf::new(),
-            min_length:   0,
-            prefix:       "scaffold".to_string(),
-            strip_desc:   true,
+            input: PathBuf::new(),
+            output: PathBuf::new(),
+            min_length: 0,
+            prefix: "scaffold".to_string(),
+            strip_desc: true,
             rename_table: None,
             sort_by_name: false,
         }
@@ -59,17 +58,17 @@ struct FastaRecord {
     /// Full original header line (without '>')
     original_header: String,
     /// Bare ID (first token of header)
-    original_id:     String,
-    sequence:        String,
+    original_id: String,
+    sequence: String,
 }
 
 fn read_fasta(path: &Path) -> Result<Vec<FastaRecord>> {
-    let file   = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(file);
 
     let mut records: Vec<FastaRecord> = Vec::new();
     let mut current_header = String::new();
-    let mut current_seq    = String::new();
+    let mut current_seq = String::new();
 
     for line_res in reader.lines() {
         let line = line_res.map_err(MycoNoteError::Io)?;
@@ -82,8 +81,8 @@ fn read_fasta(path: &Path) -> Result<Vec<FastaRecord>> {
                     .to_string();
                 records.push(FastaRecord {
                     original_header: current_header.clone(),
-                    original_id:     id,
-                    sequence:        current_seq.clone(),
+                    original_id: id,
+                    sequence: current_seq.clone(),
                 });
                 current_seq.clear();
             }
@@ -102,8 +101,8 @@ fn read_fasta(path: &Path) -> Result<Vec<FastaRecord>> {
             .to_string();
         records.push(FastaRecord {
             original_header: current_header,
-            original_id:     id,
-            sequence:        current_seq,
+            original_id: id,
+            sequence: current_seq,
         });
     }
 
@@ -148,7 +147,8 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
             writeln!(out, ">{}", new_id).map_err(MycoNoteError::Io)?;
         } else {
             // Keep description but update the ID portion
-            let desc_rest: String = rec.original_header
+            let desc_rest: String = rec
+                .original_header
                 .splitn(2, char::is_whitespace)
                 .nth(1)
                 .map(|s| format!(" {}", s))
@@ -168,8 +168,14 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
         writeln!(tbl, "original_id\tnew_id\tlength").map_err(MycoNoteError::Io)?;
         for rec in &records {
             let new_id = &rename_map[&rec.original_id];
-            writeln!(tbl, "{}\t{}\t{}", rec.original_id, new_id, rec.sequence.len())
-                .map_err(MycoNoteError::Io)?;
+            writeln!(
+                tbl,
+                "{}\t{}\t{}",
+                rec.original_id,
+                new_id,
+                rec.sequence.len()
+            )
+            .map_err(MycoNoteError::Io)?;
         }
     }
 
@@ -180,7 +186,10 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
 
     println!("  Contigs kept:   {}", records.len());
     if removed > 0 {
-        println!("  Contigs removed (< {} bp): {}", config.min_length, removed);
+        println!(
+            "  Contigs removed (< {} bp): {}",
+            config.min_length, removed
+        );
     }
     println!("  Total assembly: {} bp", total_bp);
     println!("  Longest contig: {} bp", longest);
@@ -196,13 +205,13 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
 /// Apply a rename map to an existing GFF3 file, updating seqid (column 1).
 /// Useful when you need to lift over annotations after sorting the assembly.
 pub fn liftover_gff3(
-    gff_input:  &Path,
+    gff_input: &Path,
     gff_output: &Path,
     rename_map: &HashMap<String, String>,
 ) -> Result<usize> {
     let inp = std::fs::File::open(gff_input).map_err(MycoNoteError::Io)?;
     let mut out = std::fs::File::create(gff_output).map_err(MycoNoteError::Io)?;
-    let reader  = BufReader::new(inp);
+    let reader = BufReader::new(inp);
     let mut updated = 0usize;
 
     for line_res in reader.lines() {

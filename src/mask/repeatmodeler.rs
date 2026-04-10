@@ -1,3 +1,4 @@
+use super::{MaskConfig, MaskedRegion};
 /// RepeatModeler de novo repeat library builder
 ///
 /// Discovers organism-specific repeat families directly from the genome
@@ -11,9 +12,7 @@
 ///   4. Feed library to RepeatMasker for masking
 ///
 /// Install: conda install -c bioconda repeatmodeler
-
 use crate::utils::error::{MycoNoteError, Result};
-use super::{MaskConfig, MaskedRegion};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -24,10 +23,7 @@ use std::process::Command;
 /// Build a de novo repeat library with RepeatModeler, then mask the genome
 /// with RepeatMasker using that library.
 /// Returns masked regions.
-pub fn run(
-    sequences: &[(String, String)],
-    config:    &MaskConfig,
-) -> Result<Vec<MaskedRegion>> {
+pub fn run(sequences: &[(String, String)], config: &MaskConfig) -> Result<Vec<MaskedRegion>> {
     let tmp_dir = tempfile::TempDir::new().map_err(MycoNoteError::Io)?;
     let tmp_path = tmp_dir.path();
 
@@ -62,7 +58,11 @@ pub fn run(
     if let Some(parent) = config.output.parent() {
         let lib_dest = parent.join(format!(
             "{}-families.fa",
-            config.output.file_stem().unwrap_or_default().to_string_lossy()
+            config
+                .output
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
         ));
         let _ = std::fs::copy(&repeat_lib, &lib_dest);
         println!("  De novo repeat library saved: {}", lib_dest.display());
@@ -80,7 +80,8 @@ fn build_database(genome_fa: &Path, db_name: &Path) -> Result<()> {
     let build_db = which::which("BuildDatabase").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "BuildDatabase not found in PATH.\n\
-             Install RepeatModeler: conda install -c bioconda repeatmodeler".to_string()
+             Install RepeatModeler: conda install -c bioconda repeatmodeler"
+                .to_string(),
         )
     })?;
 
@@ -88,8 +89,10 @@ fn build_database(genome_fa: &Path, db_name: &Path) -> Result<()> {
 
     let status = Command::new(&build_db)
         .args([
-            "-name",   db_name.to_str().unwrap_or(""),
-            "-engine", "ncbi",
+            "-name",
+            db_name.to_str().unwrap_or(""),
+            "-engine",
+            "ncbi",
             genome_fa.to_str().unwrap_or(""),
         ])
         .stderr(std::process::Stdio::null())
@@ -98,7 +101,7 @@ fn build_database(genome_fa: &Path, db_name: &Path) -> Result<()> {
 
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(
-            "BuildDatabase failed. Check that RepeatModeler is correctly installed.".to_string()
+            "BuildDatabase failed. Check that RepeatModeler is correctly installed.".to_string(),
         ));
     }
     Ok(())
@@ -112,7 +115,8 @@ fn run_repeatmodeler(db_name: &Path, work_dir: &Path, threads: usize) -> Result<
     let repeatmodeler = which::which("RepeatModeler").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "RepeatModeler not found in PATH.\n\
-             Install with: conda install -c bioconda repeatmodeler".to_string()
+             Install with: conda install -c bioconda repeatmodeler"
+                .to_string(),
         )
     })?;
 
@@ -121,9 +125,12 @@ fn run_repeatmodeler(db_name: &Path, work_dir: &Path, threads: usize) -> Result<
     let status = Command::new(&repeatmodeler)
         .current_dir(work_dir)
         .args([
-            "-engine", "ncbi",
-            "-pa",     &threads.to_string(),
-            "-database", db_name.to_str().unwrap_or(""),
+            "-engine",
+            "ncbi",
+            "-pa",
+            &threads.to_string(),
+            "-database",
+            db_name.to_str().unwrap_or(""),
         ])
         .stderr(std::process::Stdio::null())
         .status()
@@ -131,15 +138,13 @@ fn run_repeatmodeler(db_name: &Path, work_dir: &Path, threads: usize) -> Result<
 
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(
-            "RepeatModeler failed. Check that RECON and RepeatScout are installed.".to_string()
+            "RepeatModeler failed. Check that RECON and RepeatScout are installed.".to_string(),
         ));
     }
 
     // Find the output families FASTA — RepeatModeler creates it as
     // <db_basename>-families.fa in the working directory
-    let db_stem = db_name.file_name()
-        .unwrap_or_default()
-        .to_string_lossy();
+    let db_stem = db_name.file_name().unwrap_or_default().to_string_lossy();
 
     // RepeatModeler v2 puts output in a RM_* subdirectory
     let families_v2 = find_families_v2(work_dir);
@@ -153,7 +158,7 @@ fn run_repeatmodeler(db_name: &Path, work_dir: &Path, threads: usize) -> Result<
     }
 
     Err(MycoNoteError::InvalidFormat(
-        "RepeatModeler ran but output families FASTA not found.".to_string()
+        "RepeatModeler ran but output families FASTA not found.".to_string(),
     ))
 }
 
@@ -164,9 +169,13 @@ fn find_families_v2(work_dir: &Path) -> Option<PathBuf> {
         let name = entry.file_name().to_string_lossy().to_string();
         if name.starts_with("RM_") {
             let classified = entry.path().join("families-classified.fa");
-            if classified.exists() { return Some(classified); }
+            if classified.exists() {
+                return Some(classified);
+            }
             let families = entry.path().join("families.fa");
-            if families.exists() { return Some(families); }
+            if families.exists() {
+                return Some(families);
+            }
         }
     }
     None
@@ -177,24 +186,27 @@ fn find_families_v2(work_dir: &Path) -> Option<PathBuf> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn run_repeatmasker_with_lib(
-    genome_fa:  &Path,
+    genome_fa: &Path,
     repeat_lib: &Path,
-    out_dir:    &Path,
-    config:     &MaskConfig,
+    out_dir: &Path,
+    config: &MaskConfig,
 ) -> Result<()> {
     let rm = which::which("RepeatMasker").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
             "RepeatMasker not found in PATH.\n\
-             Install with: conda install -c bioconda repeatmasker".to_string()
+             Install with: conda install -c bioconda repeatmasker"
+                .to_string(),
         )
     })?;
 
     println!("  Running RepeatMasker with de novo library…");
 
     let cmd_args = [
-        "-lib",  repeat_lib.to_str().unwrap_or(""),
-        "-dir",  out_dir.to_str().unwrap_or(""),
-        "-pa",   // threads arg comes next (in extra_args)
+        "-lib",
+        repeat_lib.to_str().unwrap_or(""),
+        "-dir",
+        out_dir.to_str().unwrap_or(""),
+        "-pa", // threads arg comes next (in extra_args)
     ];
 
     let threads_str = config.threads.to_string();
@@ -237,16 +249,22 @@ fn parse_rm_out(path: &Path, min_length: usize) -> Result<Vec<MaskedRegion>> {
     for (line_num, line) in std::io::BufReader::new(file).lines().enumerate() {
         let line = line.map_err(MycoNoteError::Io)?;
         // Skip 3 header lines
-        if line_num < 3 { continue; }
+        if line_num < 3 {
+            continue;
+        }
         let line = line.trim();
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
 
         let fields: Vec<&str> = line.split_whitespace().collect();
-        if fields.len() < 7 { continue; }
+        if fields.len() < 7 {
+            continue;
+        }
 
         let seqid = fields[4].to_string();
         let start: usize = match fields[5].parse::<usize>() {
-            Ok(n) => n.saturating_sub(1),  // 1-based → 0-based
+            Ok(n) => n.saturating_sub(1), // 1-based → 0-based
             Err(_) => continue,
         };
         let end: usize = match fields[6].parse::<usize>() {
@@ -254,7 +272,9 @@ fn parse_rm_out(path: &Path, min_length: usize) -> Result<Vec<MaskedRegion>> {
             Err(_) => continue,
         };
 
-        if end.saturating_sub(start) < min_length { continue; }
+        if end.saturating_sub(start) < min_length {
+            continue;
+        }
 
         regions.push(MaskedRegion { seqid, start, end });
     }

@@ -27,7 +27,7 @@ jobs:
             target: aarch64-apple-darwin
             artifact: myconote-cli-macos-arm64
           - name: macOS x86_64
-            os: macos-13
+            os: macos-latest
             target: x86_64-apple-darwin
             artifact: myconote-cli-macos-amd64
     runs-on: ${{ matrix.os }}

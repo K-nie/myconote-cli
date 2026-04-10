@@ -1,0 +1,68 @@
+# HTCondor submit file for MycoNote-CLI benchmark runs
+# Submits 24 jobs: 8 genomes x 3 replicates
+#
+# Usage:
+#   condor_submit myconote.sub
+#
+# Required environment:
+#   BENCHMARK_DIR  - root directory of the benchmark
+#   DATA_DIR       - directory containing genome data (one subdir per genome)
+#   RESULTS_DIR    - directory for outputs
+#   MYCONOTE_BIN   - path to myconote-cli binary
+
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_myconote.sh
+getenv         = true
+
+# Resources per job
+request_cpus   = 8
+request_memory = 16 GB
+request_disk   = 10 GB
+
+# Allow up to 4 hours per job
++RequestRuntime = 14400
+
+# Logging
+log    = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).log
+output = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).out
+error  = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).err
+
+# Arguments: genome_id, replicate_number
+arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
+
+# Transfer required files
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+
+# Notification
+notification = Error
+notify_user  = narhmadey@wisc.edu
+
+# Submit one job per (genome, replicate) combination.
+# 8 genomes x 3 replicates = 24 jobs total.
+queue genome_id, rep from (
+    sce 1
+    sce 2
+    sce 3
+    cal 1
+    cal 2
+    cal 3
+    ani 1
+    ani 2
+    ani 3
+    cne 1
+    cne 2
+    cne 3
+    ath 1
+    ath 2
+    ath 3
+    dme 1
+    dme 2
+    dme 3
+    cel 1
+    cel 2
+    cel 3
+    pfa 1
+    pfa 2
+    pfa 3
+)

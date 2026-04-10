@@ -54,8 +54,12 @@ nav:
     - plot: analysis/plot.md
     - stats: analysis/stats.md
     - blast: analysis/blast.md
+  - Pipeline Commands:
+    - submit: pipeline/submit.md
   - Databases: databases.md
-  - Workshop Lesson: lesson.md
+  - Learning:
+    - Interactive Tutorial: learn.md
+    - Workshop Lesson: lesson.md
   - Reference:
     - Kingdom Defaults: reference/kingdoms.md
     - Output Formats: reference/outputs.md

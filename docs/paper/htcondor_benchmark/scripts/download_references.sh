@@ -89,16 +89,19 @@ validate_gff3() {
         echo "    ✗ GFF3 too small: $sz bytes (expected >= $min_bytes)"
         return 1
     fi
-    # NCBI GFF3s start with `##gff-version 3`. Some assemblies have hundreds
-    # of ##sequence-region header lines (one per scaffold) before the first
-    # feature, so we scan the first 2000 lines and look for either the gff
-    # header directive OR any non-comment line (which would be a feature row).
-    if ! head -2000 "$f" | grep -q '^##gff-version'; then
-        if ! head -2000 "$f" | grep -q '^[^#]'; then
-            echo "    ✗ Not a valid GFF3 (no gff-version header and no feature lines in first 2000 lines)"
-            echo "    ↳ first line: $(head -1 "$f" | cut -c1-80)"
-            return 1
-        fi
+    # Note: `head -N | grep` is a trap with `set -o pipefail`. When grep
+    # finds a match early and exits, head gets SIGPIPE and the pipeline is
+    # reported as failed — even though the file is perfectly valid. Instead,
+    # run grep directly on the file with -m1 so it stops after the first
+    # match with exit 0 and no pipe involved.
+    if ! grep -qm1 '^##gff-version' "$f"; then
+        echo "    ✗ Not a valid GFF3 (no ##gff-version header anywhere in file)"
+        echo "    ↳ first line: $(head -1 "$f" | cut -c1-80)"
+        return 1
+    fi
+    if ! grep -qm1 '^[^#]' "$f"; then
+        echo "    ✗ GFF3 contains only comment lines (no feature records)"
+        return 1
     fi
     return 0
 }

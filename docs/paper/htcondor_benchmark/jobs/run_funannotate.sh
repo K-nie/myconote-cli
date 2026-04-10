@@ -62,10 +62,11 @@ cd "$OUT_DIR"
     funannotate annotate -i predict_out --cpus 8 \
     >> "$LOG" 2>&1
 
-# Find the final annotated GFF3
-PREDICTED_GFF=$(find predict_out -name "*.gff3" | grep "annotations" | head -1)
+# Find the final annotated GFF3. Use `find ... -print -quit` rather than
+# `find | head -1` so the pipeline can't trip set -o pipefail via SIGPIPE.
+PREDICTED_GFF=$(find predict_out -path "*annotate*" -name "*.gff3" -print -quit 2>/dev/null || true)
 if [[ -z "$PREDICTED_GFF" ]]; then
-    PREDICTED_GFF=$(find predict_out -name "*.gff3" | head -1)
+    PREDICTED_GFF=$(find predict_out -name "*.gff3" -print -quit 2>/dev/null || true)
 fi
 
 # ── Step 6: Compute metrics ────────────────────────────────────────────────

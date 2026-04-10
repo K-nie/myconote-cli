@@ -38,10 +38,11 @@ sed -i "s|^cpus=.*|cpus=8|" maker_opts.ctl
     maker maker_opts.ctl maker_bopts.ctl maker_exe.ctl \
     >> "$LOG" 2>&1
 
-# Find MAKER's output GFF3
-PREDICTED_GFF=$(find . -name "*.all.gff" | head -1)
+# Find MAKER's output GFF3. Use `find -print -quit` so the pipeline
+# can't trip set -o pipefail via SIGPIPE on early head exit.
+PREDICTED_GFF=$(find . -name "*.all.gff" -print -quit 2>/dev/null || true)
 if [[ -z "$PREDICTED_GFF" ]]; then
-    PREDICTED_GFF=$(find . -name "*.gff" | head -1)
+    PREDICTED_GFF=$(find . -name "*.gff" -print -quit 2>/dev/null || true)
 fi
 
 # Compute metrics

@@ -1,103 +1,146 @@
 # Quick Start
 
-This guide walks you through annotating a fungal genome from start to finish. Estimated time: 45–90 minutes (excluding database downloads).
+Annotate a eukaryotic genome from start to finish. Estimated time: 30-60 minutes (excluding database downloads).
+
+**New to myconote-cli?** Run `myconote-cli learn` for an interactive tutorial that teaches each concept step by step.
 
 ---
 
-## 1. Prepare your genome
-
-Place your genome assembly FASTA in a working directory:
+## 1. Verify your installation
 
 ```bash
-mkdir my_annotation && cd my_annotation
-cp /path/to/mygenome.fas .
+myconote-cli --version       # check binary is installed
+myconote-cli check           # verify external tools
+myconote-cli setup --check   # verify databases
+```
+
+If tools or databases are missing:
+```bash
+myconote-cli install --yes   # install all missing tools via conda
+myconote-cli setup           # download all databases (~2.5 GB)
 ```
 
 ---
 
-## 2. Sort and validate scaffolds
+## 2. Sort and clean scaffolds
 
 ```bash
-myconote sort --genome mygenome.fas --out 01_sorted/
+myconote-cli sort assembly.fa --min-length 500
 ```
 
-This renames scaffolds to a consistent format, removes sequences below a minimum length (default 500 bp), and produces a summary report.
+Renames scaffolds to clean IDs (scaffold_001, scaffold_002...), sorts by length, and filters short contigs.
 
 ---
 
 ## 3. Mask repeats
 
 ```bash
-myconote mask --genome 01_sorted/genome.fas --out 02_masked/ --threads 8
+myconote-cli mask assembly_sorted.fa --engine repeatmodeler --threads 8
 ```
 
-Runs RepeatModeler2 to build a de novo repeat library, then RepeatMasker to soft-mask the genome. Soft-masked bases are lowercased; gene predictors can still read through them.
+Builds a de novo repeat library with RepeatModeler2, then soft-masks the genome with RepeatMasker. Soft-masked bases are lowercased so gene finders can skip them.
 
 ---
 
-## 4. Train gene predictors
+## 4. Train gene predictors (optional)
+
+If you have RNA-seq data:
 
 ```bash
-myconote train \
-  --genome 02_masked/genome.masked.fas \
-  --rna-bam rnaseq_aligned.bam \
-  --species my_fungus \
-  --out 03_training/
+myconote-cli train assembly_masked.fa \
+  --left R1.fastq.gz --right R2.fastq.gz \
+  --species my_organism --threads 8
 ```
 
+This assembles transcripts with Trinity, aligns them with minimap2, builds a PASA database, and trains Augustus + SNAP on your organism's gene structures.
+
 !!! tip
-    If you don't have RNA-seq data, omit `--rna-bam`. Augustus will use its built-in *Saccharomyces cerevisiae* model as the starting point.
+    If you don't have RNA-seq, skip this step. Augustus will use its pre-trained model for your kingdom.
 
 ---
 
 ## 5. Predict gene models
 
 ```bash
-myconote predict \
-  --genome 02_masked/genome.masked.fas \
-  --training 03_training/ \
+myconote-cli predict assembly_masked.fa \
   --kingdom fungi \
-  --out 04_predictions/
+  --locus-prefix MYORG \
+  --threads 8
 ```
 
-Runs Augustus, GlimmerHMM, and SNAP in parallel, then merges results using EvidenceModeler (EVM).
+Runs Augustus + SNAP, merges predictions with the Evidence Modeler consensus, and produces a clean GFF3 with sequential locus tags.
+
+**Advanced options:**
+```bash
+# Add protein evidence for better predictions
+myconote-cli predict assembly_masked.fa --kingdom fungi \
+  --protein-fasta swissprot.fasta --locus-prefix MYORG
+
+# Use custom evidence weights
+myconote-cli predict assembly_masked.fa --weights weights.toml
+
+# Handle diploid/polyploid genomes
+myconote-cli predict assembly_masked.fa --ploidy 2
+```
 
 ---
 
-## 6. Update with RNA evidence
+## 6. Functional annotation
 
 ```bash
-myconote update \
-  --genome 02_masked/genome.masked.fas \
-  --predictions 04_predictions/ \
-  --rna-bam rnaseq_aligned.bam \
-  --out 05_updated/
-```
-
----
-
-## 7. Functional annotation
-
-```bash
-myconote annotate \
-  --genome 02_masked/genome.masked.fas \
-  --gff 05_updated/final.gff3 \
+myconote-cli annotate predict_out/consensus.gff3 \
+  --fasta assembly_masked.fa \
   --kingdom fungi \
-  --out 06_annotation/
+  --trnascan \
+  --threads 8
 ```
 
-Runs BLAST, eggNOG-mapper, dbCAN (CAZymes), and antiSMASH (secondary metabolite clusters).
+Runs MMseqs2 (Swiss-Prot homology), Pfam (domain search via hmmsearch), BUSCO (completeness), GO terms, and tRNAscan-SE (tRNA genes).
+
+**Enable additional annotation sources:**
+```bash
+myconote-cli annotate predict_out/consensus.gff3 \
+  --fasta assembly_masked.fa \
+  --eggnog --cazyme --secretome --antismash --merops \
+  --interproscan --email you@email.edu \
+  --genetic-code 12    # for Candida CTG clade
+```
 
 ---
 
-## 8. View results
+## 7. Validate and prepare NCBI submission
 
 ```bash
-# Summary statistics
-myconote stats --gff 06_annotation/final.annotated.gff3
+# Check for errors first
+myconote-cli submit annotate_out/annotated.gff3 \
+  --fasta assembly_masked.fa \
+  --organism "Genus species" --validate-only
 
-# Open in JBrowse2
-myconote view jbrowse --genome 02_masked/genome.masked.fas --gff 06_annotation/final.annotated.gff3
+# Generate submission files
+myconote-cli submit annotate_out/annotated.gff3 \
+  --fasta assembly_masked.fa \
+  --organism "Genus species" \
+  --strain "CBS 123" \
+  --locus-prefix MYORG \
+  --bioproject PRJNA123456
+```
+
+---
+
+## 8. Explore your results
+
+```bash
+# Summary statistics with taxonomic benchmarking
+myconote-cli stats annotate_out/annotated.gff3 --taxon fungi
+
+# Generate a genome map
+myconote-cli plot annotate_out/annotated.gff3 --type circular --output genome_map.png
+
+# Interactive genome browser
+myconote-cli view annotate_out/annotated.gff3 --fasta assembly_masked.fa
+
+# Convert formats
+myconote-cli convert annotate_out/annotated.gff3 --to genbank --fasta assembly_masked.fa
 ```
 
 ---
@@ -106,17 +149,18 @@ myconote view jbrowse --genome 02_masked/genome.masked.fas --gff 06_annotation/f
 
 | File | Description |
 |------|-------------|
-| `final.annotated.gff3` | Full gene models with functional annotations |
-| `proteins.faa` | Predicted protein sequences (FASTA) |
-| `transcripts.fna` | Predicted transcript sequences (FASTA) |
-| `annotation_summary.txt` | Gene count, N50, BUSCO scores |
-| `cazymes.tsv` | CAZyme assignments |
-| `antismash/` | Secondary metabolite cluster predictions |
+| `predict_out/consensus.gff3` | Predicted gene models |
+| `annotate_out/annotated.gff3` | Gene models with functional annotations |
+| `annotate_out/proteins.fa` | Predicted protein sequences |
+| `annotate_out/annotations.tsv` | Full annotation table (for R/Python) |
+| `annotate_out/annotation_report.txt` | Summary with gene counts and coverage |
+| `submit_out/annotation.tbl` | NCBI feature table |
 
 ---
 
 ## Next steps
 
-- Run a phylogenomic analysis: [phylogeny](analysis/phylogeny.md)
-- Visualise your genome: [plot](analysis/plot.md)
-- Follow the full workshop tutorial: [Workshop Lesson](lesson.md)
+- Learn interactively: `myconote-cli learn`
+- Build a phylogenetic tree: [phylogeny](analysis/phylogeny.md)
+- Compare two genomes: `myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa`
+- Full workshop tutorial: [Workshop Lesson](lesson.md)

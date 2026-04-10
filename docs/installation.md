@@ -4,12 +4,29 @@
 
 - **macOS** (Apple Silicon or Intel) or **Linux** (x86-64)
 - [Miniconda or Anaconda](https://docs.conda.io/en/latest/miniconda.html)
-- Rust ≥ 1.74 (installed automatically if missing)
 - ~20 GB disk space for core tools; ~75 GB if downloading eggNOG databases
 
 ---
 
-## Option A: One-shot installer (recommended)
+## Option A: Quick install (pre-built binary)
+
+Download a pre-built binary for your platform. No Rust compiler needed.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/K-nie/myconote-cli/main/quick-install.sh | bash
+```
+
+Then install external tools and databases:
+```bash
+myconote-cli install --yes   # installs 30+ bioinformatics tools via conda
+myconote-cli setup           # downloads annotation databases (~2.5 GB)
+```
+
+---
+
+## Option B: Full installer (recommended for first-time setup)
+
+Handles everything: Miniconda, Rust, binary build, tool installation, and database downloads.
 
 ```bash
 git clone https://github.com/K-nie/myconote-cli.git
@@ -17,58 +34,87 @@ cd myconote-cli
 bash install.sh
 ```
 
-This script handles everything:
-
-1. Installs Miniconda if conda is not found
-2. Creates a dedicated `myconote` conda environment
-3. Installs all bioinformatics dependencies (Augustus, RepeatMasker, IQ-TREE2, etc.)
-4. Compiles the Myconote_CLI binary with `cargo build --release`
-5. Adds `myconote` to your PATH
-
-Estimated time: 20–40 minutes on first install (database downloads excluded).
+Estimated time: 20-40 minutes on first install.
 
 ---
 
-## Option B: Manual conda + cargo
+## Option C: Docker
 
 ```bash
-# 1. Create environment
-conda env create -f environment.yml
-conda activate myconote
+docker pull ghcr.io/k-nie/myconote-cli:latest
+docker run -v $(pwd):/data myconote-cli predict /data/genome.fa --kingdom fungi
+```
 
-# 2. Build binary
-cargo build --release
+All tools and databases are pre-installed in the container.
 
-# 3. Add to PATH
-export PATH="$PWD/target/release:$PATH"
+---
+
+## Option D: Singularity / Apptainer (HPC)
+
+```bash
+singularity pull myconote-cli.sif docker://ghcr.io/k-nie/myconote-cli:latest
+singularity run myconote-cli.sif predict genome.fa --kingdom fungi
 ```
 
 ---
 
-## Option C: Pre-built binary
+## Option E: Build from source
 
-Download the latest release from the [GitHub Releases page](https://github.com/K-nie/myconote-cli/releases), extract, and place the `myconote` binary somewhere on your PATH.
+If you have Rust >= 1.74:
+
+```bash
+git clone https://github.com/K-nie/myconote-cli.git
+cd myconote-cli
+cargo build --release
+cp target/release/myconote-cli ~/.local/bin/
+myconote-cli install --yes
+myconote-cli setup
+```
 
 ---
 
 ## Verify installation
 
 ```bash
-myconote --version
-myconote check
+myconote-cli --version       # shows version and banner
+myconote-cli check           # reports status of all 30+ external tools
+myconote-cli setup --check   # shows database download status
 ```
-
-`myconote check` reports which external tools are found and which are missing.
 
 ---
 
 ## Database setup
 
 ```bash
-myconote db setup --kingdom fungi
+myconote-cli setup                        # download all core databases
+myconote-cli setup --db swiss-prot pfam   # download specific databases
+myconote-cli setup --check                # verify what's installed
 ```
 
-Downloads and indexes required databases (dbCAN, MEROPS, GO, Pfam). The `--kingdom fungi` flag fetches the minimal set; omit it for the full suite including eggNOG (~50 GB).
+Core databases (~2.5 GB):
+
+| Database | Size | Used by |
+|----------|------|---------|
+| Swiss-Prot (MMseqs2) | ~1 GB | `annotate` (product names) |
+| Pfam-A HMMs | ~300 MB | `annotate` (domain search) |
+| BUSCO lineages | ~500 MB | `annotate` (completeness) |
+| dbCAN (CAZyme) | ~200 MB | `annotate --cazyme` |
+| MEROPS | ~100 MB | `annotate --merops` |
 
 !!! warning "eggNOG database"
-    The eggNOG database is ~50 GB. Download only if you need functional annotation beyond BLAST + dbCAN.
+    The eggNOG database is ~50 GB and is NOT downloaded by default. Download only if you need COG/KEGG annotation:
+    ```bash
+    download_eggnog_data.py -y --data_dir ~/.eggnog_mapper/data
+    ```
+
+---
+
+## Getting started
+
+After installation:
+
+```bash
+myconote-cli learn    # interactive tutorial (8 lessons, ~1 hour)
+```
+
+Or jump straight to the [Quick Start](quickstart.md) guide.

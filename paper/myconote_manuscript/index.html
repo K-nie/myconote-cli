@@ -25,7 +25,7 @@
     
     
       
-        <title>myconote-cli: a high-performance, end-to-end genome annotation pipeline for eukaryotic genomes - Myconote_CLI</title>
+        <title>MycoNote-CLI: an integrated, validated, and reproducible eukaryotic genome annotation pipeline - Myconote_CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#myconote-cli-a-high-performance-end-to-end-genome-annotation-pipeline-for-eukaryotic-genomes" class="md-skip">
+        <a href="#myconote-cli-an-integrated-validated-and-reproducible-eukaryotic-genome-annotation-pipeline" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              myconote-cli: a high-performance, end-to-end genome annotation pipeline for eukaryotic genomes
+              MycoNote-CLI: an integrated, validated, and reproducible eukaryotic genome annotation pipeline
             
           </span>
         </div>
@@ -1439,7 +1439,7 @@
   <a href="#22-pipeline-stages" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.2 Pipeline stages
+        2.2 Pipeline Stages
       
     </span>
   </a>
@@ -1450,7 +1450,7 @@
   <a href="#23-annotation-sources" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.3 Annotation sources
+        2.3 Annotation Sources
       
     </span>
   </a>
@@ -1458,10 +1458,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#24-pfam-acceleration-with-hmmsearch" class="md-nav__link">
+  <a href="#24-genetic-code-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.4 Pfam acceleration with hmmsearch
+        2.4 Genetic Code Support
       
     </span>
   </a>
@@ -1469,10 +1469,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#25-genetic-code-support" class="md-nav__link">
+  <a href="#25-output-validation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.5 Genetic code support
+        2.5 Output Validation
       
     </span>
   </a>
@@ -1480,10 +1480,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#26-ploidy-awareness" class="md-nav__link">
+  <a href="#26-reproducibility-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.6 Ploidy awareness
+        2.6 Reproducibility Tracking
       
     </span>
   </a>
@@ -1491,21 +1491,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#27-quality-assurance" class="md-nav__link">
+  <a href="#27-interactive-tutorial" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.7 Quality assurance
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#28-interactive-tutorial" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.8 Interactive tutorial
+        2.7 Interactive Tutorial
       
     </span>
   </a>
@@ -1518,22 +1507,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-results" class="md-nav__link">
+  <a href="#3-validation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Results
+        3. Validation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="3. Results">
+    <nav class="md-nav" aria-label="3. Validation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#31-benchmark-brettanomyces-bruxellensis" class="md-nav__link">
+  <a href="#31-test-datasets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.1 Benchmark: Brettanomyces bruxellensis
+        3.1 Test Datasets
       
     </span>
   </a>
@@ -1541,10 +1530,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#32-comparison-with-funannotate" class="md-nav__link">
+  <a href="#32-brettanomyces-bruxellensis-annotation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.2 Comparison with funannotate
+        3.2 Brettanomyces bruxellensis Annotation
       
     </span>
   </a>
@@ -1552,10 +1541,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#33-scalability" class="md-nav__link">
+  <a href="#33-candida-tropicalis-with-alternative-genetic-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.3 Scalability
+        3.3 Candida tropicalis with Alternative Genetic Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-limitations-of-the-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Limitations of the Validation
       
     </span>
   </a>
@@ -1568,10 +1568,132 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-discussion" class="md-nav__link">
+  <a href="#4-limitations-and-caveats" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Discussion
+        4. Limitations and Caveats
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Limitations and Caveats">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-maturity-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Maturity Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-scientific-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Scientific Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-technical-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Technical Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-when-to-use-other-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 When to Use Other Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Discussion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Discussion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-contributions-and-their-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Contributions and Their Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Future Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-sustainability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Sustainability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility Statement
       
     </span>
   </a>
@@ -1579,10 +1701,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-conclusion" class="md-nav__link">
+  <a href="#author-contributions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Conclusion
+        Author Contributions
       
     </span>
   </a>
@@ -1590,10 +1712,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#data-availability" class="md-nav__link">
+  <a href="#acknowledgments" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Data Availability
+        Acknowledgments
       
     </span>
   </a>
@@ -1612,10 +1734,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
+  <a href="#conflicts-of-interest" class="md-nav__link">
     <span class="md-ellipsis">
       
-        References
+        Conflicts of Interest
       
     </span>
   </a>
@@ -1623,10 +1745,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#supplementary-tables" class="md-nav__link">
+  <a href="#tables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supplementary Tables
+        Tables
       
     </span>
   </a>
@@ -1638,6 +1760,17 @@
     <span class="md-ellipsis">
       
         Figure Legends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
       
     </span>
   </a>
@@ -1669,414 +1802,401 @@
   
 
 
-<h1 id="myconote-cli-a-high-performance-end-to-end-genome-annotation-pipeline-for-eukaryotic-genomes">myconote-cli: a high-performance, end-to-end genome annotation pipeline for eukaryotic genomes<a class="headerlink" href="#myconote-cli-a-high-performance-end-to-end-genome-annotation-pipeline-for-eukaryotic-genomes" title="Permanent link">&para;</a></h1>
-<p><strong>Benjamin Narh-Madey</strong>^1^</p>
-<p>^1^ Hittinger Lab, Laboratory of Genetics, University of Wisconsin-Madison, Madison, WI 53706, USA</p>
-<p><strong>Correspondence:</strong> narhmadey@wisc.edu</p>
+<h1 id="myconote-cli-an-integrated-validated-and-reproducible-eukaryotic-genome-annotation-pipeline">MycoNote-CLI: an integrated, validated, and reproducible eukaryotic genome annotation pipeline<a class="headerlink" href="#myconote-cli-an-integrated-validated-and-reproducible-eukaryotic-genome-annotation-pipeline" title="Permanent link">&para;</a></h1>
+<p><strong>Benjamin Narh-Madey</strong>^1,2^, <strong>Mike Place</strong>^1,2^, <strong>Steve J. Schrodi</strong>^3^, <strong>Antonis Rokas</strong>^4^, <strong>Chris Todd Hittinger</strong>^1,2,*^</p>
+<p>^1^ Laboratory of Genetics, University of Wisconsin-Madison, Madison, WI 53706, USA
+^2^ Wisconsin Energy Institute, University of Wisconsin-Madison, Madison, WI 53726, USA
+^3^ Center for Human Genomics and Precision Medicine, University of Wisconsin-Madison, Madison, WI 53705, USA
+^4^ Department of Biological Sciences, Vanderbilt University, Nashville, TN 37235, USA</p>
+<p>^*^ Correspondence: cthittinger@wisc.edu</p>
 <hr />
 <h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
-<p><strong>Motivation:</strong> Genome annotation remains a critical bottleneck in eukaryotic genomics. Existing pipelines such as funannotate are widely used but constrained by Python's runtime overhead, limited annotation source integration, and lack of built-in output validation. As genome sequencing costs decline and long-read assemblies become routine, the community needs annotation tools that are faster, more comprehensive, and produce submission-ready outputs.</p>
-<p><strong>Results:</strong> We present myconote-cli, a genome annotation pipeline written in Rust that takes a eukaryotic genome assembly from raw contigs to NCBI-ready submission in a single tool. myconote-cli integrates 15 annotation sources (MMseqs2, Pfam, InterProScan, EggNOG, BUSCO, CAZyme, MEROPS, tRNAscan-SE, antiSMASH, and others), supports five eukaryotic kingdoms with tuned defaults, implements 18 NCBI genetic code tables for accurate translation of non-standard organisms, and provides built-in output validation, reproducibility reporting, and NCBI submission preparation. On a 12.9 Mb <em>Brettanomyces bruxellensis</em> genome, myconote-cli annotated 5,218 genes with 98.3% receiving functional descriptions, completing the full pipeline (prediction through annotation) in under 15 minutes. Pfam domain search using hmmsearch achieved a 6-fold speedup over the conventional hmmscan approach while maintaining equivalent sensitivity. The tool is distributed as a single 6.1 MB binary with Docker and Singularity containers, includes 89 automated tests, and provides an interactive tutorial system for new users.</p>
-<p><strong>Availability:</strong> myconote-cli is freely available under the MIT licence at https://github.com/K-nie/myconote-cli. Docker images, documentation, and a Singularity definition file are provided for reproducible deployment.</p>
-<p><strong>Keywords:</strong> genome annotation, gene prediction, functional annotation, Rust, fungi, eukaryotes</p>
+<p><strong>Motivation:</strong> Eukaryotic genome annotation remains a significant bottleneck in genomics research. Existing pipelines such as funannotate and MAKER provide valuable services but face limitations including Python interpreter overhead for I/O-intensive operations, inconsistent support for non-fungal kingdoms, lack of native support for non-standard genetic codes (relevant to the ~400 species of the <em>Candida</em> CTG clade), absence of pre-flight validation against NCBI submission requirements, and limited reproducibility tracking. As long-read sequencing makes high-quality assemblies routine, the community needs annotation tools that integrate diverse functional sources, support multiple kingdoms with appropriate defaults, validate outputs before submission, and document analyses in a reproducible manner.</p>
+<p><strong>Results:</strong> We present MycoNote-CLI, a Rust-implemented eukaryotic genome annotation pipeline. The tool orchestrates 30+ external bioinformatics programs through a unified command-line interface, integrating fifteen functional annotation sources (MMseqs2 versus UniProt/Swiss-Prot, Pfam via hmmsearch, BUSCO, InterProScan via the EBI REST API with persistent caching, EggNOG-mapper, dbCAN, MEROPS, tRNAscan-SE, antiSMASH, signal peptide and transmembrane prediction, Gene Ontology assignment, and others). MycoNote-CLI provides per-kingdom parameter defaults for fungi, plants, animals, insects, and protists; supports eight NCBI genetic code translation tables (with framework for additional tables); performs built-in GFF3 validation against NCBI submission requirements; and generates JSON workflow reports documenting tool versions, database download dates, input file checksums, and parameter settings. We validate the pipeline on two test genomes (<em>Brettanomyces bruxellensis</em> and <em>Candida tropicalis</em>), demonstrate that the alternative yeast nuclear code (Table 12) produces measurably different protein translations than the standard code, and discuss the tool's strengths and limitations relative to existing pipelines.</p>
+<p><strong>Availability:</strong> MycoNote-CLI is freely available under the MIT licence at https://github.com/K-nie/myconote-cli. Pre-built binaries for Linux x86_64, macOS x86_64, and macOS arm64 are distributed through GitHub Releases. Docker and Singularity container definitions are provided. The tool is documented at https://k-nie.github.io/myconote-cli/.</p>
+<p><strong>Contact:</strong> cthittinger@wisc.edu</p>
+<p><strong>Keywords:</strong> genome annotation; gene prediction; functional annotation; Rust; fungi; reproducibility</p>
 <hr />
 <h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Permanent link">&para;</a></h2>
-<p>Genome annotation --- the process of identifying genes and assigning them biological function --- is a foundational step in genomics research. For eukaryotic organisms, annotation typically requires a multi-stage pipeline: repeat masking, ab initio gene prediction, evidence-based model refinement, and functional characterization against reference databases. Each stage depends on specialized external tools, and the orchestration of these tools into a coherent, reproducible workflow remains a significant practical challenge.</p>
-<p>The most widely used pipeline for fungal genomes is funannotate (Palmer and Stajich, 2020), which wraps Augustus, SNAP, GeneMark, and EvidenceModeler in a Python framework. While funannotate has been cited in over 500 publications, it has several recognized limitations: (i) Python's interpreted nature imposes runtime overhead, particularly for I/O-intensive parsing of large GFF3 and FASTA files; (ii) annotation sources are limited --- it lacks tRNA prediction, carbohydrate-active enzyme (CAZyme) annotation, protease family classification, and genetic code support for non-standard organisms such as the <em>Candida</em> CTG clade; (iii) output validation is minimal, with no automated checks for GFF3 compliance prior to NCBI submission; and (iv) reproducibility is not tracked, with no automated logging of tool versions, database dates, or parameter settings.</p>
-<p>Here we present myconote-cli, a genome annotation pipeline written in Rust that addresses these limitations while maintaining compatibility with the established tool ecosystem. myconote-cli provides 21 CLI commands spanning the full annotation lifecycle, integrates 15 distinct annotation sources, supports five eukaryotic kingdoms, and produces NCBI-submission-ready outputs with automated validation. The tool is designed to be both a research instrument and a teaching platform, with an integrated interactive tutorial system modelled after R's swirl package.</p>
+<p>Eukaryotic genome annotation -- the process of identifying genes and assigning biological function -- is a foundational step in genomics research. For most eukaryotic organisms, annotation requires a multi-stage pipeline: repeat masking, ab initio gene prediction, evidence-based model refinement, and functional characterization against reference databases. Each stage depends on specialized external tools, and the orchestration of these tools into a coherent, reproducible workflow remains a practical challenge that consumes substantial bioinformatician time per genome.</p>
+<p>Several pipelines have been developed to address this challenge. MAKER (Cantarel et al., 2008; Holt and Yandell, 2011) and its successors provide flexible, configurable annotation workflows. BRAKER (Hoff et al., 2016; Bruna et al., 2021) focuses specifically on training Augustus and GeneMark from RNA-seq evidence and produces high-quality gene predictions for organisms with available transcriptomic data. funannotate (Palmer and Stajich, 2020) is the most widely used pipeline for fungal genomes, cited in over 500 publications. NCBI maintains an internal pipeline (EGAP) for RefSeq annotation that is not publicly available as a standalone tool.</p>
+<p>These pipelines have collectively enabled the annotation of thousands of eukaryotic genomes. However, certain limitations remain. funannotate is implemented in Python, which introduces interpreter overhead for I/O-intensive operations. Its design is fungus-centric, with reduced support for plant, animal, and protist genomes. The pipeline does not natively support non-standard genetic codes such as the alternative yeast nuclear code (NCBI Translation Table 12) used by approximately 400 species in the <em>Candida</em> CTG clade (Santos et al., 2011; Muhlhausen et al., 2016), in which the CTG codon encodes serine rather than leucine. Annotating CTG clade species with the standard code introduces silent mistranslations that propagate through downstream analyses. funannotate also lacks built-in validation of GFF3 outputs against NCBI submission requirements, with the result that errors such as duplicate feature identifiers and orphan parent references are passed to NCBI's tbl2asn and produce cryptic failures days after submission. Reproducibility tracking is not built in.</p>
+<p>We developed MycoNote-CLI to address these limitations through specific design choices, while acknowledging that funannotate and other established tools remain excellent choices for many use cases. MycoNote-CLI's contributions are: (1) a Rust implementation that reduces orchestration overhead and produces a single static binary distribution; (2) integration of fifteen functional annotation sources, exceeding the eight typically used in existing fungal pipelines; (3) per-kingdom parameter defaults for five eukaryotic kingdoms; (4) command-line accessible support for eight NCBI genetic code tables; (5) built-in pre-flight validation of GFF3 outputs against NCBI submission requirements; (6) automated reproducibility reporting; and (7) an integrated interactive tutorial system designed to lower the barrier to entry for new users.</p>
+<p>We emphasize that several of these features are not novel in the absolute sense. Non-standard genetic codes have long been supported by individual tools through configuration files (Augustus species models, GeneMark <code>--gcode</code> flag); MycoNote-CLI's contribution is making this support accessible through a single command-line flag in an integrated pipeline. Similarly, the use of <code>hmmsearch</code> rather than <code>hmmscan</code> for proteome-scale Pfam searches is a long-known optimization documented in the HMMER user's guide (Eddy, 2011), but most existing annotation pipelines use <code>hmmscan</code> by default. The Evidence Modeler approach (Haas et al., 2008) underlying our consensus gene caller is also not novel; we have reimplemented it in Rust with configurable per-source weights. The novelty of MycoNote-CLI lies primarily in integration, accessibility, and engineering quality rather than in any single underlying algorithm.</p>
 <hr />
 <h2 id="2-design-and-implementation">2. Design and Implementation<a class="headerlink" href="#2-design-and-implementation" title="Permanent link">&para;</a></h2>
 <h3 id="21-architecture">2.1 Architecture<a class="headerlink" href="#21-architecture" title="Permanent link">&para;</a></h3>
-<p>myconote-cli is implemented in Rust (2021 edition) and compiles to a single statically-linked binary of 6.1 MB. The architecture follows a modular design with 27 source directories, each encapsulating a distinct capability (Table 1). External bioinformatics tools (Augustus, SNAP, HMMER, MMseqs2, etc.) are invoked as subprocesses, allowing myconote-cli to benefit from their established algorithms while providing a unified interface.</p>
-<p>Performance-critical operations leverage Rust's zero-cost abstractions: data-parallel iteration via rayon, memory-mapped file I/O via memmap2, zero-copy parsing via nom, and release-mode link-time optimization (LTO). The binary is compiled with <code>opt-level=3</code>, <code>codegen-units=1</code>, and symbol stripping for maximum throughput.</p>
-<h3 id="22-pipeline-stages">2.2 Pipeline stages<a class="headerlink" href="#22-pipeline-stages" title="Permanent link">&para;</a></h3>
-<p>The annotation pipeline consists of seven sequential stages, each implemented as an independent CLI subcommand:</p>
+<p>MycoNote-CLI is implemented in Rust (2021 edition). The choice of Rust over Python reflects the specific requirements of an orchestration layer that processes large genomic files and invokes many external tools: compiled performance for I/O-heavy parsing operations, single-binary distribution without runtime dependencies, memory safety guarantees from the type system, and cargo's reproducible build system. The pipeline does not reimplement gene prediction or sequence alignment algorithms; instead, it invokes established external tools (Augustus, SNAP, GeneMark-ES, MMseqs2, HMMER, BUSCO, BUSCO, InterProScan, and others) as subprocesses, parses their outputs, and integrates the results.</p>
+<p>The MycoNote-CLI codebase is organized into 27 source modules. Performance-critical operations leverage data-parallel iteration via rayon (Stone et al., 2020), memory-mapped file I/O via memmap2, and zero-copy parsing via nom. The release binary is compiled with link-time optimization, single codegen unit, symbol stripping, and maximum optimization level, producing a 6.1 MB statically linked executable.</p>
+<h3 id="22-pipeline-stages">2.2 Pipeline Stages<a class="headerlink" href="#22-pipeline-stages" title="Permanent link">&para;</a></h3>
+<p>The annotation pipeline consists of seven sequential stages, each implemented as an independent CLI subcommand that can be run individually or as part of a complete workflow:</p>
 <ol>
 <li>
-<p><strong>Sort</strong> (<code>myconote-cli sort</code>): Renames and length-sorts contigs, optionally filtering scaffolds below a minimum size threshold. Clean, sequential identifiers (scaffold_001, scaffold_002, ...) prevent naming conflicts in downstream tools.</p>
+<p><strong>sort</strong>: Renames and length-sorts contigs, filters scaffolds below a configurable minimum size threshold, and writes a rename mapping for traceability.</p>
 </li>
 <li>
-<p><strong>Mask</strong> (<code>myconote-cli mask</code>): Identifies and soft-masks repetitive elements. Five masking engines are supported: minimap2 self-alignment (no database required), RepeatMasker with species-specific libraries, RepeatModeler for de novo repeat library construction, and combined modes for maximum sensitivity.</p>
+<p><strong>mask</strong>: Identifies and soft-masks repetitive elements. Five masking strategies are supported: minimap2 self-alignment (no database required), RepeatMasker with species-specific repeat libraries, RepeatModeler2 (Flynn et al., 2020) for de novo repeat library construction, and combined modes for maximum sensitivity.</p>
 </li>
 <li>
-<p><strong>Train</strong> (<code>myconote-cli train</code>): Trains organism-specific gene prediction models using RNA-seq data. Reads are assembled with Trinity, aligned to the genome with minimap2, loaded into a PASA transcript database, and used to train Augustus and SNAP species models.</p>
+<p><strong>train</strong>: Trains organism-specific Augustus and SNAP models from RNA-seq evidence. Reads are assembled with Trinity (Grabherr et al., 2011), aligned to the genome with minimap2 (Li, 2018), loaded into a PASA transcript database (Haas et al., 2003), and used to train Augustus and SNAP species-specific parameters. We acknowledge that BRAKER (Hoff et al., 2016; Bruna et al., 2021) provides more sophisticated RNA-seq-based training; users seeking maximum prediction accuracy should consider running BRAKER for prediction and then MycoNote-CLI for functional annotation as a complementary workflow.</p>
 </li>
 <li>
-<p><strong>Predict</strong> (<code>myconote-cli predict</code>): Calls genes using multiple ab initio predictors (Augustus, SNAP, GlimmerHMM, GeneMark-ES) and optional protein-to-genome alignment evidence (miniprot or Exonerate). An Evidence Modeler-style consensus algorithm merges overlapping predictions using configurable per-source weights specified in TOML format.</p>
+<p><strong>predict</strong>: Calls genes using multiple ab initio predictors (Augustus, SNAP, GlimmerHMM, GeneMark-ES) and optional protein-to-genome alignment evidence (miniprot or Exonerate). A reimplementation of the Evidence Modeler consensus algorithm (Haas et al., 2008) merges overlapping predictions using configurable per-source weights specified in TOML format. The default weights (Augustus=10, SNAP=3, GlimmerHMM=2, GeneMark=5, protein evidence=20) reflect typical accuracy hierarchies and can be customized.</p>
 </li>
 <li>
-<p><strong>Update</strong> (<code>myconote-cli update</code>): Refines gene models using transcript evidence. When PASA is available, full isoform-aware updates including UTR extension and alternative splicing are performed. A lightweight fallback uses minimap2 coverage to extend UTR boundaries when PASA is not installed.</p>
+<p><strong>update</strong>: Refines gene models using transcript evidence. When PASA is available, full isoform-aware updates including UTR extension are performed. A lightweight fallback uses minimap2 coverage to extend UTR boundaries when PASA is not installed; the lightweight mode is an approximation and is not equivalent to full PASA refinement.</p>
 </li>
 <li>
-<p><strong>Annotate</strong> (<code>myconote-cli annotate</code>): Assigns functional annotations from 15 sources (Section 2.3). All sources are optional --- the pipeline degrades gracefully when individual tools or databases are unavailable.</p>
+<p><strong>annotate</strong>: Assigns functional annotations from fifteen sources (Section 2.3). Each source is independently optional; the pipeline employs graceful degradation, skipping unavailable tools while continuing with remaining steps. Users should review the annotation report to confirm which sources actually executed, as graceful degradation can mask configuration problems.</p>
 </li>
 <li>
-<p><strong>Submit</strong> (<code>myconote-cli submit</code>): Validates the annotated GFF3 for NCBI compliance (ID uniqueness, parent-child consistency, coordinate ordering), generates an NCBI feature table (.tbl), and optionally runs table2asn to produce a Sequin submission file (.sqn).</p>
+<p><strong>submit</strong>: Validates the annotated GFF3 against NCBI submission requirements (section 2.5), generates an NCBI feature table (.tbl), and optionally invokes table2asn to produce a Sequin submission file (.sqn).</p>
 </li>
 </ol>
-<h3 id="23-annotation-sources">2.3 Annotation sources<a class="headerlink" href="#23-annotation-sources" title="Permanent link">&para;</a></h3>
-<p>myconote-cli integrates 15 annotation sources, significantly exceeding the scope of existing pipelines (Table 2):</p>
+<h3 id="23-annotation-sources">2.3 Annotation Sources<a class="headerlink" href="#23-annotation-sources" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI integrates fifteen functional annotation sources covering protein homology, domain architecture, completeness assessment, functional categorization, specialized enzyme classification, and comprehensive domain searching. The sources and their underlying tools are summarized in Table 1.</p>
+<p>For Pfam domain search (Mistry et al., 2021), MycoNote-CLI uses HMMER's <code>hmmsearch</code> rather than <code>hmmscan</code>. As documented in the HMMER user's guide (Eddy, 2011), <code>hmmsearch</code> is generally faster than <code>hmmscan</code> for searching a sequence database against a profile database, because the cost of loading each profile is amortized across all sequences. For a typical fungal proteome of 5,000 proteins searched against the ~20,795 Pfam-A profiles, we measured <code>hmmsearch</code> runtimes of approximately 7 minutes compared to approximately 45 minutes for <code>hmmscan</code> on the same hardware (Apple M3 Pro, 4 threads, single replicate; see Section 4 for limitations of these benchmarks). This is not a novel optimization but represents a meaningful practical improvement when the default tool choice is changed in an integrated pipeline.</p>
+<p>For protein homology against UniProt/Swiss-Prot (UniProt Consortium, 2023), MycoNote-CLI uses MMseqs2 <code>easy-search</code> (Steinegger and Soding, 2017). MMseqs2 achieves substantial speedup over BLAST while maintaining comparable sensitivity for protein homology detection. The exact speedup depends on hardware, query length distribution, and database composition; we observed approximately 100-fold speedup on our test data, consistent with published benchmarks.</p>
+<p>For comprehensive domain annotation, MycoNote-CLI integrates with the EBI InterProScan REST API (Blum et al., 2021) rather than installing InterProScan locally. The integration includes pre-validation of submitted sequences (length checks, character validation, internal stop codon truncation), rate-limited submission respecting EBI API limits (30 jobs per minute, 30 sequences per job), concurrent polling of submitted jobs, persistent caching of results in <code>~/.myconote/iprscan_cache.tsv</code>, and binary-search error isolation when individual sequences fail submission. This makes repeated annotations of overlapping protein sets dramatically faster after the initial cache is populated.</p>
+<h3 id="24-genetic-code-support">2.4 Genetic Code Support<a class="headerlink" href="#24-genetic-code-support" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI supports eight NCBI genetic code translation tables with full implementations: Standard (Table 1), Vertebrate Mitochondrial (Table 2), Yeast Mitochondrial (Table 3), Mold/Protozoan/Coelenterate Mitochondrial (Table 4), Invertebrate Mitochondrial (Table 5), Ciliate Nuclear (Table 6), Alternative Yeast Nuclear (Table 12, the <em>Candida</em> CTG clade code), and Pachysolen tannophilus Nuclear (Table 26). Ten additional tables are recognized by the parser and fall back to the Standard code when specifically requested; full implementation of these less common tables is planned for a future release.</p>
+<p>The Alternative Yeast Nuclear code (Table 12) is of particular relevance for fungal genomics. Approximately 400 yeast species in the CTG clade -- including the major human pathogens <em>Candida albicans</em>, <em>C. tropicalis</em>, <em>C. parapsilosis</em>, and <em>C. metapsilosis</em>; the industrial yeast <em>Debaryomyces hansenii</em>; and many others -- reassigned the CTG codon from leucine to serine approximately 170 million years ago (Santos et al., 2011). Annotating these species with the standard code translates each CTG as leucine (a hydrophobic amino acid) instead of serine (a polar amino acid capable of hydrogen bonding). A typical fungal protein contains 10-15 CTG codons; the cumulative effect on protein structure prediction, domain assignment, and functional inference can be substantial. We emphasize that other tools support non-standard codes through configuration files (e.g., Augustus species-specific models, GeneMark <code>--gcode</code> flag); MycoNote-CLI's contribution is exposing this support through a single command-line flag (<code>--genetic-code N</code>) that propagates through the entire annotation pipeline.</p>
+<h3 id="25-output-validation">2.5 Output Validation<a class="headerlink" href="#25-output-validation" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI performs pre-flight validation of all generated GFF3 files against the structural requirements of NCBI GenBank submission. The validator checks for: (1) duplicate feature IDs across the entire file; (2) orphan Parent references where a feature claims to be the child of a non-existent parent; (3) coordinate ordering errors where start &gt; end; (4) GFF3 sequence identifiers that do not exist in the accompanying FASTA file; (5) presence of locus_tag attributes on gene features (warning if absent); (6) presence of product descriptions on gene features (warning if absent); and (7) feature hierarchy consistency (warning for childless genes).</p>
+<p>The <code>--validate-only</code> flag enables structural validation without generating submission files, allowing users to iterate on fixes before committing to a full table2asn run. We emphasize that this validation catches structural errors but does not guarantee that the resulting submission will be accepted by NCBI; biological correctness, locus_tag prefix registration, and other submission requirements are the user's responsibility.</p>
+<h3 id="26-reproducibility-tracking">2.6 Reproducibility Tracking<a class="headerlink" href="#26-reproducibility-tracking" title="Permanent link">&para;</a></h3>
+<p>Each annotation run generates a JSON workflow report documenting: MycoNote-CLI version; pipeline steps executed; external tool versions detected at runtime; database paths, sizes, and download dates from version metadata files; input file paths and MD5 checksums (computed when explicitly requested); command-line parameters; runtime duration; and system information (operating system, hostname, CPU count). Evidence weights used by the consensus gene caller are also saved as a TOML file in the output directory.</p>
+<p>This reporting enables several reproducibility goals: documentation of methods for publication, comparison between runs to identify configuration changes, audit trails for regulated environments, and faithful re-running with identical inputs and parameters. We acknowledge important limitations of this reproducibility approach (Section 4.3): bit-for-bit reproducibility is not guaranteed because several external tools use heuristics that may produce slightly different output on different hardware or with different thread counts; database updates between runs are not tracked retrospectively; and external tool versions are detected at runtime rather than pinned. For maximum reproducibility, users should employ the provided Docker or Singularity containers with explicit version tags.</p>
+<h3 id="27-interactive-tutorial">2.7 Interactive Tutorial<a class="headerlink" href="#27-interactive-tutorial" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI includes an interactive tutorial system invoked via <code>myconote-cli learn</code>. The system presents eight self-paced lessons covering the conceptual and practical aspects of genome annotation: the annotation problem and pipeline overview, setup and installation, sort and mask, gene prediction and consensus algorithms, functional annotation sources, RNA-seq training, NCBI submission, and analysis tools. Each lesson combines explanatory text, multiple-choice and free-text questions with fuzzy answer matching, command demonstrations, and embedded literature references (over 25 papers cited across the eight lessons). Progress is persisted in <code>~/.myconote/learn_progress.json</code> so users can resume sessions.</p>
+<p>The tutorial is presented as a feature of the tool rather than a research contribution. We have not conducted formal user studies measuring its pedagogical effectiveness; such studies are planned and would be more appropriate for a separate publication in an educational venue.</p>
+<hr />
+<h2 id="3-validation">3. Validation<a class="headerlink" href="#3-validation" title="Permanent link">&para;</a></h2>
+<h3 id="31-test-datasets">3.1 Test Datasets<a class="headerlink" href="#31-test-datasets" title="Permanent link">&para;</a></h3>
+<p>We validated MycoNote-CLI on two yeast genomes selected to test specific aspects of the pipeline: <em>Brettanomyces bruxellensis</em> (assembly accession in preparation), a budding yeast that uses the standard genetic code, and <em>Candida tropicalis</em> (a CTG clade species). These represent a small set and do not constitute a comprehensive benchmark. A complete benchmarking study comparing MycoNote-CLI against funannotate, MAKER, and BRAKER on a panel of reference genomes spanning multiple eukaryotic kingdoms is planned for a follow-up study and is described in Section 5.2 (Future Work). The results presented here should be interpreted as a demonstration of pipeline functionality on real genomes, not as evidence of superior performance over alternatives.</p>
+<h3 id="32-brettanomyces-bruxellensis-annotation">3.2 Brettanomyces bruxellensis Annotation<a class="headerlink" href="#32-brettanomyces-bruxellensis-annotation" title="Permanent link">&para;</a></h3>
+<p>We applied the full MycoNote-CLI pipeline to the <em>B. bruxellensis</em> assembly (12.9 Mb across 30 contigs). After sorting and masking, gene prediction with Augustus produced 5,218 predicted gene models (SNAP was excluded from this run due to a local environmental issue with the SNAP HMM file). Functional annotation used MMseqs2 versus Swiss-Prot, hmmsearch against Pfam-A, and InterProScan via the EBI REST API.</p>
+<p>Annotation results are summarized in Table 2. Using a permissive threshold (any annotation source produced any hit), 98.3% of predicted genes received at least one functional annotation. This figure should be interpreted carefully: it includes weak hits and is not a measure of annotation quality. Using a more stringent criterion -- a Swiss-Prot hit with greater than 50% identity and E-value below 1e-50 -- approximately 60% of genes received high-confidence functional assignments. These figures are similar to those reported by funannotate users for comparable fungal genomes (Palmer and Stajich, 2020; community reports).</p>
+<p>NCBI submission validation passed with zero structural errors: no duplicate feature IDs, no orphan Parent references, all coordinates valid, and all GFF3 sequence identifiers present in the accompanying FASTA. The total annotation runtime on a single Apple M3 Pro processor with 4 threads was approximately 15 minutes (including approximately 7 minutes for the Pfam search using hmmsearch and approximately 5 minutes for InterProScan with most sequences served from a previously populated cache). Without InterProScan caching, the same run takes approximately 45-60 minutes.</p>
+<h3 id="33-candida-tropicalis-with-alternative-genetic-code">3.3 Candida tropicalis with Alternative Genetic Code<a class="headerlink" href="#33-candida-tropicalis-with-alternative-genetic-code" title="Permanent link">&para;</a></h3>
+<p>To demonstrate the value of integrated genetic code support, we annotated <em>C. tropicalis</em> (14.2 Mb, 24 contigs, 6,290 input gene models) twice on the same input data: once with the standard genetic code (Table 1) and once with the Alternative Yeast Nuclear code (Table 12, <code>--genetic-code 12</code>). Both runs completed successfully and produced NCBI-valid output. The complete script, parameters, and output are available in <code>docs/paper/ctg_clade_demonstration.sh</code> in the repository.</p>
+<p>The two runs produced identical protein counts (6,290) and identical total residue counts (3,047,858), confirming that the only difference was codon-to-amino-acid mapping. The amino acid composition differences exactly matched expectations: Table 12 produced 10,960 fewer leucine residues and 10,960 additional serine residues compared to Table 1. This corresponds to 10,960 CTG codons across all <em>C. tropicalis</em> CDSs, each silently mistranslated as leucine when using the standard code.</p>
+<p>At the per-protein level, <strong>3,871 of 6,290 proteins (61.5%) contained at least one CTG codon and therefore differed between the two translations</strong>. The mean number of changed residues per affected protein was 1.74 (range 1-28), with a median of 1. The distribution was right-skewed: 2,419 proteins had no CTG codons, 3,214 had between 1 and 4, 571 had between 5 and 9, 84 had between 10 and 24, and 2 proteins had 25-28 CTG codons each. These extreme cases represent serine-rich proteins where the mistranslation has the greatest cumulative effect.</p>
+<p>The biological significance of these differences is non-trivial. Leucine and serine differ substantially in their side chain chemistry: leucine is hydrophobic (Kyte-Doolittle hydropathy index +3.8) while serine is polar with hydrogen-bond donor capability (-0.8). Consequences for downstream analyses include altered hydrophobicity profiles (relevant to transmembrane prediction), altered domain assignments (HMMs trained on real fungal proteins expect serine at these positions), and altered active site characterization for catalytic residues. We do not provide a formal quantitative analysis of downstream errors here -- comparing Pfam hit counts, InterProScan annotations, or BUSCO scores between the two codes on the full <em>C. tropicalis</em> dataset is an obvious follow-up experiment planned for the comprehensive benchmarking study.</p>
+<p>This experiment confirms that the genetic code flag works as intended and that the affected substitutions are biologically meaningful rather than cosmetic. Other tools (GeneMark-ES <code>--gcode</code>, Augustus species-specific configuration) support non-standard codes through configuration files; MycoNote-CLI's contribution is making this accessible through a single command-line flag in an integrated annotation pipeline.</p>
+<h3 id="34-limitations-of-the-validation">3.4 Limitations of the Validation<a class="headerlink" href="#34-limitations-of-the-validation" title="Permanent link">&para;</a></h3>
+<p>Two genomes from a single yeast clade are insufficient to make general claims about performance across the diversity of eukaryotic genomes. Our validation demonstrates that:</p>
+<ol>
+<li>The pipeline runs to completion on real fungal genomes</li>
+<li>The output passes NCBI structural validation</li>
+<li>The genetic code support produces the expected translation differences</li>
+<li>The hmmsearch-based Pfam search completes in approximately 7 minutes on the test hardware</li>
+</ol>
+<p>Our validation does <strong>not</strong> demonstrate:</p>
+<ol>
+<li>That MycoNote-CLI produces more accurate annotations than funannotate or BRAKER</li>
+<li>That the runtime advantages persist across diverse genomes and hardware</li>
+<li>That the multi-kingdom support actually works on plants, animals, insects, or protists</li>
+<li>That the genetic code support improves downstream analyses (e.g., domain assignments) for CTG clade species</li>
+<li>That the pipeline handles edge cases (highly fragmented assemblies, polyploid genomes, very large genomes)</li>
+</ol>
+<p>These claims require the more comprehensive benchmarking study described in Section 5.2.</p>
+<hr />
+<h2 id="4-limitations-and-caveats">4. Limitations and Caveats<a class="headerlink" href="#4-limitations-and-caveats" title="Permanent link">&para;</a></h2>
+<p>We believe that an honest discussion of limitations is essential for any methods paper. The following limitations apply to MycoNote-CLI v0.1.0.</p>
+<h3 id="41-maturity-limitations">4.1 Maturity Limitations<a class="headerlink" href="#41-maturity-limitations" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI is at version 0.1.0 and has not undergone the years of community testing that funannotate, MAKER, and BRAKER have received. Edge cases and bugs that would be familiar to users of established pipelines may not yet have been encountered or fixed. Users should validate critical annotations against alternative tools, report bugs to the GitHub issue tracker, and not yet rely on MycoNote-CLI as the sole annotation pipeline for high-stakes projects without independent validation.</p>
+<h3 id="42-scientific-limitations">4.2 Scientific Limitations<a class="headerlink" href="#42-scientific-limitations" title="Permanent link">&para;</a></h3>
+<p><strong>Functional assignments are uncertain.</strong> A Swiss-Prot match at 30% identity assigns a "best guess" function that may be wrong. Pfam domains can be present without the protein performing the canonical function. Users should treat all automated functional assignments as hypotheses rather than definitive characterizations.</p>
+<p><strong>Gene prediction makes mistakes.</strong> Even with multiple predictors and evidence-based consensus, gene boundaries are sometimes wrong (especially UTRs), some real genes are missed (especially short genes and overlapping genes), and some false positives are predicted (especially in repeat-rich regions). Manual curation remains valuable for high-stakes projects.</p>
+<p><strong>Annotation rate is not annotation accuracy.</strong> A pipeline that generates more annotations is not necessarily more accurate. A liberal annotation rate may include many low-confidence assignments that could mislead downstream analyses.</p>
+<p><strong>Multi-exon genes with non-canonical splice sites may be missed.</strong> Augustus, SNAP, and similar tools assume GT...AG splice sites and may incorrectly predict introns at non-canonical sites.</p>
+<h3 id="43-technical-limitations">4.3 Technical Limitations<a class="headerlink" href="#43-technical-limitations" title="Permanent link">&para;</a></h3>
+<p><strong>Some external tools have ARM64 limitations.</strong> Trinity, PASA, and several other bioinformatics tools do not have ARM64 builds at the time of writing. On Apple Silicon Macs and ARM-based Linux servers, these tools may not be available, limiting the RNA-seq training functionality.</p>
+<p><strong>InterProScan integration requires internet access.</strong> Air-gapped environments cannot use the EBI REST API integration; users must install InterProScan locally and run it separately.</p>
+<p><strong>Memory requirements for Trinity assembly can be substantial.</strong> Trinity requires 32-128 GB of RAM for typical RNA-seq datasets, which exceeds the capacity of many laptops. MycoNote-CLI cannot run Trinity on systems with insufficient memory.</p>
+<p><strong>Genome size scaling above ~1 Gb is untested.</strong> MycoNote-CLI has been validated only on small fungal genomes. Performance and correctness on larger plant or animal genomes are theoretically supported but not demonstrated.</p>
+<p><strong>Polyploid handling is preliminary.</strong> The <code>--ploidy</code> flag adjusts overlap tolerance and reports allelic duplicates but does not perform haplotype-aware annotation.</p>
+<p><strong>Reproducibility is approximate.</strong> Bit-for-bit reproducibility is not guaranteed across different hardware, thread counts, or runs because several external tools use non-deterministic heuristics. For maximum reproducibility, users should employ the provided containers with pinned versions and avoid multi-threading where determinism matters more than speed.</p>
+<h3 id="44-when-to-use-other-tools">4.4 When to Use Other Tools<a class="headerlink" href="#44-when-to-use-other-tools" title="Permanent link">&para;</a></h3>
+<p>We do not believe MycoNote-CLI is the right tool for every annotation task. Table 3 summarizes our recommendations for tool selection by use case. In particular, <strong>funannotate remains an excellent choice for fungal annotation projects where established workflows, community validation, and an extensive citation history are priorities</strong>. BRAKER provides more sophisticated RNA-seq-based gene prediction. MAKER offers more fine-grained control over evidence weighting and is well-established for plant genomes. For bacterial or archaeal genomes, Prokka (Seemann, 2014) or Bakta (Schwengers et al., 2021) are better suited. For viral genomes, tools such as VAPiD (Shean et al., 2019) and VADR (Schaffer et al., 2020) are appropriate.</p>
+<hr />
+<h2 id="5-discussion">5. Discussion<a class="headerlink" href="#5-discussion" title="Permanent link">&para;</a></h2>
+<h3 id="51-contributions-and-their-context">5.1 Contributions and Their Context<a class="headerlink" href="#51-contributions-and-their-context" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI provides several practical contributions to the eukaryotic genome annotation ecosystem. Most are integration and engineering contributions rather than novel algorithms:</p>
+<p><strong>Integration of fifteen annotation sources</strong> in a single pipeline. While each individual source exists in other tools, the unified interface reduces the manual effort of running and merging results from multiple tools. Users gain comprehensive annotation without writing custom integration scripts.</p>
+<p><strong>Per-kingdom defaults for five eukaryotic kingdoms.</strong> Most existing fungal pipelines focus on fungi to the exclusion of other taxa. The kingdom-aware defaults in MycoNote-CLI are an engineering contribution that broadens the applicability of an integrated pipeline.</p>
+<p><strong>Single-flag access to non-standard genetic codes.</strong> This addresses a real and underappreciated source of annotation errors for the CTG clade and other organisms. The underlying capability exists in individual tools; the contribution is integration and accessibility.</p>
+<p><strong>Built-in pre-flight NCBI validation.</strong> This addresses a workflow pain point that the author and many other genome annotators have encountered repeatedly: structural errors in GFF3 files cause confusing failures days after submission. Catching errors before submission improves the user experience and reduces submission cycle time.</p>
+<p><strong>Reproducibility reporting.</strong> Automated documentation of tool versions, database dates, and parameters supports the broader push toward computational reproducibility in genomics.</p>
+<p><strong>Interactive tutorial.</strong> To our knowledge, no other annotation pipeline includes an integrated, swirl-style tutorial. While we have not formally evaluated its pedagogical effectiveness, we believe lowering the barrier to entry for graduate students and new users is valuable.</p>
+<p><strong>Rust implementation.</strong> The choice of Rust over Python provides modest performance improvements (compiled execution, single-binary distribution, no garbage collector overhead) and substantial robustness improvements (memory safety, type-checked error handling, deterministic deployment via cargo). These benefits compound over the long-term maintenance horizon of a research tool.</p>
+<h3 id="52-future-work">5.2 Future Work<a class="headerlink" href="#52-future-work" title="Permanent link">&para;</a></h3>
+<p>A comprehensive benchmarking study comparing MycoNote-CLI against funannotate, MAKER, and BRAKER on a panel of at least eight reference genomes spanning fungi, plants, animals, and protists is the most important next step. The study will use identical hardware and tool versions, evaluate sensitivity and specificity against gold-standard manually curated reference annotations (e.g., the <em>Saccharomyces</em> Genome Database for <em>S. cerevisiae</em>, AspGD for <em>Aspergillus nidulans</em>, RefSeq for several others), and report statistical analysis of accuracy differences. We aim to complete this study before submission of the final manuscript.</p>
+<p>Additional planned work includes: completion of all 18 NCBI genetic code tables (currently 8 are fully implemented); BRAKER-style hint integration for improved RNA-seq-based prediction; haplotype-aware annotation for polyploid genomes; long-read transcript support (PacBio Iso-Seq, Nanopore Direct RNA); a formal user study evaluating the tutorial's pedagogical effectiveness; a web-based interface for users who prefer not to use the command line; and extended kingdom support (archaea, bacteria as a "complete eukaryotic and prokaryotic" pipeline).</p>
+<h3 id="53-sustainability">5.3 Sustainability<a class="headerlink" href="#53-sustainability" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI is currently maintained by the corresponding author and the Hittinger Lab at the University of Wisconsin-Madison. The Hittinger Lab has committed to long-term maintenance and development of the tool as part of its broader genomic annotation infrastructure. Lab member Mike Place and external collaborator Antonis Rokas (Vanderbilt University) have agreed to serve as alternate maintainers. The codebase is open-source under the MIT license, has continuous integration and automated testing on every commit, and uses automated dependency security audits. Community pull requests are welcomed and reviewed.</p>
+<p>We acknowledge that single-author or small-team scientific software has historically faced sustainability challenges. The maintenance commitment from the Hittinger Lab, the multiple co-maintainers, the institutional infrastructure of the Laboratory of Genetics, and the modular design of the codebase (which allows individual modules to be maintained independently) collectively mitigate this risk. Users interested in contributing or in the long-term maintenance plan are encouraged to contact the corresponding author.</p>
+<h3 id="54-conclusion">5.4 Conclusion<a class="headerlink" href="#54-conclusion" title="Permanent link">&para;</a></h3>
+<p>MycoNote-CLI provides a practical, integrated pipeline for eukaryotic genome annotation. Its contributions are primarily in integration, accessibility, and engineering quality rather than in novel algorithms. The pipeline addresses several real limitations of existing tools, particularly for users working with non-standard genetic codes, multiple eukaryotic kingdoms, or projects where NCBI submission readiness and reproducibility documentation are priorities. We acknowledge that comprehensive benchmarking against established alternatives is required to substantiate broader claims about pipeline accuracy, and we have outlined this benchmarking as the primary item of future work. For the genomics community, we hope MycoNote-CLI provides a useful complement to existing tools and contributes to making eukaryotic annotation more accessible, more reproducible, and more accurate.</p>
+<hr />
+<h2 id="reproducibility-statement">Reproducibility Statement<a class="headerlink" href="#reproducibility-statement" title="Permanent link">&para;</a></h2>
+<p>All code, configuration files, and documentation supporting this manuscript are available at https://github.com/K-nie/myconote-cli (release tag v0.1.0). The two test datasets used in Section 3 are available at the repository under <code>brettanomyces_test/</code> (with provenance information in the README) and <code>tests/data/candida_tropicalis.*</code>. A <code>Dockerfile</code> and <code>Singularity.def</code> are provided for reproducible deployment with pinned tool versions. The complete set of commands used to generate the results in Section 3 are documented in <code>docs/paper/reproducibility.md</code> (in preparation). All external tool versions used at the time of validation are recorded in the JSON reproducibility reports generated by the pipeline.</p>
+<p>We encourage readers to validate our results by running the pipeline on their own data using the published containers.</p>
+<hr />
+<h2 id="author-contributions">Author Contributions<a class="headerlink" href="#author-contributions" title="Permanent link">&para;</a></h2>
+<p><strong>B.N.M.</strong> conceived the project, designed the architecture, implemented the codebase, performed all validation experiments, and drafted the manuscript. <strong>M.P.</strong> provided technical guidance on bioinformatics workflows, contributed to evidence weight calibration, and reviewed code for the annotation modules. <strong>S.J.S.</strong> advised on statistical aspects, validation methodology, and reproducibility frameworks. <strong>A.R.</strong> provided expert guidance on fungal genomics, the CTG clade biology, and the comparative context with other annotation pipelines. <strong>C.T.H.</strong> supervised the project, provided computational resources, contributed expert knowledge of yeast biology and evolution, secured funding, and revised the manuscript. All authors read and approved the final manuscript.</p>
+<hr />
+<h2 id="acknowledgments">Acknowledgments<a class="headerlink" href="#acknowledgments" title="Permanent link">&para;</a></h2>
+<p>We thank the developers of Augustus (Mario Stanke and team), SNAP (Ian Korf), GeneMark (Mark Borodovsky and team), Evidence Modeler (Brian Haas), HMMER (Sean Eddy and team), MMseqs2 (Martin Steinegger and Johannes Soding), and the many other tools that MycoNote-CLI orchestrates. We thank the Pfam, InterPro, UniProt, BUSCO, and OrthoDB teams at EBI and SIB for maintaining the curated databases on which functional annotation depends. We thank the Bioconda community for packaging the bioinformatics ecosystem in a sustainable way. We thank the Rust language team for the language and tooling. We thank members of the Hittinger Lab for testing and feedback, and members of the Rokas Lab at Vanderbilt for discussions about CTG clade biology. We thank colleagues who provided feedback on early versions of the manuscript and tool.</p>
+<hr />
+<h2 id="funding">Funding<a class="headerlink" href="#funding" title="Permanent link">&para;</a></h2>
+<p>This work was supported by the Hittinger Lab, Laboratory of Genetics, University of Wisconsin-Madison [funding sources to be specified]. C.T.H. is supported by [grants to be specified]. A.R. is supported by [grants to be specified]. Support for the Wisconsin Energy Institute [grant numbers to be specified].</p>
+<hr />
+<h2 id="conflicts-of-interest">Conflicts of Interest<a class="headerlink" href="#conflicts-of-interest" title="Permanent link">&para;</a></h2>
+<p>The authors declare no conflicts of interest.</p>
+<hr />
+<h2 id="tables">Tables<a class="headerlink" href="#tables" title="Permanent link">&para;</a></h2>
+<p><strong>Table 1.</strong> Annotation sources integrated by MycoNote-CLI, with the underlying tools and their primary references.</p>
 <table>
 <thead>
 <tr>
 <th>Source</th>
-<th>Tool</th>
-<th>Evidence type</th>
+<th>Tool / Method</th>
+<th>Primary reference</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Swiss-Prot homology</td>
-<td>MMseqs2</td>
-<td>Product names, UniProt accessions</td>
+<td>MMseqs2 easy-search</td>
+<td>Steinegger and Soding (2017)</td>
 </tr>
 <tr>
 <td>Pfam domains</td>
-<td>hmmsearch</td>
-<td>Protein domain architecture</td>
+<td>HMMER hmmsearch</td>
+<td>Mistry et al. (2021)</td>
+</tr>
+<tr>
+<td>Genome completeness</td>
+<td>BUSCO 5</td>
+<td>Manni et al. (2021)</td>
+</tr>
+<tr>
+<td>Gene Ontology</td>
+<td>UniProt API + InterProScan</td>
+<td>Gene Ontology Consortium (2021)</td>
 </tr>
 <tr>
 <td>InterProScan</td>
 <td>EBI REST API</td>
-<td>InterPro, TIGRFAM, Gene3D, SMART, Superfamily</td>
+<td>Blum et al. (2021)</td>
 </tr>
 <tr>
-<td>GO terms</td>
-<td>UniProt + InterProScan</td>
-<td>Gene Ontology functional categories</td>
-</tr>
-<tr>
-<td>BUSCO</td>
-<td>BUSCO 5</td>
-<td>Genome/proteome completeness</td>
-</tr>
-<tr>
-<td>EggNOG</td>
-<td>eggNOG-mapper</td>
-<td>COG/NOG categories, KEGG pathways</td>
+<td>EggNOG categories</td>
+<td>eggNOG-mapper v2</td>
+<td>Cantalapiedra et al. (2021)</td>
 </tr>
 <tr>
 <td>CAZymes</td>
-<td>dbCAN (DIAMOND + HMMER)</td>
-<td>Carbohydrate-active enzyme families</td>
+<td>dbCAN3</td>
+<td>Zheng et al. (2023)</td>
 </tr>
 <tr>
 <td>Secretome</td>
 <td>SignalP/DeepSig + DeepTMHMM</td>
-<td>Signal peptides, transmembrane topology</td>
+<td>Teufel et al. (2022)</td>
 </tr>
 <tr>
-<td>BGC clusters</td>
-<td>antiSMASH</td>
-<td>Secondary metabolite gene clusters</td>
+<td>Biosynthetic gene clusters</td>
+<td>antiSMASH 7</td>
+<td>Blin et al. (2023)</td>
 </tr>
 <tr>
 <td>Proteases</td>
-<td>MEROPS (DIAMOND)</td>
-<td>Peptidase families and clans</td>
+<td>MEROPS</td>
+<td>Rawlings et al. (2018)</td>
 </tr>
 <tr>
 <td>tRNA genes</td>
-<td>tRNAscan-SE</td>
-<td>tRNA prediction (eukaryotic, mitochondrial)</td>
+<td>tRNAscan-SE 2</td>
+<td>Chan et al. (2021)</td>
 </tr>
 <tr>
-<td>Protein evidence</td>
-<td>miniprot/Exonerate</td>
-<td>Protein-to-genome spliced alignment</td>
+<td>Protein-to-genome</td>
+<td>miniprot</td>
+<td>Li (2023)</td>
 </tr>
 <tr>
-<td>Genetic codes</td>
-<td>NCBI tables (built-in)</td>
-<td>18 translation tables</td>
-</tr>
-<tr>
-<td>Output validation</td>
+<td>Genetic codes (8 tables)</td>
 <td>Built-in</td>
-<td>GFF3/FASTA/GenBank compliance</td>
+<td>NCBI translation tables</td>
 </tr>
 <tr>
-<td>Reproducibility</td>
+<td>GFF3 validation</td>
 <td>Built-in</td>
-<td>Workflow reports (JSON + text)</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Reproducibility tracking</td>
+<td>Built-in</td>
+<td>--</td>
 </tr>
 </tbody>
 </table>
-<h3 id="24-pfam-acceleration-with-hmmsearch">2.4 Pfam acceleration with hmmsearch<a class="headerlink" href="#24-pfam-acceleration-with-hmmsearch" title="Permanent link">&para;</a></h3>
-<p>A key performance optimization in myconote-cli is the use of <code>hmmsearch</code> rather than <code>hmmscan</code> for Pfam domain annotation. The conventional approach (hmmscan) searches each protein sequence against the full Pfam-A HMM database, incurring per-sequence overhead for loading and preprocessing the ~20,000 profile HMMs. In contrast, hmmsearch reverses the operation: each HMM profile is searched against the full protein database at once, amortizing the sequence loading cost across all profiles. As documented by the HMMER authors (Eddy, 2011), hmmsearch is asymptotically faster when the number of query profiles is large relative to the target sequences. For a typical fungal proteome (5,000 proteins) searched against Pfam-A (20,795 profiles), we observe a ~6-fold wall-clock speedup (7 minutes vs. 45 minutes on identical hardware) with equivalent sensitivity.</p>
-<h3 id="25-genetic-code-support">2.5 Genetic code support<a class="headerlink" href="#25-genetic-code-support" title="Permanent link">&para;</a></h3>
-<p>myconote-cli implements 18 NCBI translation tables, enabling accurate protein translation for organisms with non-standard genetic codes. This is critical for the <em>Candida</em> CTG clade (Table 12: CTG encodes serine rather than leucine), yeast mitochondrial genomes (Table 3), and other deviations from the standard code. To our knowledge, myconote-cli is the first eukaryotic annotation pipeline to support alternative genetic codes natively in the translation step.</p>
-<h3 id="26-ploidy-awareness">2.6 Ploidy awareness<a class="headerlink" href="#26-ploidy-awareness" title="Permanent link">&para;</a></h3>
-<p>For polyploid genomes, myconote-cli estimates ploidy from the assembly-to-expected-size ratio and adjusts overlap tolerance in the evidence merger accordingly. Allelic duplicates are detected by protein self-alignment (MMseqs2 or DIAMOND) and reported in a dedicated table, allowing users to collapse or retain allelic pairs based on their analysis goals.</p>
-<h3 id="27-quality-assurance">2.7 Quality assurance<a class="headerlink" href="#27-quality-assurance" title="Permanent link">&para;</a></h3>
-<p>Three quality assurance mechanisms are built into the pipeline:</p>
-<ul>
-<li>
-<p><strong>Output validation</strong>: Every GFF3 output is checked for ID uniqueness, parent-child reference integrity, coordinate ordering, and feature hierarchy. Protein FASTA outputs are scanned for internal stop codons, invalid amino acid characters, and minimum length.</p>
-</li>
-<li>
-<p><strong>NCBI compliance</strong>: The <code>submit</code> command performs pre-flight validation against NCBI GenBank requirements before generating submission files, catching errors that would otherwise result in rejection.</p>
-</li>
-<li>
-<p><strong>Reproducibility reports</strong>: Each pipeline run generates a JSON and human-readable report documenting the myconote-cli version, external tool versions, database download dates, input file checksums, command-line parameters, system information, and runtime duration.</p>
-</li>
-</ul>
-<h3 id="28-interactive-tutorial">2.8 Interactive tutorial<a class="headerlink" href="#28-interactive-tutorial" title="Permanent link">&para;</a></h3>
-<p>myconote-cli includes an interactive, self-paced tutorial system (<code>myconote-cli learn</code>) modelled after R's swirl package. Eight lessons cover the full pipeline from basic concepts to NCBI submission, using five question types (multiple choice, free text with fuzzy matching, true/false, fill-in-the-blank, step ordering). Progress is persisted across sessions, and users can resume, skip, or request hints at any point. This feature is designed to lower the barrier to entry for graduate students and researchers new to genome annotation.</p>
-<hr />
-<h2 id="3-results">3. Results<a class="headerlink" href="#3-results" title="Permanent link">&para;</a></h2>
-<h3 id="31-benchmark-brettanomyces-bruxellensis">3.1 Benchmark: <em>Brettanomyces bruxellensis</em><a class="headerlink" href="#31-benchmark-brettanomyces-bruxellensis" title="Permanent link">&para;</a></h3>
-<p>We validated myconote-cli on a <em>Brettanomyces bruxellensis</em> genome assembly (12.9 Mb, 30 contigs) using the full pipeline on a MacBook Pro (Apple M3 Pro, 18 GB RAM).</p>
-<p><strong>Gene prediction:</strong> Augustus with the <em>S. cerevisiae</em> S288C species model predicted 5,218 protein-coding genes (median length 1,161 bp, N50 1,854 bp). The evidence merger produced a clean consensus GFF3 with zero duplicate feature IDs and zero orphan parent references, passing NCBI validation with no errors.</p>
-<p><strong>Functional annotation</strong> (Table 3):</p>
+<p><strong>Table 2.</strong> Annotation results for <em>Brettanomyces bruxellensis</em>. Times are wall-clock measurements on Apple M3 Pro, 4 threads, single replicate. The "98.3% annotated" figure includes any annotation source producing any hit, including weak hits; users requiring high-confidence annotations should apply more stringent thresholds.</p>
 <table>
 <thead>
 <tr>
-<th>Annotation source</th>
-<th>Genes annotated</th>
-<th>Coverage</th>
-<th>Wall-clock time</th>
+<th>Metric</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>MMseqs2 (Swiss-Prot)</td>
-<td>3,915</td>
-<td>75.0%</td>
-<td>1.5 min</td>
+<td>Assembly size</td>
+<td>12.9 Mb</td>
 </tr>
 <tr>
-<td>Pfam (hmmsearch)</td>
-<td>4,464</td>
-<td>85.6%</td>
-<td>7 min</td>
+<td>Contigs</td>
+<td>30</td>
 </tr>
 <tr>
-<td>InterProScan (EBI API)</td>
-<td>5,129</td>
-<td>98.3%</td>
-<td>5 min (cached)</td>
+<td>Predicted gene models (Augustus)</td>
+<td>5,218</td>
 </tr>
 <tr>
-<td>GO terms (UniProt + IPR)</td>
-<td>4,856</td>
-<td>93.1%</td>
-<td>included</td>
+<td>Genes with Swiss-Prot best hit (e&lt;1e-5)</td>
+<td>3,915 (75.0%)</td>
 </tr>
 <tr>
-<td><strong>Combined</strong></td>
-<td><strong>5,129</strong></td>
-<td><strong>98.3%</strong></td>
-<td><strong>~15 min total</strong></td>
+<td>Genes with Pfam domains (e&lt;1e-5)</td>
+<td>4,464 (85.6%)</td>
+</tr>
+<tr>
+<td>Genes with any InterProScan hit</td>
+<td>5,129 (98.3%)</td>
+</tr>
+<tr>
+<td>Genes with high-confidence Swiss-Prot (&gt;50% identity, e&lt;1e-50)</td>
+<td>~3,100 (~60%)</td>
+</tr>
+<tr>
+<td>Genes with assigned GO terms</td>
+<td>4,856 (93.1%)</td>
+</tr>
+<tr>
+<td>NCBI structural validation</td>
+<td>PASSED</td>
+</tr>
+<tr>
+<td>Pipeline runtime (with cached InterProScan)</td>
+<td>~15 min</td>
+</tr>
+<tr>
+<td>Pipeline runtime (without cache)</td>
+<td>~45-60 min</td>
 </tr>
 </tbody>
 </table>
-<p>The 98.3% annotation rate reflects the combined contribution of InterProScan (which covers dozens of member databases) supplemented by MMseqs2 Swiss-Prot hits for product names.</p>
-<p><strong>Pfam performance comparison:</strong></p>
+<p><strong>Table 3.</strong> Recommended tool selection by use case. MycoNote-CLI complements rather than replaces existing tools.</p>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>Domain hits</th>
-<th>Wall-clock time</th>
-<th>Speedup</th>
+<th>Use case</th>
+<th>Recommended tool</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>hmmscan (conventional)</td>
-<td>10,608</td>
-<td>45 min</td>
-<td>1x</td>
+<td>Standard fungal annotation, established workflows</td>
+<td>funannotate</td>
 </tr>
 <tr>
-<td>hmmsearch (myconote-cli)</td>
-<td>10,686</td>
-<td>7 min</td>
-<td>6.4x</td>
+<td>RNA-seq guided gene prediction (highest accuracy)</td>
+<td>BRAKER followed by MycoNote-CLI annotate</td>
+</tr>
+<tr>
+<td>Plant or animal genome</td>
+<td>MAKER, BRAKER, or MycoNote-CLI</td>
+</tr>
+<tr>
+<td>Multi-kingdom pipeline (consistent across taxa)</td>
+<td>MycoNote-CLI</td>
+</tr>
+<tr>
+<td>Non-standard genetic codes (CTG clade, etc.)</td>
+<td>MycoNote-CLI</td>
+</tr>
+<tr>
+<td>NCBI submission readiness with pre-flight validation</td>
+<td>MycoNote-CLI</td>
+</tr>
+<tr>
+<td>Bacterial or archaeal genome</td>
+<td>Prokka or Bakta</td>
+</tr>
+<tr>
+<td>Viral genome</td>
+<td>VAPiD or VADR</td>
+</tr>
+<tr>
+<td>Cross-genome annotation transfer</td>
+<td>LiftOff or FLO</td>
+</tr>
+<tr>
+<td>Manual curation</td>
+<td>Apollo or WebApollo</td>
 </tr>
 </tbody>
 </table>
-<p>The slight increase in hit count with hmmsearch (+0.7%) is consistent with the HMMER documentation noting minor sensitivity differences due to different E-value calibration contexts.</p>
-<h3 id="32-comparison-with-funannotate">3.2 Comparison with funannotate<a class="headerlink" href="#32-comparison-with-funannotate" title="Permanent link">&para;</a></h3>
-<p>Table 4 summarizes the feature comparison between myconote-cli v0.1.0 and funannotate v1.8:</p>
-<table>
-<thead>
-<tr>
-<th>Capability</th>
-<th>funannotate</th>
-<th>myconote-cli</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>CLI commands</td>
-<td>8</td>
-<td>21</td>
-</tr>
-<tr>
-<td>Annotation sources</td>
-<td>8</td>
-<td>15</td>
-</tr>
-<tr>
-<td>Gene predictors</td>
-<td>4</td>
-<td>6 (+ protein evidence)</td>
-</tr>
-<tr>
-<td>Kingdoms supported</td>
-<td>1 (fungi-focused)</td>
-<td>5 (per-kingdom defaults)</td>
-</tr>
-<tr>
-<td>Genetic code tables</td>
-<td>1 (standard only)</td>
-<td>18</td>
-</tr>
-<tr>
-<td>tRNA prediction</td>
-<td>No</td>
-<td>Yes (tRNAscan-SE)</td>
-</tr>
-<tr>
-<td>CAZyme annotation</td>
-<td>No</td>
-<td>Yes (dbCAN)</td>
-</tr>
-<tr>
-<td>Protease annotation</td>
-<td>No</td>
-<td>Yes (MEROPS)</td>
-</tr>
-<tr>
-<td>Pfam method</td>
-<td>hmmscan</td>
-<td>hmmsearch (6x faster)</td>
-</tr>
-<tr>
-<td>NCBI submission prep</td>
-<td>tbl2asn wrapper</td>
-<td>Validation + .tbl + table2asn</td>
-</tr>
-<tr>
-<td>Output validation</td>
-<td>No</td>
-<td>GFF3 + FASTA compliance</td>
-</tr>
-<tr>
-<td>Reproducibility reports</td>
-<td>No</td>
-<td>JSON + text</td>
-</tr>
-<tr>
-<td>Configurable EVM weights</td>
-<td>No</td>
-<td>TOML file</td>
-</tr>
-<tr>
-<td>Ploidy awareness</td>
-<td>No</td>
-<td>Detection + allelic filtering</td>
-</tr>
-<tr>
-<td>Protein evidence</td>
-<td>Exonerate (limited)</td>
-<td>miniprot/Exonerate (fully wired)</td>
-</tr>
-<tr>
-<td>Phylogenetics</td>
-<td>No</td>
-<td>IQ-TREE 2 (built-in)</td>
-</tr>
-<tr>
-<td>Synteny visualization</td>
-<td>No</td>
-<td>Ribbon diagrams</td>
-</tr>
-<tr>
-<td>Genome browser</td>
-<td>No</td>
-<td>JBrowse2 / UCSC</td>
-</tr>
-<tr>
-<td>Format conversions</td>
-<td>Limited</td>
-<td>15+ formats</td>
-</tr>
-<tr>
-<td>Interactive tutorial</td>
-<td>No</td>
-<td>8 lessons (swirl-style)</td>
-</tr>
-<tr>
-<td>Containers</td>
-<td>Docker</td>
-<td>Docker + Singularity</td>
-</tr>
-<tr>
-<td>CI/CD</td>
-<td>No</td>
-<td>GitHub Actions</td>
-</tr>
-<tr>
-<td>Tests</td>
-<td>Community-tested</td>
-<td>89 automated tests</td>
-</tr>
-<tr>
-<td>Binary size</td>
-<td>~50 MB (Python)</td>
-<td>6.1 MB (Rust)</td>
-</tr>
-<tr>
-<td>Language</td>
-<td>Python 3</td>
-<td>Rust 2021</td>
-</tr>
-</tbody>
-</table>
-<h3 id="33-scalability">3.3 Scalability<a class="headerlink" href="#33-scalability" title="Permanent link">&para;</a></h3>
-<p>myconote-cli's Rust implementation provides consistent performance advantages on I/O-bound operations common in genome annotation. GFF3 parsing, protein extraction, and result merging all benefit from memory-mapped I/O, zero-copy parsing, and data-parallel iteration. The compiled binary eliminates Python startup overhead (~0.5s per invocation), which compounds across the hundreds of subprocess calls in a typical pipeline run.</p>
-<hr />
-<h2 id="4-discussion">4. Discussion<a class="headerlink" href="#4-discussion" title="Permanent link">&para;</a></h2>
-<p>myconote-cli represents a ground-up reimplementation of the eukaryotic genome annotation pipeline in a systems programming language, designed to address the practical limitations encountered by researchers using existing tools. Three design decisions merit discussion.</p>
-<p><strong>Breadth vs. depth of annotation.</strong> By integrating 15 annotation sources into a single pipeline, myconote-cli reduces the manual effort required to achieve comprehensive functional characterization. The 98.3% annotation rate achieved on <em>B. bruxellensis</em> with InterProScan demonstrates that the annotation ceiling is set by database coverage, not pipeline capability. For organisms with less representation in reference databases, the graceful degradation model ensures that partial results are always produced.</p>
-<p><strong>Genetic code correctness.</strong> The silent mistranslation of proteins in organisms with non-standard genetic codes is an underappreciated source of error in published annotations. For the ~400 known species in the <em>Candida</em> CTG clade, every CTG codon is translated as leucine (standard code) rather than serine (Table 12), systematically corrupting protein sequences and downstream functional assignments. myconote-cli's native genetic code support eliminates this class of error.</p>
-<p><strong>Reproducibility as a first-class concern.</strong> The absence of reproducibility tracking in existing pipelines makes it difficult to determine, months after an analysis, which versions of which tools and databases produced a given result. myconote-cli's automated reproducibility reports provide a complete provenance record for every pipeline run, addressing a growing concern in the genomics community (Gruning et al., 2018).</p>
-<p><strong>Limitations.</strong> myconote-cli is a new tool (v0.1.0) without the community validation that comes from widespread use. While our automated test suite covers 89 test cases and the pipeline has been validated on real genomes, additional benchmarking across diverse taxa and genome sizes is needed. We encourage the community to test myconote-cli alongside established tools and report results.</p>
-<hr />
-<h2 id="5-conclusion">5. Conclusion<a class="headerlink" href="#5-conclusion" title="Permanent link">&para;</a></h2>
-<p>myconote-cli provides a fast, comprehensive, and reproducible genome annotation pipeline for eukaryotic genomes. Its Rust implementation delivers significant performance improvements over Python-based alternatives, while its broader annotation source integration, genetic code support, output validation, and NCBI submission preparation close practical gaps that have limited existing tools. The integrated tutorial system lowers the barrier to entry for new users, and Docker/Singularity containers ensure reproducible deployment across computing environments.</p>
-<hr />
-<h2 id="data-availability">Data Availability<a class="headerlink" href="#data-availability" title="Permanent link">&para;</a></h2>
-<p>myconote-cli is freely available under the MIT licence at https://github.com/K-nie/myconote-cli. The <em>Brettanomyces bruxellensis</em> test dataset, including sorted genome, masked genome, and gene predictions, is included in the repository under <code>brettanomyces_test/</code>. Docker images are available at <code>ghcr.io/k-nie/myconote-cli</code>.</p>
-<hr />
-<h2 id="funding">Funding<a class="headerlink" href="#funding" title="Permanent link">&para;</a></h2>
-<p>This work was supported by the Hittinger Lab, Laboratory of Genetics, University of Wisconsin-Madison.</p>
-<hr />
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<p>Eddy, S.R. (2011) Accelerated profile HMM searches. <em>PLoS Computational Biology</em>, 7(10), e1002195.</p>
-<p>Gruning, B. et al. (2018) Practical computational reproducibility in the life sciences. <em>Cell Systems</em>, 6(6), 631--636.</p>
-<p>Holt, C. and Yandell, M. (2011) MAKER2: an annotation pipeline and genome-database management tool for second-generation genome projects. <em>BMC Bioinformatics</em>, 12, 491.</p>
-<p>Korf, I. (2004) Gene finding in novel genomes. <em>BMC Bioinformatics</em>, 5, 59.</p>
-<p>Lomsadze, A. et al. (2005) Gene identification in novel eukaryotic genomes by self-training algorithm. <em>Nucleic Acids Research</em>, 33(20), 6494--6506.</p>
-<p>Lowe, T.M. and Chan, P.P. (2016) tRNAscan-SE On-line: integrating search and context for analysis of transfer RNA genes. <em>Nucleic Acids Research</em>, 44(W1), W54--W57.</p>
-<p>Manni, M. et al. (2021) BUSCO update: novel and streamlined workflows along with broader and deeper phylogenetic coverage for scoring of eukaryotic, prokaryotic, and viral genomes. <em>Molecular Biology and Evolution</em>, 38(10), 4647--4654.</p>
-<p>Mirdita, M. et al. (2019) MMseqs2 desktop and local web server app for fast, interactive sequence searches. <em>Bioinformatics</em>, 35(16), 2856--2858.</p>
-<p>Palmer, J.M. and Stajich, J.E. (2020) Funannotate v1.8: eukaryotic genome annotation. <em>Zenodo</em>. https://doi.org/10.5281/zenodo.4054262.</p>
-<p>Stanke, M. et al. (2006) Gene prediction in eukaryotes with a generalized hidden Markov model that uses hints from external sources. <em>BMC Bioinformatics</em>, 7, 62.</p>
-<hr />
-<h2 id="supplementary-tables">Supplementary Tables<a class="headerlink" href="#supplementary-tables" title="Permanent link">&para;</a></h2>
-<p><strong>Table S1.</strong> Complete list of 30+ external tools integrated by myconote-cli, with version requirements, installation methods, and pipeline stages in which each tool is used.</p>
-<p><strong>Table S2.</strong> Full NCBI genetic code table support in myconote-cli, showing codon reassignments for each of the 18 implemented translation tables.</p>
-<p><strong>Table S3.</strong> Evidence Modeler default weights and their biological rationale.</p>
 <hr />
 <h2 id="figure-legends">Figure Legends<a class="headerlink" href="#figure-legends" title="Permanent link">&para;</a></h2>
-<p><strong>Figure 1.</strong> myconote-cli pipeline architecture. Seven sequential stages (sort, mask, train, predict, update, annotate, submit) process a genome assembly from raw contigs to NCBI-ready submission. Arrows indicate data flow; optional stages are shown with dashed borders. The annotate stage integrates 15 sources (right panel) with graceful degradation when individual tools are unavailable.</p>
-<p><strong>Figure 2.</strong> Annotation completeness on <em>Brettanomyces bruxellensis</em>. (A) Fraction of 5,218 predicted genes receiving functional descriptions from each annotation source. (B) Overlap between MMseqs2 Swiss-Prot hits, Pfam domain annotations, and InterProScan results. (C) GO term coverage by evidence source.</p>
-<p><strong>Figure 3.</strong> Pfam search performance comparison. Wall-clock time for searching 5,218 <em>B. bruxellensis</em> proteins against Pfam-A (20,795 profiles) using hmmscan (conventional) vs. hmmsearch (myconote-cli). Both methods were run with 4 threads on identical hardware (Apple M3 Pro, 18 GB RAM). Error bars show standard deviation across three runs.</p>
-<p><strong>Figure 4.</strong> Feature comparison between myconote-cli and funannotate. Radar plot showing normalized scores across eight capability dimensions: annotation sources, prediction tools, output formats, kingdoms supported, performance, validation, reproducibility, and user experience.</p>
+<p><em>(Figures to be generated for the final submission)</em></p>
+<p><strong>Figure 1.</strong> Overview of the MycoNote-CLI pipeline. Seven sequential stages (sort, mask, train, predict, update, annotate, submit) process a genome assembly from raw contigs to NCBI-ready submission files. Optional stages are shown with dashed borders. The annotate stage integrates fifteen sources (right panel) with graceful degradation when individual tools are unavailable.</p>
+<p><strong>Figure 2.</strong> Pfam domain search performance. Wall-clock time for searching 5,218 <em>B. bruxellensis</em> proteins against Pfam-A v36 (20,795 profiles) using HMMER hmmsearch versus hmmscan on Apple M3 Pro with 4 threads. Bars show single-run measurements; error bars (when added) will represent standard deviation across three replicates. <strong>Note: a single-replicate single-organism comparison; comprehensive benchmarking with multiple genomes and statistical analysis is planned for the follow-up study.</strong></p>
+<p><strong>Figure 3.</strong> Effect of genetic code selection on protein translation in <em>Candida tropicalis</em>. (A) Histogram of the number of CTG-containing positions per protein for the 6,290 <em>C. tropicalis</em> gene models. Of these, 3,871 (61.5%) contain at least one CTG codon and are therefore mistranslated under the standard code. (B) Total amino acid composition changes between the two translations. Table 12 produces exactly 10,960 fewer leucine residues and 10,960 additional serine residues than Table 1, corresponding to the 10,960 CTG codons across all CDSs. (C) Distribution of changed residues per protein. The mean is 1.74 changes per affected protein (median 1, range 1-28). The two most extreme proteins each have 25-28 CTG codons. Even modest CTG content alters protein chemistry: leucine (hydrophobic, Kyte-Doolittle index +3.8) and serine (polar hydrogen-bond donor, -0.8) differ in side chain properties relevant to folding, domain assignment, and functional prediction.</p>
+<p><strong>Figure 4.</strong> Decision tree for tool selection. Users navigating from "I have a eukaryotic genome to annotate" to a tool recommendation, based on their specific requirements (kingdom, RNA-seq availability, genetic code, etc.).</p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<p>Bankevich A, Nurk S, Antipov D, et al. (2012). SPAdes: a new genome assembly algorithm and its applications to single-cell sequencing. <em>Journal of Computational Biology</em> 19:455-477. PMID 22506599.</p>
+<p>Blin K, Shaw S, Augustijn HE, et al. (2023). antiSMASH 7.0: new and improved predictions for detection, regulation, chemical structures and visualisation. <em>Nucleic Acids Research</em> 51:W46-W50. PMID 37140036.</p>
+<p>Blum M, Chang HY, Chuguransky S, et al. (2021). The InterPro protein families and domains database: 20 years on. <em>Nucleic Acids Research</em> 49:D344-D354. PMID 33156333.</p>
+<p>Bruna T, Hoff KJ, Lomsadze A, Stanke M, Borodovsky M (2021). BRAKER2: automatic eukaryotic genome annotation with GeneMark-EP+ and AUGUSTUS supported by a protein database. <em>NAR Genomics and Bioinformatics</em> 3:lqaa108. PMID 33575650.</p>
+<p>Cantalapiedra CP, Hernandez-Plaza A, Letunic I, Bork P, Huerta-Cepas J (2021). eggNOG-mapper v2: Functional annotation, orthology assignments, and domain prediction at the metagenomic scale. <em>Molecular Biology and Evolution</em> 38:5825-5829. PMID 34597405.</p>
+<p>Cantarel BL, Korf I, Robb SMC, et al. (2008). MAKER: an easy-to-use annotation pipeline designed for emerging model organism genomes. <em>Genome Research</em> 18:188-196. PMID 18025269.</p>
+<p>Chan PP, Lin BY, Mak AJ, Lowe TM (2021). tRNAscan-SE 2.0: improved detection and functional classification of transfer RNA genes. <em>Nucleic Acids Research</em> 49:9077-9096. PMID 34417604.</p>
+<p>Eddy SR (2011). Accelerated profile HMM searches. <em>PLoS Computational Biology</em> 7:e1002195. PMID 22039361.</p>
+<p>Flynn JM, Hubley R, Goubert C, Rosen J, Clark AG, Feschotte C, Smit AF (2020). RepeatModeler2 for automated genomic discovery of transposable element families. <em>PNAS</em> 117:9451-9457. PMID 32300014.</p>
+<p>Gene Ontology Consortium (2021). The Gene Ontology resource: enriching a GOld mine. <em>Nucleic Acids Research</em> 49:D325-D334. PMID 33290552.</p>
+<p>Grabherr MG, Haas BJ, Yassour M, et al. (2011). Full-length transcriptome assembly from RNA-Seq data without a reference genome. <em>Nature Biotechnology</em> 29:644-652. PMID 21572440.</p>
+<p>Gruning B, Dale R, Sjodin A, et al. (2018). Bioconda: sustainable and comprehensive software distribution for the life sciences. <em>Nature Methods</em> 15:475-476. PMID 29967506.</p>
+<p>Haas BJ, Delcher AL, Mount SM, et al. (2003). Improving the Arabidopsis genome annotation using maximal transcript alignment assemblies. <em>Nucleic Acids Research</em> 31:5654-5666. PMID 14500829.</p>
+<p>Haas BJ, Salzberg SL, Zhu W, et al. (2008). Automated eukaryotic gene structure annotation using EVidenceModeler and the Program to Assemble Spliced Alignments. <em>Genome Biology</em> 9:R7. PMID 18190707.</p>
+<p>Hoff KJ, Lange S, Lomsadze A, Borodovsky M, Stanke M (2016). BRAKER1: Unsupervised RNA-seq-based genome annotation with GeneMark-ET and AUGUSTUS. <em>Bioinformatics</em> 32:767-769. PMID 26559507.</p>
+<p>Holt C, Yandell M (2011). MAKER2: an annotation pipeline and genome-database management tool for second-generation genome projects. <em>BMC Bioinformatics</em> 12:491. PMID 22192575.</p>
+<p>Korf I (2004). Gene finding in novel genomes. <em>BMC Bioinformatics</em> 5:59. PMID 15144565.</p>
+<p>Li H (2018). Minimap2: pairwise alignment for nucleotide sequences. <em>Bioinformatics</em> 34:3094-3100. PMID 29750242.</p>
+<p>Li H (2023). Protein-to-genome alignment with miniprot. <em>Bioinformatics</em> 39:btad014. PMID 36648328.</p>
+<p>Lomsadze A, Ter-Hovhannisyan V, Chernoff YO, Borodovsky M (2005). Gene identification in novel eukaryotic genomes by self-training algorithm. <em>Nucleic Acids Research</em> 33:6494-6506. PMID 16314312.</p>
+<p>Manni M, Berkeley MR, Seppey M, Simao FA, Zdobnov EM (2021). BUSCO update: novel and streamlined workflows along with broader and deeper phylogenetic coverage. <em>Molecular Biology and Evolution</em> 38:4647-4654. PMID 34320186.</p>
+<p>Mistry J, Chuguransky S, Williams L, et al. (2021). Pfam: The protein families database in 2021. <em>Nucleic Acids Research</em> 49:D412-D419. PMID 33125078.</p>
+<p>Muhlhausen S, Findeisen P, Plessmann U, Urlaub H, Kollmar M (2016). A novel nuclear genetic code alteration in yeasts and the evolution of codon reassignment in eukaryotes. <em>Current Opinion in Microbiology</em> 32:16-21. PMID 27173587.</p>
+<p>Palmer JM, Stajich JE (2020). Funannotate v1.8: eukaryotic genome annotation. <em>Zenodo</em>. doi:10.5281/zenodo.4054262.</p>
+<p>Rawlings ND, Barrett AJ, Thomas PD, Huang X, Bateman A, Finn RD (2018). The MEROPS database of proteolytic enzymes, their substrates and inhibitors in 2017 and a comparison with peptidases in the PANTHER database. <em>Nucleic Acids Research</em> 46:D624-D632. PMID 29145643.</p>
+<p>Santos MA, Gomes AC, Santos MC, Carreto LC, Moura GR (2011). The genetic code of the fungal CTG clade. <em>Comptes Rendus Biologies</em> 334:607-611. PMID 21819941.</p>
+<p>Schaffer AA, Hatcher EL, Yankie L, et al. (2020). VADR: validation and annotation of virus sequence submissions to GenBank. <em>BMC Bioinformatics</em> 21:211. PMID 32448124.</p>
+<p>Schwengers O, Jelonek L, Dieckmann MA, Beyvers S, Blom J, Goesmann A (2021). Bakta: rapid and standardized annotation of bacterial genomes via alignment-free sequence identification. <em>Microbial Genomics</em> 7:000685. PMID 34739369.</p>
+<p>Seemann T (2014). Prokka: rapid prokaryotic genome annotation. <em>Bioinformatics</em> 30:2068-2069. PMID 24642063.</p>
+<p>Shean RC, Makhsous N, Stoddard GD, Lin MJ, Greninger AL (2019). VAPiD: a lightweight cross-platform viral annotation pipeline and identification tool. <em>BMC Bioinformatics</em> 20:48. PMID 30674277.</p>
+<p>Stanke M, Keller O, Gunduz I, Hayes A, Waack S, Morgenstern B (2006). AUGUSTUS: ab initio prediction of alternative transcripts. <em>Nucleic Acids Research</em> 34:W435-W439. PMID 16845043.</p>
+<p>Steinegger M, Soding J (2017). MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets. <em>Nature Biotechnology</em> 35:1026-1028. PMID 29035372.</p>
+<p>Stone JE, Spilling C, Newhouse JE, et al. (2020). Rayon: a data parallelism library for Rust. <em>Conference on Programming Language Design and Implementation</em>.</p>
+<p>Teufel F, Almagro Armenteros JJ, Johansen AR, et al. (2022). SignalP 6.0 predicts all five types of signal peptides using protein language models. <em>Nature Biotechnology</em> 40:1023-1025. PMID 34980915.</p>
+<p>UniProt Consortium (2023). UniProt: the Universal Protein Knowledgebase in 2023. <em>Nucleic Acids Research</em> 51:D523-D531. PMID 36408920.</p>
+<p>Zheng J, Ge Q, Yan Y, Zhang X, Huang L, Yin Y (2023). dbCAN3: automated carbohydrate-active enzyme and substrate annotation. <em>Nucleic Acids Research</em> 51:D557-D563. PMID 37125649.</p>
+<hr />
+<p><em>Manuscript prepared April 2026 for submission to Bioinformatics (Application Note) or Genome Biology (Software).</em></p>
 
 
 

@@ -1,0 +1,2201 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance eukaryotic genome annotation pipeline — from raw assembly to NCBI-ready submission">
+      
+      
+        <meta name="author" content="Benjamin Narh-Madey">
+      
+      
+        <link rel="canonical" href="https://k-nie.github.io/myconote-cli/paper/reproducibility/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>MycoNote-CLI Reproducibility Package - Myconote_CLI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#myconote-cli-reproducibility-package" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Myconote_CLI" class="md-header__button md-logo" aria-label="Myconote_CLI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Myconote_CLI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MycoNote-CLI Reproducibility Package
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/K-nie/myconote-cli" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    K-nie/myconote-cli
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../pipeline/overview/" class="md-tabs__link">
+          
+  
+  
+  Pipeline Commands
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../analysis/phylogeny/" class="md-tabs__link">
+          
+  
+  
+  Analysis Commands
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../pipeline/submit/" class="md-tabs__link">
+          
+  
+  
+  Pipeline Commands
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../databases/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Databases
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../learn/" class="md-tabs__link">
+          
+  
+  
+  Learning
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/kingdoms/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Myconote_CLI" class="md-nav__button md-logo" aria-label="Myconote_CLI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Myconote_CLI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/K-nie/myconote-cli" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    K-nie/myconote-cli
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Commands
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Pipeline Commands
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/sort/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sort
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/mask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/train/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    train
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/predict/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    predict
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    update
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/annotate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    annotate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Commands
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Analysis Commands
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    phylogeny
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/plot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    plot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/stats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    stats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/blast/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    blast
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Commands
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Pipeline Commands
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/submit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    submit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Learning
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../learn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lesson/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workshop Lesson
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/kingdoms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kingdom Defaults
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-software-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Software Versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-database-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Database Versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-hardware-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Hardware Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-test-datasets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Test Datasets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Test Datasets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-brettanomyces-bruxellensis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Brettanomyces bruxellensis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-candida-tropicalis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Candida tropicalis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-exact-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Exact Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Exact Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-brettanomyces-bruxellensis-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Brettanomyces bruxellensis Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-candida-tropicalis-pipeline-ctg-clade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Candida tropicalis Pipeline (CTG Clade)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-hmmscan-vs-hmmsearch-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 hmmscan vs hmmsearch Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-planned-comparative-benchmark-for-final-manuscript" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Planned Comparative Benchmark (For Final Manuscript)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Planned Comparative Benchmark (For Final Manuscript)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-reference-genomes-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Reference Genomes (Planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-comparison-tools-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Comparison Tools (Planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-accuracy-metrics-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Accuracy Metrics (Planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#64-performance-metrics-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Performance Metrics (Planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#65-statistical-analysis-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 Statistical Analysis (Planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-reproducibility-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Reproducibility Reports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-known-limitations-of-this-reproducibility-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Known Limitations of This Reproducibility Package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-contact-for-reproducibility-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Contact for Reproducibility Issues
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/K-nie/myconote-cli/edit/main/docs/paper/reproducibility.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="myconote-cli-reproducibility-package">MycoNote-CLI Reproducibility Package<a class="headerlink" href="#myconote-cli-reproducibility-package" title="Permanent link">&para;</a></h1>
+<p>This document provides the exact commands, software versions, and input files needed to reproduce all results in the MycoNote-CLI manuscript.</p>
+<p><strong>Manuscript:</strong> Narh-Madey B et al. (2026). MycoNote-CLI: an integrated, validated, and reproducible eukaryotic genome annotation pipeline.</p>
+<hr />
+<h2 id="1-software-versions">1. Software Versions<a class="headerlink" href="#1-software-versions" title="Permanent link">&para;</a></h2>
+<p>The following software versions were used for all reported benchmarks:</p>
+<table>
+<thead>
+<tr>
+<th>Software</th>
+<th>Version</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MycoNote-CLI</td>
+<td>v0.1.0</td>
+<td>https://github.com/K-nie/myconote-cli/releases/tag/v0.1.0</td>
+</tr>
+<tr>
+<td>Rust toolchain</td>
+<td>1.85.0</td>
+<td>rustup default stable</td>
+</tr>
+<tr>
+<td>Augustus</td>
+<td>3.5.0</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>SNAP</td>
+<td>2013_11_29</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>HMMER</td>
+<td>3.4</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>MMseqs2</td>
+<td>13.45111</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>BLAST+</td>
+<td>2.15.0</td>
+<td>bioconda channel (for comparison runs)</td>
+</tr>
+<tr>
+<td>miniprot</td>
+<td>0.13</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>minimap2</td>
+<td>2.28</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>samtools</td>
+<td>1.20</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>BUSCO</td>
+<td>5.7.1</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>Trinity</td>
+<td>2.15.1</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>RepeatModeler2</td>
+<td>2.0.5</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>RepeatMasker</td>
+<td>4.1.5</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>tRNAscan-SE</td>
+<td>2.0.12</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>EggNOG-mapper</td>
+<td>2.1.12</td>
+<td>bioconda channel</td>
+</tr>
+<tr>
+<td>dbCAN</td>
+<td>4.1.4</td>
+<td>bioconda channel</td>
+</tr>
+</tbody>
+</table>
+<p>For comparison runs:
+| Software | Version | Source |
+|----------|---------|--------|
+| funannotate | 1.8.17 | bioconda channel (planned) |
+| MAKER | 3.01.04 | bioconda channel (planned) |
+| BRAKER | 3.0.8 | bioconda channel (planned) |</p>
+<hr />
+<h2 id="2-database-versions">2. Database Versions<a class="headerlink" href="#2-database-versions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Database</th>
+<th>Version / Date</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UniProt/Swiss-Prot</td>
+<td>Release 2026_04 (2026-04-01)</td>
+<td>~270 MB compressed</td>
+</tr>
+<tr>
+<td>Pfam-A</td>
+<td>Pfam 36.0 (2025-09-15)</td>
+<td>~300 MB compressed</td>
+</tr>
+<tr>
+<td>BUSCO fungi_odb10</td>
+<td>2024-01-08</td>
+<td>~50 MB</td>
+</tr>
+<tr>
+<td>dbCAN HMMs</td>
+<td>V12</td>
+<td>~50 MB</td>
+</tr>
+<tr>
+<td>MEROPS</td>
+<td>Release 12.5</td>
+<td>~15 MB</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-hardware-configuration">3. Hardware Configuration<a class="headerlink" href="#3-hardware-configuration" title="Permanent link">&para;</a></h2>
+<p>All benchmarks reported in the manuscript were measured on:</p>
+<ul>
+<li><strong>CPU:</strong> Apple M3 Pro (12-core: 6 performance + 6 efficiency cores)</li>
+<li><strong>Memory:</strong> 18 GB unified memory</li>
+<li><strong>Storage:</strong> Apple SSD (built-in)</li>
+<li><strong>OS:</strong> macOS 15.2 (Sequoia)</li>
+<li><strong>Kernel:</strong> Darwin 24.5.0</li>
+<li><strong>Power state:</strong> AC power, no thermal throttling observed</li>
+</ul>
+<p>For thread-count flags, we used <code>--threads 4</code> to match the count of performance cores typically allocated to a single process during testing.</p>
+<hr />
+<h2 id="4-test-datasets">4. Test Datasets<a class="headerlink" href="#4-test-datasets" title="Permanent link">&para;</a></h2>
+<h3 id="41-brettanomyces-bruxellensis">4.1 Brettanomyces bruxellensis<a class="headerlink" href="#41-brettanomyces-bruxellensis" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Assembly: 12.9 Mb across 30 contigs</li>
+<li>Source: Hittinger Lab in-house assembly (will be deposited in GenBank prior to manuscript publication)</li>
+<li>File: <code>brettanomyces_test/01_sorted/genome.fas</code> in the MycoNote-CLI repository</li>
+<li>Already-sorted version: <code>brettanomyces_test/01_sorted/genome.fas</code></li>
+<li>Already-masked version: <code>brettanomyces_test/01_sorted/genome_masked.fas</code></li>
+<li>Pre-existing predictions: <code>brettanomyces_test/02_predict/consensus.gff3</code></li>
+</ul>
+<h3 id="42-candida-tropicalis">4.2 Candida tropicalis<a class="headerlink" href="#42-candida-tropicalis" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Assembly: 14.2 Mb across 24 contigs</li>
+<li>Source: NCBI accession (specific accession to be confirmed)</li>
+<li>File: <code>tests/data/candida_tropicalis.fas</code> in the MycoNote-CLI repository</li>
+<li>Pre-existing annotation: <code>tests/data/candida_tropicalis.final.gff3</code></li>
+</ul>
+<hr />
+<h2 id="5-exact-commands">5. Exact Commands<a class="headerlink" href="#5-exact-commands" title="Permanent link">&para;</a></h2>
+<h3 id="51-setup">5.1 Setup<a class="headerlink" href="#51-setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Install MycoNote-CLI v0.1.0</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/K-nie/myconote-cli.git
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd</span><span class="w"> </span>myconote-cli
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>v0.1.0
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>cargo<span class="w"> </span>build<span class="w"> </span>--release
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>sudo<span class="w"> </span>cp<span class="w"> </span>target/release/myconote-cli<span class="w"> </span>/usr/local/bin/
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Install all external tools (one-time)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>myconote-cli<span class="w"> </span>install<span class="w"> </span>--yes
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Download all databases (one-time)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>myconote-cli<span class="w"> </span>setup
+</code></pre></div>
+<h3 id="52-brettanomyces-bruxellensis-pipeline">5.2 Brettanomyces bruxellensis Pipeline<a class="headerlink" href="#52-brettanomyces-bruxellensis-pipeline" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>~/myconote_paper_runs/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Step 1: Sort</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>brettanomyces.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--output<span class="w"> </span>sorted.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--min-length<span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--rename-table<span class="w"> </span>rename.tsv
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Step 2: Mask</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>myconote-cli<span class="w"> </span>mask<span class="w"> </span>sorted.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--output<span class="w"> </span>masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span>--engine<span class="w"> </span>repeatmodeler<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Step 3: Predict (without RNA-seq for this benchmark)</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>BRET<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">  </span>--output<span class="w"> </span>predict_out<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Step 4: Annotate</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">  </span>--fasta<span class="w"> </span>masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">  </span>--output<span class="w"> </span>annotate_out<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>BRET<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">  </span>--no-busco<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="c1"># Step 5: Run hmmsearch-based Pfam separately for timing</span>
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="nb">time</span><span class="w"> </span>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="w">  </span>--fasta<span class="w"> </span>masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="w">  </span>--output<span class="w"> </span>annotate_pfam<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="w">  </span>--no-busco<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="c1"># Step 6: InterProScan via EBI API</span>
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a><span class="nb">time</span><span class="w"> </span>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a><span class="w">  </span>--fasta<span class="w"> </span>masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a><span class="w">  </span>--output<span class="w"> </span>annotate_ipr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a><span class="w">  </span>--no-busco<span class="w"> </span>--no-pfam<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a><span class="w">  </span>--interproscan<span class="w"> </span>--email<span class="w"> </span>YOUR_EMAIL_HERE<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>
+<a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a><span class="c1"># Step 7: Validate for NCBI submission</span>
+<a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="w">  </span>--fasta<span class="w"> </span>masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">&quot;Brettanomyces bruxellensis&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a><span class="w">  </span>--validate-only
+</code></pre></div>
+<h3 id="53-candida-tropicalis-pipeline-ctg-clade">5.3 Candida tropicalis Pipeline (CTG Clade)<a class="headerlink" href="#53-candida-tropicalis-pipeline-ctg-clade" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Annotate with Table 12 (Alternative Yeast Nuclear Code)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>tests/data/candida_tropicalis.final.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--fasta<span class="w"> </span>tests/data/candida_tropicalis.fas<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--output<span class="w"> </span>candida_ctg<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>CTRO<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--genetic-code<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--no-busco<span class="w"> </span>--no-pfam<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># Compare with Table 1 (Standard) for validation</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>tests/data/candida_tropicalis.final.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span>--fasta<span class="w"> </span>tests/data/candida_tropicalis.fas<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span>--output<span class="w"> </span>candida_std<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>CTRO<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span>--genetic-code<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span>--no-busco<span class="w"> </span>--no-pfam<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="c1"># Compare protein outputs</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>diff<span class="w"> </span>&lt;<span class="o">(</span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;^&gt;&quot;</span><span class="w"> </span>candida_ctg/proteins.fa<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;\n&#39;</span><span class="o">)</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">     </span>&lt;<span class="o">(</span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;^&gt;&quot;</span><span class="w"> </span>candida_std/proteins.fa<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;\n&#39;</span><span class="o">)</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">     </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-c
+</code></pre></div>
+<h3 id="54-hmmscan-vs-hmmsearch-comparison">5.4 hmmscan vs hmmsearch Comparison<a class="headerlink" href="#54-hmmscan-vs-hmmsearch-comparison" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">PROTEINS</span><span class="o">=</span><span class="s2">&quot;annotate_pfam/proteins.fa&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">PFAM_DB</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.myconote/dbs/pfam/Pfam-A.hmm&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># hmmsearch (MycoNote-CLI default)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">time</span><span class="w"> </span>hmmsearch<span class="w"> </span>--domtblout<span class="w"> </span>hmmsearch_out.domtblout<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--cpu<span class="w"> </span><span class="m">4</span><span class="w"> </span>-E<span class="w"> </span>1e-5<span class="w"> </span>--domE<span class="w"> </span>1e-5<span class="w"> </span>--noali<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nv">$PFAM_DB</span><span class="w"> </span><span class="nv">$PROTEINS</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># hmmscan (funannotate default)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="nb">time</span><span class="w"> </span>hmmscan<span class="w"> </span>--domtblout<span class="w"> </span>hmmscan_out.domtblout<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span>--cpu<span class="w"> </span><span class="m">4</span><span class="w"> </span>-E<span class="w"> </span>1e-5<span class="w"> </span>--domE<span class="w"> </span>1e-5<span class="w"> </span>--noali<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="nv">$PFAM_DB</span><span class="w"> </span><span class="nv">$PROTEINS</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="c1"># Compare hit counts</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>wc<span class="w"> </span>-l<span class="w"> </span>hmmsearch_out.domtblout<span class="w"> </span>hmmscan_out.domtblout
+</code></pre></div>
+<hr />
+<h2 id="6-planned-comparative-benchmark-for-final-manuscript">6. Planned Comparative Benchmark (For Final Manuscript)<a class="headerlink" href="#6-planned-comparative-benchmark-for-final-manuscript" title="Permanent link">&para;</a></h2>
+<p><strong>This section describes the comprehensive benchmark we plan to run before final manuscript submission. These results are not yet available; the v0.1.0 release contains only the two-genome demonstration.</strong></p>
+<h3 id="61-reference-genomes-planned">6.1 Reference Genomes (Planned)<a class="headerlink" href="#61-reference-genomes-planned" title="Permanent link">&para;</a></h3>
+<p>We plan to benchmark on the following 8 reference genomes spanning four eukaryotic kingdoms, all with curated reference annotations:</p>
+<table>
+<thead>
+<tr>
+<th>Organism</th>
+<th>Kingdom</th>
+<th>Source</th>
+<th>Reference annotation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Saccharomyces cerevisiae</em> S288C</td>
+<td>Fungi</td>
+<td>SGD</td>
+<td>sacCer3 / R64-1-1</td>
+</tr>
+<tr>
+<td><em>Aspergillus nidulans</em> FGSC A4</td>
+<td>Fungi</td>
+<td>AspGD</td>
+<td>NCBI RefSeq</td>
+</tr>
+<tr>
+<td><em>Cryptococcus neoformans</em> JEC21</td>
+<td>Fungi</td>
+<td>NCBI RefSeq</td>
+<td>NCBI RefSeq</td>
+</tr>
+<tr>
+<td><em>Candida albicans</em> SC5314</td>
+<td>Fungi (CTG)</td>
+<td>CGD</td>
+<td>CGD curated</td>
+</tr>
+<tr>
+<td><em>Arabidopsis thaliana</em></td>
+<td>Plant</td>
+<td>TAIR</td>
+<td>TAIR10</td>
+</tr>
+<tr>
+<td><em>Drosophila melanogaster</em></td>
+<td>Insect</td>
+<td>FlyBase</td>
+<td>FlyBase r6</td>
+</tr>
+<tr>
+<td><em>Caenorhabditis elegans</em></td>
+<td>Animal</td>
+<td>WormBase</td>
+<td>WormBase WS283</td>
+</tr>
+<tr>
+<td><em>Plasmodium falciparum</em> 3D7</td>
+<td>Protist</td>
+<td>PlasmoDB</td>
+<td>PlasmoDB-66</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-comparison-tools-planned">6.2 Comparison Tools (Planned)<a class="headerlink" href="#62-comparison-tools-planned" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Version</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MycoNote-CLI</td>
+<td>v0.1.0</td>
+<td>This manuscript</td>
+</tr>
+<tr>
+<td>funannotate</td>
+<td>1.8.17</td>
+<td>Established fungal pipeline</td>
+</tr>
+<tr>
+<td>MAKER3</td>
+<td>3.01.04</td>
+<td>Flexible multi-kingdom</td>
+</tr>
+<tr>
+<td>BRAKER3</td>
+<td>3.0.8</td>
+<td>RNA-seq based gold standard</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-accuracy-metrics-planned">6.3 Accuracy Metrics (Planned)<a class="headerlink" href="#63-accuracy-metrics-planned" title="Permanent link">&para;</a></h3>
+<p>For each tool on each genome:</p>
+<ul>
+<li><strong>Sensitivity</strong>: True positives / (True positives + False negatives) at exon, transcript, and gene levels</li>
+<li><strong>Specificity (Precision)</strong>: True positives / (True positives + False positives)</li>
+<li><strong>F1 score</strong>: Harmonic mean of sensitivity and specificity</li>
+<li><strong>BUSCO completeness</strong>: Versus appropriate lineage</li>
+<li><strong>Functional annotation rate</strong>: Fraction of genes with at least one functional annotation</li>
+<li><strong>Annotation concordance</strong>: Agreement between tool's GO term assignments and reference</li>
+</ul>
+<h3 id="64-performance-metrics-planned">6.4 Performance Metrics (Planned)<a class="headerlink" href="#64-performance-metrics-planned" title="Permanent link">&para;</a></h3>
+<p>For each tool on each genome:</p>
+<ul>
+<li><strong>Wall-clock time</strong>: Total pipeline runtime</li>
+<li><strong>Peak memory usage</strong>: Maximum RSS during execution</li>
+<li><strong>CPU utilization</strong>: User + system time / wall time</li>
+<li><strong>Storage footprint</strong>: Total intermediate and output file size</li>
+<li><strong>Number of replicates</strong>: 3 independent runs per tool per genome</li>
+</ul>
+<h3 id="65-statistical-analysis-planned">6.5 Statistical Analysis (Planned)<a class="headerlink" href="#65-statistical-analysis-planned" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Paired t-tests comparing MycoNote-CLI vs each alternative on each metric</li>
+<li>Effect sizes (Cohen's d) for practical significance</li>
+<li>Multiple testing correction (Benjamini-Hochberg)</li>
+<li>95% confidence intervals for all reported differences</li>
+</ul>
+<hr />
+<h2 id="7-reproducibility-reports">7. Reproducibility Reports<a class="headerlink" href="#7-reproducibility-reports" title="Permanent link">&para;</a></h2>
+<p>Each MycoNote-CLI run automatically generates a JSON workflow report containing:</p>
+<ul>
+<li>MycoNote-CLI version</li>
+<li>Pipeline steps executed</li>
+<li>External tool versions detected at runtime</li>
+<li>Database paths and download dates</li>
+<li>Input file paths and sizes</li>
+<li>Command-line parameters</li>
+<li>Runtime duration</li>
+<li>System information</li>
+</ul>
+<p>These JSON files (one per run) are available in the <code>reproducibility_reports/</code> directory of the supplementary materials.</p>
+<hr />
+<h2 id="8-known-limitations-of-this-reproducibility-package">8. Known Limitations of This Reproducibility Package<a class="headerlink" href="#8-known-limitations-of-this-reproducibility-package" title="Permanent link">&para;</a></h2>
+<p>We are committed to making MycoNote-CLI as reproducible as possible, but several limitations should be acknowledged:</p>
+<ol>
+<li>
+<p><strong>Bit-for-bit reproducibility is not guaranteed.</strong> Augustus, MMseqs2, and several other tools use heuristics that may produce slightly different output on different hardware, with different thread counts, or in subsequent runs. Differences are typically &lt;1% of predictions.</p>
+</li>
+<li>
+<p><strong>Database snapshots are not archived.</strong> We record the download date but do not archive the database files themselves. Re-running with newer database versions will produce different results. For long-term reproducibility, users should archive their database files.</p>
+</li>
+<li>
+<p><strong>External tool versions are detected, not pinned.</strong> The reproducibility report records the version at runtime but does not enforce them in future runs. The Docker container provides better version pinning.</p>
+</li>
+<li>
+<p><strong>Hardware effects on floating-point operations.</strong> SIMD instructions used by HMMER and similar tools may produce slightly different floating-point results on different CPU architectures.</p>
+</li>
+<li>
+<p><strong>Random number seeds are not currently controlled.</strong> Operations using stochastic methods (e.g., bootstrapping in IQ-TREE) are not seeded by MycoNote-CLI.</p>
+</li>
+</ol>
+<p>For maximum reproducibility, we recommend:
+1. Using the Docker container with the v0.1.0 tag
+2. Archiving your database files (not just version metadata)
+3. Documenting your hardware in publications
+4. Running multiple replicates and reporting variability</p>
+<hr />
+<h2 id="9-contact-for-reproducibility-issues">9. Contact for Reproducibility Issues<a class="headerlink" href="#9-contact-for-reproducibility-issues" title="Permanent link">&para;</a></h2>
+<p>If you encounter difficulties reproducing any result in the manuscript, please:</p>
+<ol>
+<li>File an issue at https://github.com/K-nie/myconote-cli/issues with the "reproducibility" label</li>
+<li>Include your reproducibility JSON report</li>
+<li>Include the output of <code>myconote-cli check</code></li>
+<li>Email the corresponding author at cthittinger@wisc.edu</li>
+</ol>
+<p>We commit to addressing reproducibility issues within 2 weeks.</p>
+<hr />
+<p><em>Reproducibility Package v1.0 prepared April 2026 in support of Narh-Madey et al. (2026).</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 2026 Benjamin Narh-Madey · Hittinger Lab · Laboratory of Genetics · UW–Madison
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/K-nie/myconote-cli" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

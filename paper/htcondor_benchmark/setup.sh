@@ -67,33 +67,91 @@ echo ""
 # ── Step 2: Verify conda environments ─────────────────────────────────────
 echo "── Step 2: Verifying conda environments ──"
 
-source ~/miniconda3/etc/profile.d/conda.sh 2>/dev/null || \
-    source ~/anaconda3/etc/profile.d/conda.sh 2>/dev/null || \
-    { echo "ERROR: Could not find conda installation"; exit 1; }
-
-check_env() {
-    local env_name="$1"
-    if conda env list | grep -q "^$env_name "; then
-        echo "  ✓ Environment '$env_name' exists"
-    else
-        echo "  ✗ Environment '$env_name' MISSING - install with:"
-        case "$env_name" in
-            funannotate) echo "      conda create -n funannotate -c bioconda funannotate" ;;
-            maker)       echo "      conda create -n maker -c bioconda maker" ;;
-            braker)      echo "      conda create -n braker -c bioconda braker3" ;;
-        esac
+# Locate a conda installation. Try, in order:
+#   1. `conda` already in PATH (module load, active env, custom install)
+#   2. $CONDA_EXE set by a currently-active conda
+#   3. Common install paths on HPC clusters and personal setups
+CONDA_OK=0
+locate_conda() {
+    if command -v conda &>/dev/null; then
+        local profile
+        profile=$(conda info --base 2>/dev/null)/etc/profile.d/conda.sh
+        if [[ -f "$profile" ]]; then
+            # shellcheck source=/dev/null
+            source "$profile" && CONDA_OK=1 && return 0
+        fi
     fi
+    if [[ -n "${CONDA_EXE:-}" && -x "$CONDA_EXE" ]]; then
+        local profile
+        profile="$(dirname "$(dirname "$CONDA_EXE")")/etc/profile.d/conda.sh"
+        if [[ -f "$profile" ]]; then
+            # shellcheck source=/dev/null
+            source "$profile" && CONDA_OK=1 && return 0
+        fi
+    fi
+    for base in \
+        "$HOME/miniconda3" \
+        "$HOME/anaconda3" \
+        "$HOME/miniforge3" \
+        "$HOME/mambaforge" \
+        "$HOME/conda" \
+        "/opt/miniconda3" \
+        "/opt/anaconda3" \
+        "/opt/conda" \
+        "/software/miniconda3" \
+        "/software/anaconda3"
+    do
+        if [[ -f "$base/etc/profile.d/conda.sh" ]]; then
+            # shellcheck source=/dev/null
+            source "$base/etc/profile.d/conda.sh" && CONDA_OK=1 && return 0
+        fi
+    done
+    return 1
 }
 
-check_env funannotate
-check_env maker
-check_env braker
+if locate_conda; then
+    echo "  ✓ conda found: $(command -v conda)"
 
-# Check myconote-cli is in PATH
+    check_env() {
+        local env_name="$1"
+        if conda env list 2>/dev/null | awk '{print $1}' | grep -qx "$env_name"; then
+            echo "  ✓ Environment '$env_name' exists"
+        else
+            echo "  ✗ Environment '$env_name' MISSING — install with:"
+            case "$env_name" in
+                funannotate) echo "      conda create -n funannotate -c bioconda funannotate" ;;
+                maker)       echo "      conda create -n maker -c bioconda maker" ;;
+                braker)      echo "      conda create -n braker -c bioconda braker3" ;;
+            esac
+        fi
+    }
+
+    check_env funannotate
+    check_env maker
+    check_env braker
+else
+    echo "  ⚠ Could not auto-locate conda. Searched PATH, CONDA_EXE, and:"
+    echo "       ~/miniconda3  ~/anaconda3  ~/miniforge3  ~/mambaforge  ~/conda"
+    echo "       /opt/miniconda3  /opt/anaconda3  /opt/conda"
+    echo "       /software/miniconda3  /software/anaconda3"
+    echo ""
+    echo "    If conda is installed somewhere else on this cluster (for example"
+    echo "    under /software or loaded via a module), either:"
+    echo "      (a) run 'module load miniconda' (or equivalent) and re-run setup.sh"
+    echo "      (b) source its conda.sh manually before submit_all.sh"
+    echo "      (c) set CONDA_EXE=/path/to/conda and re-run setup.sh"
+    echo ""
+    echo "    Skipping tool-environment checks for now. You can still submit"
+    echo "    MycoNote-CLI jobs if myconote-cli is in PATH — the comparison"
+    echo "    tools (funannotate, maker, braker) just won't run yet."
+fi
+echo ""
+
+# Check myconote-cli is in PATH (independent of conda)
 if command -v myconote-cli &>/dev/null; then
     echo "  ✓ myconote-cli found: $(myconote-cli --version 2>&1 | head -1 || echo 'unknown')"
 else
-    echo "  ✗ myconote-cli NOT in PATH - install with:"
+    echo "  ✗ myconote-cli NOT in PATH — install with:"
     echo "      curl -fsSL https://raw.githubusercontent.com/K-nie/myconote-cli/main/quick-install.sh | bash"
 fi
 echo ""

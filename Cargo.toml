@@ -3,7 +3,7 @@ name = "myconote-cli"
 version = "0.1.0"
 edition = "2021"
 authors = ["Benjamin Narh-Madey <narhmadey@wisc.edu>"]
-description = "Blazing-fast genome annotation analysis CLI"
+description = "High-performance eukaryotic genome annotation pipeline — from raw assembly to NCBI-ready submission"
 license = "MIT"
 repository = "https://github.com/K-nie/myconote-cli"
 

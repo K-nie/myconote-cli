@@ -1,6 +1,6 @@
 # Myconote_CLI
 
-**Blazing-fast genome annotation pipeline** -- a high-performance Rust CLI for annotating eukaryotic genomes, from raw assembly to NCBI-ready submission.
+**Blazing-fast genome annotation pipeline** -- as genome sequencing becomes cheaper and long-read assemblies become routine, the bottleneck in genomics has shifted from sequencing to annotation. Existing pipelines are slow, narrowly scoped, and produce outputs that require extensive manual cleanup before submission. myconote-cli addresses this gap: a high-performance Rust CLI that takes a eukaryotic genome assembly from raw contigs to NCBI-ready submission, integrating 15 annotation sources across 5 kingdoms with built-in validation and reproducibility tracking.
 
 > Developed by **Benjamin Narh-Madey** - Hittinger Lab, Laboratory of Genetics - UW-Madison
 

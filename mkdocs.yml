@@ -1,5 +1,5 @@
 site_name: Myconote_CLI
-site_description: Genome Annotation Pipeline for Fungi and Other Eukaryotes
+site_description: High-performance eukaryotic genome annotation pipeline — from raw assembly to NCBI-ready submission
 site_author: Benjamin Narh-Madey
 site_url: https://k-nie.github.io/myconote-cli/
 

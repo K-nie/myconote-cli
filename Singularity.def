@@ -3,7 +3,7 @@ From: condaforge/mambaforge:latest
 
 %labels
     Author Benjamin Narh-Madey <narhmadey@wisc.edu>
-    Description myconote-cli: Blazing-fast genome annotation pipeline
+    Description myconote-cli: High-performance eukaryotic genome annotation pipeline
     Version 0.1.0
     URL https://github.com/K-nie/myconote-cli
 
@@ -60,7 +60,7 @@ From: condaforge/mambaforge:latest
     myconote-cli --version
 
 %help
-    myconote-cli: Blazing-fast genome annotation pipeline for eukaryotic genomes.
+    myconote-cli: High-performance eukaryotic genome annotation pipeline for eukaryotic genomes.
     Hittinger Lab, Laboratory of Genetics, UW-Madison.
 
     Usage:

@@ -28,18 +28,18 @@ This package implements the comprehensive comparative benchmark requested by Rev
 
 ### Table 1. Reference genomes used in the benchmark.
 
-| ID | Organism | Size (Mb) | Kingdom | Reference annotation source |
-|----|----------|-----------|---------|----------------------------|
-| 1 | *Saccharomyces cerevisiae* S288C | 12 | Fungi | SGD R64-1-1 |
-| 2 | *Candida albicans* SC5314 | 14 | Fungi (CTG) | CGD A22 |
-| 3 | *Aspergillus nidulans* FGSC A4 | 30 | Fungi | AspGD / FungiDB |
-| 4 | *Cryptococcus neoformans* JEC21 | 19 | Fungi | NCBI RefSeq |
-| 5 | *Arabidopsis thaliana* Col-0 | 135 | Plant | TAIR10 / Araport11 |
-| 6 | *Drosophila melanogaster* | 144 | Insect | FlyBase r6.55 |
-| 7 | *Caenorhabditis elegans* | 100 | Animal | WormBase WS292 |
-| 8 | *Plasmodium falciparum* 3D7 | 23 | Protist | PlasmoDB-66 |
+| ID | Organism | Size (Mb) | Kingdom | NCBI RefSeq assembly |
+|----|----------|-----------|---------|----------------------|
+| sce | *Saccharomyces cerevisiae* S288C | 12 | Fungi | GCF_000146045.2 (R64) |
+| cal | *Candida albicans* SC5314 | 14 | Fungi (CTG clade) | GCF_000182965.3 (ASM18296v3) |
+| ani | *Aspergillus nidulans* FGSC A4 | 30 | Fungi | GCF_000011425.1 (ASM1142v1) |
+| cne | *Cryptococcus neoformans* JEC21 | 19 | Fungi | GCF_000091045.1 (ASM9104v1) |
+| ath | *Arabidopsis thaliana* Col-0 | 135 | Plant | GCF_000001735.4 (TAIR10.1) |
+| dme | *Drosophila melanogaster* | 144 | Insect | GCF_000001215.4 (Release 6) |
+| cel | *Caenorhabditis elegans* | 100 | Animal | GCF_000002985.6 (WBcel235) |
+| pfa | *Plasmodium falciparum* 3D7 | 23 | Protist | GCF_000002765.6 |
 
-All eight have manually curated reference annotations that serve as gold standards for sensitivity/specificity calculations.
+All eight assemblies carry manually curated NCBI RefSeq annotations (which mirror the canonical community resources — SGD, CGD, FungiDB, TAIR, FlyBase, WormBase, PlasmoDB — but through a single stable download endpoint). These serve as gold standards for sensitivity/specificity calculations.
 
 ---
 

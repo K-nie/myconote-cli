@@ -51,7 +51,7 @@ esac
     >> "$LOG" 2>&1
 
 PREDICTED_GFF="$OUT_DIR/braker.gff3"
-[[ -f "$PREDICTED_GFF" ]] || PREDICTED_GFF=$(find "$OUT_DIR" -name "*.gff3" | head -1)
+[[ -f "$PREDICTED_GFF" ]] || PREDICTED_GFF=$(find "$OUT_DIR" -name "*.gff3" -print -quit 2>/dev/null || true)
 
 python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
     "$PREDICTED_GFF" \

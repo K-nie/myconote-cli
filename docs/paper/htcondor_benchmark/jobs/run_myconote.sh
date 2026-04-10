@@ -60,11 +60,14 @@ echo "[$(date +%T)] Step 1: sort"
     >> "$LOG" 2>&1
 
 # ── Step 2: Mask ───────────────────────────────────────────────────────────
+# Use the default SelfAlign engine: pure-Rust tandem-repeat finder plus
+# minimap2 self-alignment (gracefully skips the minimap2 step if the
+# binary isn't in PATH). RepeatModeler2 and RepeatMasker are NOT required,
+# which matters on HPC clusters without those tools pre-installed.
 echo "[$(date +%T)] Step 2: mask"
 /usr/bin/time -v -o "$OUT_DIR/time_mask.log" \
     myconote-cli mask "$OUT_DIR/sorted.fa" \
     --output "$OUT_DIR/masked.fa" \
-    --engine repeatmodeler \
     --threads 8 \
     >> "$LOG" 2>&1
 

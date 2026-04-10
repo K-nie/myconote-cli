@@ -609,10 +609,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-prepare-your-genome" class="md-nav__link">
+  <a href="#1-verify-your-installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Prepare your genome
+        1. Verify your installation
       
     </span>
   </a>
@@ -620,10 +620,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-sort-and-validate-scaffolds" class="md-nav__link">
+  <a href="#2-sort-and-clean-scaffolds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Sort and validate scaffolds
+        2. Sort and clean scaffolds
       
     </span>
   </a>
@@ -642,10 +642,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-train-gene-predictors" class="md-nav__link">
+  <a href="#4-train-gene-predictors-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Train gene predictors
+        4. Train gene predictors (optional)
       
     </span>
   </a>
@@ -664,10 +664,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-update-with-rna-evidence" class="md-nav__link">
+  <a href="#6-functional-annotation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Update with RNA evidence
+        6. Functional annotation
       
     </span>
   </a>
@@ -675,10 +675,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-functional-annotation" class="md-nav__link">
+  <a href="#7-validate-and-prepare-ncbi-submission" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Functional annotation
+        7. Validate and prepare NCBI submission
       
     </span>
   </a>
@@ -686,10 +686,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-view-results" class="md-nav__link">
+  <a href="#8-explore-your-results" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. View results
+        8. Explore your results
       
     </span>
   </a>
@@ -1559,10 +1559,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-prepare-your-genome" class="md-nav__link">
+  <a href="#1-verify-your-installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Prepare your genome
+        1. Verify your installation
       
     </span>
   </a>
@@ -1570,10 +1570,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-sort-and-validate-scaffolds" class="md-nav__link">
+  <a href="#2-sort-and-clean-scaffolds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Sort and validate scaffolds
+        2. Sort and clean scaffolds
       
     </span>
   </a>
@@ -1592,10 +1592,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-train-gene-predictors" class="md-nav__link">
+  <a href="#4-train-gene-predictors-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Train gene predictors
+        4. Train gene predictors (optional)
       
     </span>
   </a>
@@ -1614,10 +1614,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-update-with-rna-evidence" class="md-nav__link">
+  <a href="#6-functional-annotation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Update with RNA evidence
+        6. Functional annotation
       
     </span>
   </a>
@@ -1625,10 +1625,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-functional-annotation" class="md-nav__link">
+  <a href="#7-validate-and-prepare-ncbi-submission" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Functional annotation
+        7. Validate and prepare NCBI submission
       
     </span>
   </a>
@@ -1636,10 +1636,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-view-results" class="md-nav__link">
+  <a href="#8-explore-your-results" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. View results
+        8. Explore your results
       
     </span>
   </a>
@@ -1694,68 +1694,103 @@
 
 
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
-<p>This guide walks you through annotating a fungal genome from start to finish. Estimated time: 45–90 minutes (excluding database downloads).</p>
+<p>Annotate a eukaryotic genome from start to finish. Estimated time: 30-60 minutes (excluding database downloads).</p>
+<p><strong>New to myconote-cli?</strong> Run <code>myconote-cli learn</code> for an interactive tutorial that teaches each concept step by step.</p>
 <hr />
-<h2 id="1-prepare-your-genome">1. Prepare your genome<a class="headerlink" href="#1-prepare-your-genome" title="Permanent link">&para;</a></h2>
-<p>Place your genome assembly FASTA in a working directory:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>my_annotation<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>my_annotation
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>/path/to/mygenome.fas<span class="w"> </span>.
+<h2 id="1-verify-your-installation">1. Verify your installation<a class="headerlink" href="#1-verify-your-installation" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>--version<span class="w">       </span><span class="c1"># check binary is installed</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote-cli<span class="w"> </span>check<span class="w">           </span><span class="c1"># verify external tools</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--check<span class="w">   </span><span class="c1"># verify databases</span>
 </code></pre></div>
+<p>If tools or databases are missing:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myconote-cli<span class="w"> </span>install<span class="w"> </span>--yes<span class="w">   </span><span class="c1"># install all missing tools via conda</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>myconote-cli<span class="w"> </span>setup<span class="w">           </span><span class="c1"># download all databases (~2.5 GB)</span>
+</code></pre></div></p>
 <hr />
-<h2 id="2-sort-and-validate-scaffolds">2. Sort and validate scaffolds<a class="headerlink" href="#2-sort-and-validate-scaffolds" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myconote<span class="w"> </span>sort<span class="w"> </span>--genome<span class="w"> </span>mygenome.fas<span class="w"> </span>--out<span class="w"> </span>01_sorted/
+<h2 id="2-sort-and-clean-scaffolds">2. Sort and clean scaffolds<a class="headerlink" href="#2-sort-and-clean-scaffolds" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>assembly.fa<span class="w"> </span>--min-length<span class="w"> </span><span class="m">500</span>
 </code></pre></div>
-<p>This renames scaffolds to a consistent format, removes sequences below a minimum length (default 500 bp), and produces a summary report.</p>
+<p>Renames scaffolds to clean IDs (scaffold_001, scaffold_002...), sorts by length, and filters short contigs.</p>
 <hr />
 <h2 id="3-mask-repeats">3. Mask repeats<a class="headerlink" href="#3-mask-repeats" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote<span class="w"> </span>mask<span class="w"> </span>--genome<span class="w"> </span>01_sorted/genome.fas<span class="w"> </span>--out<span class="w"> </span>02_masked/<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>myconote-cli<span class="w"> </span>mask<span class="w"> </span>assembly_sorted.fa<span class="w"> </span>--engine<span class="w"> </span>repeatmodeler<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
 </code></pre></div>
-<p>Runs RepeatModeler2 to build a de novo repeat library, then RepeatMasker to soft-mask the genome. Soft-masked bases are lowercased; gene predictors can still read through them.</p>
+<p>Builds a de novo repeat library with RepeatModeler2, then soft-masks the genome with RepeatMasker. Soft-masked bases are lowercased so gene finders can skip them.</p>
 <hr />
-<h2 id="4-train-gene-predictors">4. Train gene predictors<a class="headerlink" href="#4-train-gene-predictors" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>myconote<span class="w"> </span>train<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--genome<span class="w"> </span>02_masked/genome.masked.fas<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--rna-bam<span class="w"> </span>rnaseq_aligned.bam<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--species<span class="w"> </span>my_fungus<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--out<span class="w"> </span>03_training/
+<h2 id="4-train-gene-predictors-optional">4. Train gene predictors (optional)<a class="headerlink" href="#4-train-gene-predictors-optional" title="Permanent link">&para;</a></h2>
+<p>If you have RNA-seq data:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>myconote-cli<span class="w"> </span>train<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--left<span class="w"> </span>R1.fastq.gz<span class="w"> </span>--right<span class="w"> </span>R2.fastq.gz<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--species<span class="w"> </span>my_organism<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
 </code></pre></div>
+<p>This assembles transcripts with Trinity, aligns them with minimap2, builds a PASA database, and trains Augustus + SNAP on your organism's gene structures.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>If you don't have RNA-seq data, omit <code>--rna-bam</code>. Augustus will use its built-in <em>Saccharomyces cerevisiae</em> model as the starting point.</p>
+<p>If you don't have RNA-seq, skip this step. Augustus will use its pre-trained model for your kingdom.</p>
 </div>
 <hr />
 <h2 id="5-predict-gene-models">5. Predict gene models<a class="headerlink" href="#5-predict-gene-models" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>myconote<span class="w"> </span>predict<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--genome<span class="w"> </span>02_masked/genome.masked.fas<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--training<span class="w"> </span>03_training/<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--out<span class="w"> </span>04_predictions/
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>MYORG<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">8</span>
 </code></pre></div>
-<p>Runs Augustus, GlimmerHMM, and SNAP in parallel, then merges results using EvidenceModeler (EVM).</p>
+<p>Runs Augustus + SNAP, merges predictions with the Evidence Modeler consensus, and produces a clean GFF3 with sequential locus tags.</p>
+<p><strong>Advanced options:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Add protein evidence for better predictions</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>assembly_masked.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--protein-fasta<span class="w"> </span>swissprot.fasta<span class="w"> </span>--locus-prefix<span class="w"> </span>MYORG
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Use custom evidence weights</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>assembly_masked.fa<span class="w"> </span>--weights<span class="w"> </span>weights.toml
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Handle diploid/polyploid genomes</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>assembly_masked.fa<span class="w"> </span>--ploidy<span class="w"> </span><span class="m">2</span>
+</code></pre></div></p>
 <hr />
-<h2 id="6-update-with-rna-evidence">6. Update with RNA evidence<a class="headerlink" href="#6-update-with-rna-evidence" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>myconote<span class="w"> </span>update<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--genome<span class="w"> </span>02_masked/genome.masked.fas<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--predictions<span class="w"> </span>04_predictions/<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--rna-bam<span class="w"> </span>rnaseq_aligned.bam<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--out<span class="w"> </span>05_updated/
+<h2 id="6-functional-annotation">6. Functional annotation<a class="headerlink" href="#6-functional-annotation" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--trnascan<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">8</span>
+</code></pre></div>
+<p>Runs MMseqs2 (Swiss-Prot homology), Pfam (domain search via hmmsearch), BUSCO (completeness), GO terms, and tRNAscan-SE (tRNA genes).</p>
+<p><strong>Enable additional annotation sources:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--eggnog<span class="w"> </span>--cazyme<span class="w"> </span>--secretome<span class="w"> </span>--antismash<span class="w"> </span>--merops<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--interproscan<span class="w"> </span>--email<span class="w"> </span>you@email.edu<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--genetic-code<span class="w"> </span><span class="m">12</span><span class="w">    </span><span class="c1"># for Candida CTG clade</span>
+</code></pre></div></p>
+<hr />
+<h2 id="7-validate-and-prepare-ncbi-submission">7. Validate and prepare NCBI submission<a class="headerlink" href="#7-validate-and-prepare-ncbi-submission" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Check for errors first</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">&quot;Genus species&quot;</span><span class="w"> </span>--validate-only
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Generate submission files</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">&quot;Genus species&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--strain<span class="w"> </span><span class="s2">&quot;CBS 123&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>MYORG<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span>--bioproject<span class="w"> </span>PRJNA123456
 </code></pre></div>
 <hr />
-<h2 id="7-functional-annotation">7. Functional annotation<a class="headerlink" href="#7-functional-annotation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>myconote<span class="w"> </span>annotate<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--genome<span class="w"> </span>02_masked/genome.masked.fas<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--gff<span class="w"> </span>05_updated/final.gff3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--out<span class="w"> </span>06_annotation/
-</code></pre></div>
-<p>Runs BLAST, eggNOG-mapper, dbCAN (CAZymes), and antiSMASH (secondary metabolite clusters).</p>
-<hr />
-<h2 id="8-view-results">8. View results<a class="headerlink" href="#8-view-results" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Summary statistics</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>myconote<span class="w"> </span>stats<span class="w"> </span>--gff<span class="w"> </span>06_annotation/final.annotated.gff3
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Open in JBrowse2</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>myconote<span class="w"> </span>view<span class="w"> </span>jbrowse<span class="w"> </span>--genome<span class="w"> </span>02_masked/genome.masked.fas<span class="w"> </span>--gff<span class="w"> </span>06_annotation/final.annotated.gff3
+<h2 id="8-explore-your-results">8. Explore your results<a class="headerlink" href="#8-explore-your-results" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Summary statistics with taxonomic benchmarking</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--taxon<span class="w"> </span>fungi
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Generate a genome map</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>myconote-cli<span class="w"> </span>plot<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--type<span class="w"> </span>circular<span class="w"> </span>--output<span class="w"> </span>genome_map.png
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Interactive genome browser</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>myconote-cli<span class="w"> </span>view<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--fasta<span class="w"> </span>assembly_masked.fa
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1"># Convert formats</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>genbank<span class="w"> </span>--fasta<span class="w"> </span>assembly_masked.fa
 </code></pre></div>
 <hr />
 <h2 id="output-files">Output files<a class="headerlink" href="#output-files" title="Permanent link">&para;</a></h2>
@@ -1768,37 +1803,38 @@
 </thead>
 <tbody>
 <tr>
-<td><code>final.annotated.gff3</code></td>
-<td>Full gene models with functional annotations</td>
+<td><code>predict_out/consensus.gff3</code></td>
+<td>Predicted gene models</td>
 </tr>
 <tr>
-<td><code>proteins.faa</code></td>
-<td>Predicted protein sequences (FASTA)</td>
+<td><code>annotate_out/annotated.gff3</code></td>
+<td>Gene models with functional annotations</td>
 </tr>
 <tr>
-<td><code>transcripts.fna</code></td>
-<td>Predicted transcript sequences (FASTA)</td>
+<td><code>annotate_out/proteins.fa</code></td>
+<td>Predicted protein sequences</td>
 </tr>
 <tr>
-<td><code>annotation_summary.txt</code></td>
-<td>Gene count, N50, BUSCO scores</td>
+<td><code>annotate_out/annotations.tsv</code></td>
+<td>Full annotation table (for R/Python)</td>
 </tr>
 <tr>
-<td><code>cazymes.tsv</code></td>
-<td>CAZyme assignments</td>
+<td><code>annotate_out/annotation_report.txt</code></td>
+<td>Summary with gene counts and coverage</td>
 </tr>
 <tr>
-<td><code>antismash/</code></td>
-<td>Secondary metabolite cluster predictions</td>
+<td><code>submit_out/annotation.tbl</code></td>
+<td>NCBI feature table</td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Run a phylogenomic analysis: <a href="../analysis/phylogeny/">phylogeny</a></li>
-<li>Visualise your genome: <a href="../analysis/plot/">plot</a></li>
-<li>Follow the full workshop tutorial: <a href="../lesson/">Workshop Lesson</a></li>
+<li>Learn interactively: <code>myconote-cli learn</code></li>
+<li>Build a phylogenetic tree: <a href="../analysis/phylogeny/">phylogeny</a></li>
+<li>Compare two genomes: <code>myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa</code></li>
+<li>Full workshop tutorial: <a href="../lesson/">Workshop Lesson</a></li>
 </ul>
 
 

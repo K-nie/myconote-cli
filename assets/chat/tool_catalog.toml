@@ -1,0 +1,114 @@
+# Tool catalog: every myconote-cli subcommand with usage, flags, and context.
+# Used by the command recommender to generate and validate recommendations.
+
+[[commands]]
+name = "sort"
+usage = "myconote-cli sort <genome.fa> [options]"
+when = "First pipeline step. Sort + rename contigs by length for consistent IDs."
+flags = ["--output", "--prefix", "--min-length", "--rename-table", "--keep-desc", "--sort-by-name"]
+inputs = ["genome FASTA"]
+outputs = ["sorted FASTA", "rename table TSV"]
+
+[[commands]]
+name = "mask"
+usage = "myconote-cli mask <sorted_genome.fa> [options]"
+when = "After sorting. Identify and soft-mask repeats before gene prediction."
+flags = ["--engine", "--output", "--threads", "--species"]
+inputs = ["sorted genome FASTA"]
+outputs = ["masked FASTA", "repeat families FASTA"]
+
+[[commands]]
+name = "train"
+usage = "myconote-cli train <masked_genome.fa> [options]"
+when = "After masking, before predicting. RNA-seq mediated training of Augustus/SNAP."
+flags = ["--left", "--right", "--single", "--trinity", "--species", "--output", "--max-intron"]
+inputs = ["masked genome FASTA", "RNA-seq reads"]
+outputs = ["trained Augustus species model", "training reports"]
+
+[[commands]]
+name = "predict"
+usage = "myconote-cli predict <masked_genome.fa> [options]"
+when = "After masking and optionally training. Predict gene models."
+flags = ["--kingdom", "--species", "--output", "--protein-evidence", "--locus-prefix", "--no-snap", "--train", "--glimmerhmm", "--genemark"]
+inputs = ["masked genome FASTA", "optional training species", "optional protein evidence"]
+outputs = ["consensus GFF3", "predict_summary.txt", "per-tool GFF3 files"]
+
+[[commands]]
+name = "update"
+usage = "myconote-cli update <predicted.gff3> [options]"
+when = "After prediction. Refine gene models with RNA-seq evidence via PASA."
+flags = ["--fasta", "--output", "--left", "--right", "--single"]
+inputs = ["predicted GFF3", "genome FASTA", "RNA-seq reads"]
+outputs = ["updated GFF3"]
+
+[[commands]]
+name = "annotate"
+usage = "myconote-cli annotate <gff3> --fasta <genome.fa> [options]"
+when = "After prediction/update. Add functional annotation from multiple databases."
+flags = ["--fasta", "--output", "--db-dir", "--threads", "--busco-lineage", "--eggnog", "--interproscan"]
+inputs = ["GFF3", "genome FASTA"]
+outputs = ["annotated GFF3", "per-source TSV files"]
+
+[[commands]]
+name = "submit"
+usage = "myconote-cli submit <annotated.gff3> --fasta <genome.fa> [options]"
+when = "Final pipeline step. Prepare and validate NCBI GenBank submission."
+flags = ["--fasta", "--output", "--organism", "--strain", "--bioproject", "--biosample", "--locus-prefix", "--genetic-code", "--email", "--validate-only"]
+inputs = ["annotated GFF3", "genome FASTA"]
+outputs = ["annotation.tbl", "annotation.fsa", "annotation.sqn", "errorsummary.val"]
+
+[[commands]]
+name = "stats"
+usage = "myconote-cli stats <file.gff3> [options]"
+when = "After any stage that produces a GFF3. Shows gene counts, lengths, isoforms."
+flags = ["--format", "--taxon", "--primary-only", "--chromosome", "--region", "--exclude"]
+inputs = ["GFF3 file"]
+outputs = ["statistics (human/JSON/CSV)"]
+
+[[commands]]
+name = "fix"
+usage = "myconote-cli fix <file.gff3> [options]"
+when = "After validation errors. Auto-repair common GFF3 issues."
+flags = ["--output", "--dry-run", "--report"]
+inputs = ["GFF3 file"]
+outputs = ["fixed GFF3", "fix report"]
+
+[[commands]]
+name = "clean"
+usage = "myconote-cli clean <file.gff3> [options]"
+when = "Remove orphan features, fix parent-child relationships."
+flags = ["--output"]
+inputs = ["GFF3 file"]
+outputs = ["cleaned GFF3"]
+
+[[commands]]
+name = "convert"
+usage = "myconote-cli convert <file> --format <fmt> [options]"
+when = "Convert between annotation formats (GFF3, GTF, BED, GenBank, etc)."
+flags = ["--format", "--output", "--fasta"]
+inputs = ["annotation file"]
+outputs = ["converted file"]
+
+[[commands]]
+name = "check"
+usage = "myconote-cli check"
+when = "Verify that required bioinformatics tools are installed and accessible."
+flags = []
+inputs = []
+outputs = ["tool availability report"]
+
+[[commands]]
+name = "setup"
+usage = "myconote-cli setup [options]"
+when = "Download and index reference databases for annotation."
+flags = ["--list", "--check", "--dbs", "--db-dir", "--chat-corpus"]
+inputs = []
+outputs = ["databases in ~/.myconote/dbs/"]
+
+[[commands]]
+name = "explain"
+usage = "myconote-cli explain <stage> [options]"
+when = "Interpret results from any pipeline stage. Recommends next commands."
+flags = ["--dir", "--model", "--endpoint", "--no-llm", "--verbose", "--trace", "--dry-run", "--paste"]
+inputs = ["stage name or pasted output"]
+outputs = ["interpretation with citations and command recommendations"]

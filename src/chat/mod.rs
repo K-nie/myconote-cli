@@ -9,11 +9,15 @@
 ///   - Full mode (default): deterministic rules + Ollama LLM interpretation
 ///   - Rules-only mode (`--no-llm`): no Ollama needed, prints findings + commands
 pub mod backend;
+pub mod commands;
 pub mod config;
 pub mod context;
 pub mod ethics;
+pub mod profile;
+pub mod prompts;
 pub mod retrieval;
 pub mod rules;
+pub mod validator;
 
 use crate::learn::{C_BOLD, C_CYAN, C_DIM, C_GREEN, C_RESET, C_YELLOW};
 use crate::utils::error::{MycoNoteError, Result};

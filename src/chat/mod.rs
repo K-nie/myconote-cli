@@ -9,12 +9,16 @@
 ///   - Full mode (default): deterministic rules + Ollama LLM interpretation
 ///   - Rules-only mode (`--no-llm`): no Ollama needed, prints findings + commands
 pub mod backend;
+pub mod bundle;
 pub mod commands;
 pub mod config;
 pub mod context;
 pub mod ethics;
+pub mod history;
+pub mod paste;
 pub mod profile;
 pub mod prompts;
+pub mod render;
 pub mod retrieval;
 pub mod rules;
 pub mod validator;
@@ -45,32 +49,32 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    // ── Determine mode ──
-    let is_paste = stage_or_paste == "__paste__";
+    let verbosity = if cfg.trace {
+        render::Verbosity::Trace
+    } else if cfg.verbose {
+        render::Verbosity::Verbose
+    } else {
+        render::Verbosity::Short
+    };
 
-    if is_paste {
-        println!(
-            "  {}{}Paste mode{} — reading from stdin...",
-            C_BOLD, C_CYAN, C_RESET
-        );
-        println!(
-            "  {}(paste mode will be available in a future commit){}", C_DIM, C_RESET
-        );
-        return Ok(());
+    // ── Ethics check (runs on any user-provided text) ──
+    let all_input = format!("{} {}", stage_or_paste, dir.as_deref().unwrap_or(""));
+    match ethics::classify(&all_input) {
+        ethics::EthicsVerdict::Refuse { rule_id: _, message } => {
+            println!("\n  {}{}{}", C_YELLOW, message, C_RESET);
+            return Ok(());
+        }
+        ethics::EthicsVerdict::Pass => {}
+    }
+
+    // ── Paste mode ──
+    if stage_or_paste == "__paste__" {
+        return run_paste_mode(&cfg, verbosity);
     }
 
     // ── Stage mode ──
     let stage_name = &stage_or_paste;
-    let valid_stages = ["sort", "mask", "train", "predict", "update", "annotate", "submit"];
-    if !valid_stages.contains(&stage_name.as_str()) {
-        return Err(MycoNoteError::ChatContext(format!(
-            "unknown stage '{}'. Expected one of: {}",
-            stage_name,
-            valid_stages.join(", ")
-        )));
-    }
-
-    // Resolve directory
+    let stage = context::Stage::from_str(stage_name)?;
     let work_dir = resolve_dir(stage_name, dir.as_deref())?;
 
     println!(
@@ -78,12 +82,43 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         C_BOLD, C_CYAN, C_RESET, C_GREEN, stage_name, C_RESET, work_dir.display()
     );
 
+    // ── Build context ──
+    let ctx = context::build_context(stage, &work_dir)?;
+
+    // ── Run rule engine ──
+    let findings = rules::evaluate(&ctx);
+
+    // ── Retrieve knowledge ──
+    let query = build_retrieval_query(&ctx, &findings);
+    let retrieved = retrieval::retrieve_knowledge(stage_name, &query, 5);
+
+    // ── Generate command recommendations ──
+    let recs = commands::recommend(&ctx, &findings);
+
+    // ── Load user profile ──
+    let user_profile = profile::UserProfile::load();
+
+    // ── Rules-only mode or LLM unavailable ──
     if cfg.no_llm {
+        render::render_rules_only_header();
+        render::render_findings(&findings, verbosity);
+        render::render_commands(&recs);
+        write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, None, None, 0, 0)?;
+        record_history(stage_name, &ctx, &findings, false, &cfg)?;
+        return Ok(());
+    }
+
+    // ── Assemble prompt ──
+    let system_prompt = prompts::render(stage_name, &ctx, &findings, &retrieved, &user_profile);
+    let user_msg = prompts::user_message(stage_name);
+
+    // ── Dry-run ──
+    if cfg.dry_run {
         println!(
-            "  {}Rules-only mode{} — no LLM call will be made.\n",
+            "\n  {}--dry-run{}: showing assembled prompt (no LLM call)",
             C_YELLOW, C_RESET
         );
-        println!("  {}(rule engine will be available in a future commit){}", C_DIM, C_RESET);
+        render::render_trace(&system_prompt, retrieved.len(), 0, 0);
         return Ok(());
     }
 
@@ -93,35 +128,186 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         C_BOLD, cfg.model, C_RESET, C_DIM, cfg.endpoint, C_RESET
     );
 
-    let backend = backend::ollama::OllamaBackend::new(&cfg.endpoint, &cfg.model, cfg.timeout_s)?;
+    let llm_backend = backend::ollama::OllamaBackend::new(&cfg.endpoint, &cfg.model, cfg.timeout_s)?;
 
-    if !backend.is_available() {
-        println!(
-            "\n  {}LLM unavailable{} — showing rule-based findings only.",
-            C_YELLOW, C_RESET
-        );
-        println!(
-            "  Start Ollama for a full interpretation: {}ollama serve{}",
-            C_BOLD, C_RESET
-        );
-        println!("  {}(rule engine will be available in a future commit){}", C_DIM, C_RESET);
+    if !llm_backend.is_available() {
+        render::render_llm_unavailable();
+        render::render_findings(&findings, verbosity);
+        render::render_commands(&recs);
+        write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, Some(&system_prompt), None, 0, 0)?;
+        record_history(stage_name, &ctx, &findings, false, &cfg)?;
         return Ok(());
     }
 
-    if cfg.dry_run {
-        println!(
-            "\n  {}--dry-run{}: would assemble prompt for stage '{}' from {}",
-            C_YELLOW, C_RESET, stage_name, work_dir.display()
-        );
-        println!("  {}(prompt assembly will be available in a future commit){}", C_DIM, C_RESET);
-        return Ok(());
+    // ── Call LLM ──
+    use backend::ChatBackend;
+    let messages = vec![
+        backend::Message::system(&system_prompt),
+        backend::Message::user(&user_msg),
+    ];
+
+    let response = match llm_backend.chat(&messages) {
+        Ok(msg) => msg.content,
+        Err(e) => {
+            println!("\n  {}LLM error: {}{}", C_YELLOW, e, C_RESET);
+            render::render_findings(&findings, verbosity);
+            render::render_commands(&recs);
+            write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, Some(&system_prompt), None, 0, 0)?;
+            record_history(stage_name, &ctx, &findings, false, &cfg)?;
+            return Ok(());
+        }
+    };
+
+    // ── Validate output (strip unresolvable citations) ──
+    let valid_ids = validator::build_valid_ids(&findings, &retrieved);
+    let validation = validator::validate_citations(&response, &valid_ids);
+
+    // ── Render ──
+    render::render_findings(&findings, verbosity);
+    render::render_llm_response(&validation.text);
+    render::render_commands(&recs);
+
+    if verbosity == render::Verbosity::Trace {
+        render::render_trace(&system_prompt, retrieved.len(), validation.citations_kept, validation.citations_removed);
     }
 
-    // Placeholder: full pipeline (context → rules → retrieval → prompt → LLM → validate → render → bundle)
+    // ── Write bundle ──
+    write_bundle(
+        stage_name, &cfg, &ctx, &findings, &retrieved, &recs,
+        Some(&system_prompt), Some(&validation.text),
+        validation.citations_kept, validation.citations_removed,
+    )?;
+
+    // ── Record history ──
+    record_history(stage_name, &ctx, &findings, true, &cfg)?;
+
+    Ok(())
+}
+
+/// Paste mode: read stdin, detect format, run rules, optionally call LLM.
+fn run_paste_mode(_cfg: &ChatConfig, verbosity: render::Verbosity) -> Result<()> {
     println!(
-        "\n  {}(full pipeline will be built in subsequent commits){}", C_DIM, C_RESET
+        "\n  {}{}Paste mode{} — reading from stdin...",
+        C_BOLD, C_CYAN, C_RESET
     );
 
+    let (input, format) = paste::read_stdin();
+    if input.trim().is_empty() {
+        println!("  {}No input received.{}", C_DIM, C_RESET);
+        return Ok(());
+    }
+
+    // Ethics check on pasted content
+    match ethics::classify(&input) {
+        ethics::EthicsVerdict::Refuse { rule_id: _, message } => {
+            println!("\n  {}{}{}", C_YELLOW, message, C_RESET);
+            return Ok(());
+        }
+        ethics::EthicsVerdict::Pass => {}
+    }
+
+    println!("  Detected format: {}{}{}", C_GREEN, format, C_RESET);
+    println!("  Input: {} lines, {} bytes", input.lines().count(), input.len());
+
+    // For paste mode, determine the most likely stage from the format
+    let inferred_stage = match format {
+        paste::PasteFormat::Gff3 => "predict",
+        paste::PasteFormat::FastaHeader => "sort",
+        paste::PasteFormat::ValidationError => "submit",
+        paste::PasteFormat::LogOutput => "predict",
+        paste::PasteFormat::Tsv => "annotate",
+        paste::PasteFormat::Unknown => "predict",
+    };
+
+    // Build a minimal context from the pasted text
+    let ctx = context::StageContext {
+        stage: inferred_stage.to_string(),
+        dir: "(stdin)".to_string(),
+        artifacts: vec![context::ArtifactSummary {
+            name: "(pasted input)".to_string(),
+            size_bytes: input.len() as u64,
+            line_count: Some(input.lines().count()),
+            preview: Some(input.chars().take(50_000).collect()),
+        }],
+        stats: None,
+        notes: vec![format!("Paste mode: detected as {}", format)],
+    };
+
+    let findings = rules::evaluate(&ctx);
+    let recs = commands::recommend(&ctx, &findings);
+
+    render::render_findings(&findings, verbosity);
+    render::render_commands(&recs);
+
+    Ok(())
+}
+
+fn build_retrieval_query(ctx: &context::StageContext, findings: &[rules::Finding]) -> String {
+    let mut parts = vec![ctx.stage.clone()];
+    for f in findings {
+        parts.push(f.message.clone());
+    }
+    for note in &ctx.notes {
+        parts.push(note.clone());
+    }
+    parts.join(" ")
+}
+
+fn write_bundle(
+    stage_name: &str,
+    cfg: &ChatConfig,
+    ctx: &context::StageContext,
+    findings: &[rules::Finding],
+    retrieved: &[retrieval::Citation],
+    recs: &[commands::CommandRecommendation],
+    prompt: Option<&str>,
+    response: Option<&str>,
+    citations_kept: usize,
+    citations_removed: usize,
+) -> Result<()> {
+    let b = bundle::ExplainBundle {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        timestamp: bundle::timestamp(),
+        stage: stage_name.to_string(),
+        model: if cfg.no_llm { None } else { Some(cfg.model.clone()) },
+        endpoint: if cfg.no_llm { None } else { Some(cfg.endpoint.clone()) },
+        prompt: prompt.map(|s| s.to_string()),
+        context: ctx.clone(),
+        findings: findings.to_vec(),
+        retrieved: retrieved.to_vec(),
+        commands: recs.to_vec(),
+        response: response.map(|s| s.to_string()),
+        citations_kept,
+        citations_removed,
+    };
+    match b.write() {
+        Ok(dir) => {
+            println!("  {}Bundle: {}{}", C_DIM, dir.display(), C_RESET);
+        }
+        Err(e) => {
+            eprintln!("  {}Bundle write failed: {}{}", C_DIM, e, C_RESET);
+        }
+    }
+    Ok(())
+}
+
+fn record_history(
+    stage_name: &str,
+    ctx: &context::StageContext,
+    findings: &[rules::Finding],
+    llm_used: bool,
+    cfg: &ChatConfig,
+) -> Result<()> {
+    let entry = history::HistoryEntry {
+        timestamp: bundle::timestamp(),
+        stage: stage_name.to_string(),
+        dir: ctx.dir.clone(),
+        findings_count: findings.len(),
+        llm_used,
+        model: if llm_used { Some(cfg.model.clone()) } else { None },
+    };
+    // Non-fatal: don't fail the explain call if history can't be written
+    let _ = history::append(&entry);
     Ok(())
 }
 

@@ -10,6 +10,7 @@
 ///   - Rules-only mode (`--no-llm`): no Ollama needed, prints findings + commands
 pub mod backend;
 pub mod config;
+pub mod context;
 
 use crate::learn::{C_BOLD, C_CYAN, C_DIM, C_GREEN, C_RESET, C_YELLOW};
 use crate::utils::error::{MycoNoteError, Result};

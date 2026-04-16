@@ -26,6 +26,21 @@ pub enum MycoNoteError {
 
     #[error("JSON serialization error: {0}")]
     JsonError(#[from] serde_json::Error),
+
+    #[error("Chat config error: {0}")]
+    ChatConfig(String),
+
+    #[error("Chat backend error: {0}")]
+    ChatBackend(String),
+
+    #[error("Chat context error: {0}")]
+    ChatContext(String),
+
+    #[error("Chat validation error: {0}")]
+    ChatValidation(String),
+
+    #[error("Chat refused: {0}")]
+    ChatRefused(String),
 }
 
 impl From<plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>>

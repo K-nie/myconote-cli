@@ -5,6 +5,7 @@ use std::path::PathBuf;
 pub mod align;
 pub mod annotate;
 pub mod blast;
+pub mod chat;
 pub mod check;
 pub mod cli;
 pub mod compare;
@@ -755,6 +756,9 @@ fn main() -> Result<()> {
         "learn" | "tutorial" | "swirl" => {
             learn::run_learn(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
+        "explain" => {
+            chat::run_explain(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
         "submit" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
                 println!("Usage: myconote-cli submit <annotated.gff3> --fasta <genome.fa> [options]");
@@ -783,7 +787,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | explain | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())

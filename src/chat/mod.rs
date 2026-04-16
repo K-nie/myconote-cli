@@ -82,6 +82,16 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         C_BOLD, C_CYAN, C_RESET, C_GREEN, stage_name, C_RESET, work_dir.display()
     );
 
+    // Hint for first-time users: suggest the relevant learn lesson
+    if is_first_run() {
+        if let Some(lesson) = learn_lesson_for_stage(stage_name) {
+            println!(
+                "  {}New to this stage? Run `myconote-cli learn {}` for a walkthrough.{}",
+                C_DIM, lesson, C_RESET
+            );
+        }
+    }
+
     // ── Build context ──
     let ctx = context::build_context(stage, &work_dir)?;
 
@@ -486,6 +496,31 @@ fn print_explain_help() {
     println!("  Always verify results in the context of your organism, assembly, and");
     println!("  research goals before drawing scientific conclusions.");
     println!();
+}
+
+/// Check if this is the user's first time running explain (no history directory).
+fn is_first_run() -> bool {
+    let home = match std::env::var("HOME") {
+        Ok(h) => h,
+        Err(_) => return true,
+    };
+    let history_dir = std::path::PathBuf::from(home)
+        .join(".myconote")
+        .join("chat_history");
+    !history_dir.exists()
+}
+
+/// Map a pipeline stage to the corresponding `learn` lesson number.
+fn learn_lesson_for_stage(stage: &str) -> Option<&'static str> {
+    match stage {
+        "sort" | "mask" => Some("3"),
+        "train" => Some("3"),
+        "predict" => Some("4"),
+        "update" => Some("4"),
+        "annotate" => Some("5"),
+        "submit" => Some("7"),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

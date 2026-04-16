@@ -702,7 +702,17 @@ fn test_explain_predict_no_llm() {
         .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Rules-only mode"));
+        .stdout(predicate::str::contains("Rules-only mode"))
+        .stdout(predicate::str::contains("suggestive, not definitive"));
+}
+
+#[test]
+fn test_explain_help_shows_disclaimer() {
+    bin()
+        .args(["explain", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("suggestive, not definitive"));
 }
 
 #[test]

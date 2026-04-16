@@ -107,6 +107,28 @@ pub fn render_rules_only_header() {
     );
 }
 
+/// Render the scientific disclaimer. This must appear in every explain output.
+pub fn render_disclaimer() {
+    println!("  {}{}{}", C_DIM, "─".repeat(60), C_RESET);
+    println!(
+        "  {}NOTE: These results are suggestive, not definitive. All findings{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}and interpretations must be independently verified in the context{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}of your research. Do not rely solely on this tool for scientific{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}conclusions or publication-ready claims.{}",
+        C_YELLOW, C_RESET
+    );
+    println!();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

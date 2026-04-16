@@ -117,6 +117,7 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         render::render_rules_only_header();
         render::render_findings(&findings, verbosity);
         render::render_commands(&recs);
+        render::render_disclaimer();
         write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, None, None, 0, 0)?;
         record_history(stage_name, &ctx, &findings, false, &cfg)?;
         return Ok(());
@@ -148,6 +149,7 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         render::render_llm_unavailable();
         render::render_findings(&findings, verbosity);
         render::render_commands(&recs);
+        render::render_disclaimer();
         write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, Some(&system_prompt), None, 0, 0)?;
         record_history(stage_name, &ctx, &findings, false, &cfg)?;
         return Ok(());
@@ -166,6 +168,7 @@ pub fn run_explain(args: &[String]) -> Result<()> {
             println!("\n  {}LLM error: {}{}", C_YELLOW, e, C_RESET);
             render::render_findings(&findings, verbosity);
             render::render_commands(&recs);
+            render::render_disclaimer();
             write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, Some(&system_prompt), None, 0, 0)?;
             record_history(stage_name, &ctx, &findings, false, &cfg)?;
             return Ok(());
@@ -184,6 +187,8 @@ pub fn run_explain(args: &[String]) -> Result<()> {
     if verbosity == render::Verbosity::Trace {
         render::render_trace(&system_prompt, retrieved.len(), validation.citations_kept, validation.citations_removed);
     }
+
+    render::render_disclaimer();
 
     // ── Write bundle ──
     write_bundle(
@@ -252,6 +257,7 @@ fn run_paste_mode(_cfg: &ChatConfig, verbosity: render::Verbosity) -> Result<()>
 
     render::render_findings(&findings, verbosity);
     render::render_commands(&recs);
+    render::render_disclaimer();
 
     Ok(())
 }
@@ -475,6 +481,10 @@ fn print_explain_help() {
     println!("    myconote-cli explain predict --no-llm");
     println!("    myconote-cli explain annotate --dir 05_annotate/ --verbose");
     println!("    echo \"ERROR: SEQ_FEAT.NoStop\" | myconote-cli explain --paste");
+    println!();
+    println!("  {}Note:{} All findings and interpretations are suggestive, not definitive.",  C_YELLOW, C_RESET);
+    println!("  Always verify results in the context of your organism, assembly, and");
+    println!("  research goals before drawing scientific conclusions.");
     println!();
 }
 

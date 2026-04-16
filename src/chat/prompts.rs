@@ -28,7 +28,8 @@ pub fn render(
     prompt.push_str("- Do not invent numbers. Use only values from the context below.\n");
     prompt.push_str("- If a critical file is missing, recommend rerunning the stage.\n");
     prompt.push_str("- End your response with 1-3 recommended next commands from the tool catalog.\n");
-    prompt.push_str("- Format commands as: `myconote-cli <command> [args]` with a one-sentence rationale.\n\n");
+    prompt.push_str("- Format commands as: `myconote-cli <command> [args]` with a one-sentence rationale.\n");
+    prompt.push_str("- Your interpretation is suggestive, not definitive. Remind the user to verify findings in the context of their specific organism, assembly, and research goals.\n\n");
 
     // Stage-specific reference ranges
     prompt.push_str("REFERENCE RANGES:\n");

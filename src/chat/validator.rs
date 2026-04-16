@@ -20,7 +20,10 @@ pub fn validate_citations(response: &str, valid_ids: &[String]) -> ValidationRes
         // Extract the full ID (e.g., "knowledge:predict.gene_count_ranges")
         let id = &tag[1..tag.len() - 1]; // strip [ and ]
 
-        if valid_ids.iter().any(|vid| vid == id || tag.contains(vid.as_str())) {
+        if valid_ids
+            .iter()
+            .any(|vid| vid == id || tag.contains(vid.as_str()))
+        {
             kept_count += 1;
         } else {
             // Remove the unresolvable citation
@@ -38,10 +41,7 @@ pub fn validate_citations(response: &str, valid_ids: &[String]) -> ValidationRes
 }
 
 /// Build the list of valid citation IDs from findings and retrieved knowledge.
-pub fn build_valid_ids(
-    findings: &[super::rules::Finding],
-    retrieved: &[Citation],
-) -> Vec<String> {
+pub fn build_valid_ids(findings: &[super::rules::Finding], retrieved: &[Citation]) -> Vec<String> {
     let mut ids = Vec::new();
 
     for f in findings {
@@ -77,7 +77,9 @@ mod tests {
         assert!(result.is_valid);
         assert_eq!(result.citations_kept, 1);
         assert_eq!(result.citations_removed, 0);
-        assert!(result.text.contains("[knowledge:predict.gene_count_ranges]"));
+        assert!(result
+            .text
+            .contains("[knowledge:predict.gene_count_ranges]"));
     }
 
     #[test]
@@ -89,7 +91,9 @@ mod tests {
         assert!(!result.is_valid);
         assert_eq!(result.citations_kept, 1);
         assert_eq!(result.citations_removed, 1);
-        assert!(result.text.contains("[knowledge:predict.gene_count_ranges]"));
+        assert!(result
+            .text
+            .contains("[knowledge:predict.gene_count_ranges]"));
         assert!(!result.text.contains("[paper:10.1234/fake]"));
     }
 
@@ -114,8 +118,8 @@ mod tests {
 
     #[test]
     fn build_valid_ids_from_findings() {
-        use crate::chat::rules::{Finding, Severity};
         use crate::chat::retrieval::{Citation, SourceType};
+        use crate::chat::rules::{Finding, Severity};
 
         let findings = vec![Finding {
             rule_id: "predict.high".to_string(),

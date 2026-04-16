@@ -86,12 +86,16 @@ pub fn evaluate(ctx: &StageContext) -> Vec<Finding> {
 
 fn evaluate_sort(ctx: &StageContext, findings: &mut Vec<Finding>) {
     // Check for rename table
-    let has_rename = ctx.artifacts.iter().any(|a| a.name.contains("name_map") || a.name.contains("rename"));
+    let has_rename = ctx
+        .artifacts
+        .iter()
+        .any(|a| a.name.contains("name_map") || a.name.contains("rename"));
     if !has_rename {
         findings.push(Finding {
             rule_id: "sort.no_rename_table".to_string(),
             severity: Severity::Info,
-            message: "No rename table found. If contigs were renamed, the mapping is not recorded.".to_string(),
+            message: "No rename table found. If contigs were renamed, the mapping is not recorded."
+                .to_string(),
             evidence: "No file matching 'name_map' or 'rename' found in directory.".to_string(),
             citation: None,
         });
@@ -146,7 +150,10 @@ fn evaluate_mask(ctx: &StageContext, findings: &mut Vec<Finding>) {
                     findings.push(Finding {
                         rule_id: "mask.normal_masking".to_string(),
                         severity: Severity::Info,
-                        message: format!("Masked content: {:.1}%. This is within typical range.", pct),
+                        message: format!(
+                            "Masked content: {:.1}%. This is within typical range.",
+                            pct
+                        ),
                         evidence: format!("Masked content: {:.1}%", pct),
                         citation: None,
                     });
@@ -169,13 +176,17 @@ fn evaluate_train(_ctx: &StageContext, findings: &mut Vec<Finding>) {
 
 fn evaluate_predict(ctx: &StageContext, findings: &mut Vec<Finding>) {
     if let Some(ref stats_val) = ctx.stats {
-        let gene_count = stats_val.get("total_genes").and_then(|v| v.as_u64()).unwrap_or(0);
+        let gene_count = stats_val
+            .get("total_genes")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
 
         if gene_count == 0 {
             findings.push(Finding {
                 rule_id: "predict.no_genes".to_string(),
                 severity: Severity::Critical,
-                message: "No genes found in the GFF3. Gene prediction may have failed entirely.".to_string(),
+                message: "No genes found in the GFF3. Gene prediction may have failed entirely."
+                    .to_string(),
                 evidence: "total_genes: 0".to_string(),
                 citation: None,
             });
@@ -199,14 +210,20 @@ fn evaluate_predict(ctx: &StageContext, findings: &mut Vec<Finding>) {
             findings.push(Finding {
                 rule_id: "predict.gene_count_normal".to_string(),
                 severity: Severity::Info,
-                message: format!("Gene count: {}. Within typical range for eukaryotic genomes.", gene_count),
+                message: format!(
+                    "Gene count: {}. Within typical range for eukaryotic genomes.",
+                    gene_count
+                ),
                 evidence: format!("total_genes: {}", gene_count),
                 citation: None,
             });
         }
 
         // Check transcript/gene ratio (isoform complexity)
-        let transcript_count = stats_val.get("total_transcripts").and_then(|v| v.as_u64()).unwrap_or(0);
+        let transcript_count = stats_val
+            .get("total_transcripts")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         if gene_count > 0 && transcript_count > 0 {
             let ratio = transcript_count as f64 / gene_count as f64;
             if ratio > 2.0 {
@@ -244,7 +261,10 @@ fn evaluate_predict(ctx: &StageContext, findings: &mut Vec<Finding>) {
 
 fn evaluate_update(ctx: &StageContext, findings: &mut Vec<Finding>) {
     if let Some(ref stats_val) = ctx.stats {
-        let gene_count = stats_val.get("total_genes").and_then(|v| v.as_u64()).unwrap_or(0);
+        let gene_count = stats_val
+            .get("total_genes")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         if gene_count > 0 {
             findings.push(Finding {
                 rule_id: "update.genes_present".to_string(),
@@ -267,13 +287,25 @@ fn evaluate_update(ctx: &StageContext, findings: &mut Vec<Finding>) {
 
 fn evaluate_annotate(ctx: &StageContext, findings: &mut Vec<Finding>) {
     // Check for annotation source coverage
-    let annotation_sources = ["pfam", "eggnog", "cazyme", "merops", "interproscan", "busco", "mmseqs"];
+    let annotation_sources = [
+        "pfam",
+        "eggnog",
+        "cazyme",
+        "merops",
+        "interproscan",
+        "busco",
+        "mmseqs",
+    ];
     let mut found = Vec::new();
     let mut missing = Vec::new();
 
     for src in &annotation_sources {
-        if ctx.artifacts.iter().any(|a| a.name.to_lowercase().contains(src)) ||
-           ctx.notes.iter().any(|n| n.to_lowercase().contains(src)) {
+        if ctx
+            .artifacts
+            .iter()
+            .any(|a| a.name.to_lowercase().contains(src))
+            || ctx.notes.iter().any(|n| n.to_lowercase().contains(src))
+        {
             found.push(*src);
         } else {
             missing.push(*src);
@@ -302,7 +334,10 @@ fn evaluate_annotate(ctx: &StageContext, findings: &mut Vec<Finding>) {
 
     // Gene count from stats
     if let Some(ref stats_val) = ctx.stats {
-        let gene_count = stats_val.get("total_genes").and_then(|v| v.as_u64()).unwrap_or(0);
+        let gene_count = stats_val
+            .get("total_genes")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         if gene_count > 0 {
             findings.push(Finding {
                 rule_id: "annotate.gene_count".to_string(),
@@ -432,15 +467,20 @@ fn evaluate_toml_rules(ctx: &StageContext) -> Option<Vec<Finding>> {
 
 fn extract_field_value(ctx: &StageContext, field: &str) -> Option<f64> {
     ctx.stats.as_ref().and_then(|v| {
-        v.get(field).and_then(|f| f.as_f64().or_else(|| f.as_u64().map(|u| u as f64)))
+        v.get(field)
+            .and_then(|f| f.as_f64().or_else(|| f.as_u64().map(|u| u as f64)))
     })
 }
 
 fn find_assets_rules_dir() -> Option<std::path::PathBuf> {
     // Try relative to the binary, then CARGO_MANIFEST_DIR, then cwd
     let candidates = [
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("assets/chat/rules"))),
-        std::env::var("CARGO_MANIFEST_DIR").ok().map(|d| std::path::PathBuf::from(d).join("assets/chat/rules")),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("assets/chat/rules"))),
+        std::env::var("CARGO_MANIFEST_DIR")
+            .ok()
+            .map(|d| std::path::PathBuf::from(d).join("assets/chat/rules")),
         Some(std::path::PathBuf::from("assets/chat/rules")),
     ];
 
@@ -490,8 +530,13 @@ mod tests {
     fn predict_gene_count_high_fires() {
         let ctx = make_predict_context(25_000, 25_000);
         let findings = evaluate(&ctx);
-        assert!(findings.iter().any(|f| f.rule_id == "predict.gene_count_high"));
-        let high = findings.iter().find(|f| f.rule_id == "predict.gene_count_high").unwrap();
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "predict.gene_count_high"));
+        let high = findings
+            .iter()
+            .find(|f| f.rule_id == "predict.gene_count_high")
+            .unwrap();
         assert_eq!(high.severity, Severity::Warning);
     }
 
@@ -499,22 +544,30 @@ mod tests {
     fn predict_gene_count_low_fires() {
         let ctx = make_predict_context(2_000, 2_000);
         let findings = evaluate(&ctx);
-        assert!(findings.iter().any(|f| f.rule_id == "predict.gene_count_low"));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "predict.gene_count_low"));
     }
 
     #[test]
     fn predict_normal_no_warnings() {
         let ctx = make_predict_context(8_000, 8_000);
         let findings = evaluate(&ctx);
-        assert!(!findings.iter().any(|f| f.severity == Severity::Warning || f.severity == Severity::Critical));
-        assert!(findings.iter().any(|f| f.rule_id == "predict.gene_count_normal"));
+        assert!(!findings
+            .iter()
+            .any(|f| f.severity == Severity::Warning || f.severity == Severity::Critical));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "predict.gene_count_normal"));
     }
 
     #[test]
     fn predict_no_genes_critical() {
         let ctx = make_predict_context(0, 0);
         let findings = evaluate(&ctx);
-        assert!(findings.iter().any(|f| f.rule_id == "predict.no_genes" && f.severity == Severity::Critical));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "predict.no_genes" && f.severity == Severity::Critical));
     }
 
     #[test]
@@ -527,7 +580,9 @@ mod tests {
             notes: vec!["Soft-masked content: 0.5%".to_string()],
         };
         let findings = evaluate(&ctx);
-        assert!(findings.iter().any(|f| f.rule_id == "mask.very_low_masking" && f.severity == Severity::Critical));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "mask.very_low_masking" && f.severity == Severity::Critical));
     }
 
     #[test]
@@ -545,7 +600,10 @@ mod tests {
             notes: vec![],
         };
         let findings = evaluate(&ctx);
-        let err = findings.iter().find(|f| f.rule_id == "submit.validation_errors").unwrap();
+        let err = findings
+            .iter()
+            .find(|f| f.rule_id == "submit.validation_errors")
+            .unwrap();
         assert_eq!(err.severity, Severity::Critical);
         assert!(err.message.contains("2 error(s)"));
     }
@@ -569,15 +627,29 @@ mod tests {
             stage: "annotate".to_string(),
             dir: "/tmp".to_string(),
             artifacts: vec![
-                ArtifactSummary { name: "pfam_results.tsv".to_string(), size_bytes: 1000, line_count: Some(50), preview: None },
-                ArtifactSummary { name: "busco_summary.txt".to_string(), size_bytes: 500, line_count: Some(10), preview: None },
+                ArtifactSummary {
+                    name: "pfam_results.tsv".to_string(),
+                    size_bytes: 1000,
+                    line_count: Some(50),
+                    preview: None,
+                },
+                ArtifactSummary {
+                    name: "busco_summary.txt".to_string(),
+                    size_bytes: 500,
+                    line_count: Some(10),
+                    preview: None,
+                },
             ],
             stats: None,
             notes: vec![],
         };
         let findings = evaluate(&ctx);
-        assert!(findings.iter().any(|f| f.rule_id == "annotate.sources_found"));
-        assert!(findings.iter().any(|f| f.rule_id == "annotate.sources_missing"));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "annotate.sources_found"));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "annotate.sources_missing"));
     }
 
     #[test]

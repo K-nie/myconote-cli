@@ -62,7 +62,9 @@ pub fn classify(input: &str) -> EthicsVerdict {
 
 fn load_ethics_rules() -> Vec<EthicsRuleDef> {
     let path = find_ethics_rules_file();
-    let Some(path) = path else { return default_rules() };
+    let Some(path) = path else {
+        return default_rules();
+    };
 
     let text = match std::fs::read_to_string(&path) {
         Ok(t) => t,
@@ -125,8 +127,12 @@ fn default_rules() -> Vec<EthicsRuleDef> {
 
 fn find_ethics_rules_file() -> Option<PathBuf> {
     let candidates = [
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("assets/chat/ethics_rules.toml"))),
-        std::env::var("CARGO_MANIFEST_DIR").ok().map(|d| PathBuf::from(d).join("assets/chat/ethics_rules.toml")),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("assets/chat/ethics_rules.toml"))),
+        std::env::var("CARGO_MANIFEST_DIR")
+            .ok()
+            .map(|d| PathBuf::from(d).join("assets/chat/ethics_rules.toml")),
         Some(PathBuf::from("assets/chat/ethics_rules.toml")),
     ];
 

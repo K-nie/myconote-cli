@@ -34,7 +34,9 @@ impl OllamaBackend {
             .user_agent("myconote-cli/0.1 (genome annotation tool)")
             .timeout(Duration::from_secs(timeout_s))
             .build()
-            .map_err(|e| MycoNoteError::ChatBackend(format!("failed to build HTTP client: {}", e)))?;
+            .map_err(|e| {
+                MycoNoteError::ChatBackend(format!("failed to build HTTP client: {}", e))
+            })?;
 
         Ok(Self {
             client,
@@ -60,26 +62,21 @@ impl ChatBackend for OllamaBackend {
             stream: false,
         };
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .send()
-            .map_err(|e| {
-                if e.is_connect() {
-                    MycoNoteError::ChatBackend(format!(
-                        "connection refused to {} — is `ollama serve` running?",
-                        self.endpoint
-                    ))
-                } else if e.is_timeout() {
-                    MycoNoteError::ChatBackend(format!(
-                        "request timed out after {}s — try a smaller model or increase --timeout",
-                        e
-                    ))
-                } else {
-                    MycoNoteError::ChatBackend(format!("HTTP error: {}", e))
-                }
-            })?;
+        let response = self.client.post(&url).json(&request).send().map_err(|e| {
+            if e.is_connect() {
+                MycoNoteError::ChatBackend(format!(
+                    "connection refused to {} — is `ollama serve` running?",
+                    self.endpoint
+                ))
+            } else if e.is_timeout() {
+                MycoNoteError::ChatBackend(format!(
+                    "request timed out after {}s — try a smaller model or increase --timeout",
+                    e
+                ))
+            } else {
+                MycoNoteError::ChatBackend(format!("HTTP error: {}", e))
+            }
+        })?;
 
         let status = response.status();
         if !status.is_success() {
@@ -90,9 +87,9 @@ impl ChatBackend for OllamaBackend {
             )));
         }
 
-        let resp: OllamaResponse = response
-            .json()
-            .map_err(|e| MycoNoteError::ChatBackend(format!("failed to parse Ollama response: {}", e)))?;
+        let resp: OllamaResponse = response.json().map_err(|e| {
+            MycoNoteError::ChatBackend(format!("failed to parse Ollama response: {}", e))
+        })?;
 
         Ok(Message {
             role: resp.message.role,

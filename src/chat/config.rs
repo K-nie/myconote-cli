@@ -10,11 +10,31 @@ const DEFAULT_TIMEOUT_S: u64 = 120;
 ///
 /// All models are local-only via Ollama — no data leaves the machine.
 pub const MODEL_TIERS: &[ModelTier] = &[
-    ModelTier { name: "llama3.3:70b-instruct-q4_K_M", min_ram_gb: 48, description: "Best quality — needs 48 GB RAM/VRAM" },
-    ModelTier { name: "qwen2.5:32b-instruct-q4_K_M",  min_ram_gb: 24, description: "Excellent quality — needs 24 GB RAM/VRAM" },
-    ModelTier { name: "mistral-small:22b",             min_ram_gb: 16, description: "Strong quality — needs 16 GB RAM/VRAM" },
-    ModelTier { name: "qwen2.5:14b",                   min_ram_gb: 12, description: "Good quality — needs 12 GB RAM/VRAM" },
-    ModelTier { name: "llama3.1:8b",                   min_ram_gb: 8,  description: "Baseline — needs 8 GB RAM/VRAM" },
+    ModelTier {
+        name: "llama3.3:70b-instruct-q4_K_M",
+        min_ram_gb: 48,
+        description: "Best quality — needs 48 GB RAM/VRAM",
+    },
+    ModelTier {
+        name: "qwen2.5:32b-instruct-q4_K_M",
+        min_ram_gb: 24,
+        description: "Excellent quality — needs 24 GB RAM/VRAM",
+    },
+    ModelTier {
+        name: "mistral-small:22b",
+        min_ram_gb: 16,
+        description: "Strong quality — needs 16 GB RAM/VRAM",
+    },
+    ModelTier {
+        name: "qwen2.5:14b",
+        min_ram_gb: 12,
+        description: "Good quality — needs 12 GB RAM/VRAM",
+    },
+    ModelTier {
+        name: "llama3.1:8b",
+        min_ram_gb: 8,
+        description: "Baseline — needs 8 GB RAM/VRAM",
+    },
 ];
 
 pub struct ModelTier {
@@ -117,13 +137,27 @@ impl ChatConfig {
         // Layer 1: TOML file
         if let Some(toml_cfg) = load_toml_config() {
             if let Some(chat) = toml_cfg.chat {
-                if let Some(v) = chat.enabled { cfg.enabled = v; }
-                if let Some(v) = chat.endpoint { cfg.endpoint = v; }
-                if let Some(v) = chat.model { cfg.model = v; }
-                if let Some(v) = chat.api_key { cfg.api_key = Some(v); }
-                if let Some(v) = chat.provider { cfg.provider = v; }
-                if let Some(v) = chat.timeout_s { cfg.timeout_s = v; }
-                if let Some(v) = chat.corpus_dir { cfg.corpus_dir = Some(PathBuf::from(v)); }
+                if let Some(v) = chat.enabled {
+                    cfg.enabled = v;
+                }
+                if let Some(v) = chat.endpoint {
+                    cfg.endpoint = v;
+                }
+                if let Some(v) = chat.model {
+                    cfg.model = v;
+                }
+                if let Some(v) = chat.api_key {
+                    cfg.api_key = Some(v);
+                }
+                if let Some(v) = chat.provider {
+                    cfg.provider = v;
+                }
+                if let Some(v) = chat.timeout_s {
+                    cfg.timeout_s = v;
+                }
+                if let Some(v) = chat.corpus_dir {
+                    cfg.corpus_dir = Some(PathBuf::from(v));
+                }
             }
         }
 
@@ -139,8 +173,12 @@ impl ChatConfig {
         }
 
         // Layer 3: CLI flags
-        if let Some(ref v) = cli.endpoint { cfg.endpoint = v.clone(); }
-        if let Some(ref v) = cli.model { cfg.model = v.clone(); }
+        if let Some(ref v) = cli.endpoint {
+            cfg.endpoint = v.clone();
+        }
+        if let Some(ref v) = cli.model {
+            cfg.model = v.clone();
+        }
         cfg.no_llm = cli.no_llm;
         cfg.verbose = cli.verbose;
         cfg.trace = cli.trace;
@@ -176,8 +214,9 @@ pub fn myconote_dir() -> Result<PathBuf> {
         .map_err(|_| MycoNoteError::ChatConfig("HOME environment variable not set".to_string()))?;
     let dir = PathBuf::from(home).join(".myconote");
     if !dir.exists() {
-        std::fs::create_dir_all(&dir)
-            .map_err(|e| MycoNoteError::ChatConfig(format!("failed to create {}: {}", dir.display(), e)))?;
+        std::fs::create_dir_all(&dir).map_err(|e| {
+            MycoNoteError::ChatConfig(format!("failed to create {}: {}", dir.display(), e))
+        })?;
     }
     Ok(dir)
 }
@@ -193,8 +232,11 @@ mod tests {
         assert_eq!(cfg.endpoint, "http://localhost:11434");
         // Model is auto-selected based on system memory — just verify it's a valid tier
         let valid_models: Vec<&str> = MODEL_TIERS.iter().map(|t| t.name).collect();
-        assert!(valid_models.contains(&cfg.model.as_str()),
-            "default model '{}' not in valid tiers", cfg.model);
+        assert!(
+            valid_models.contains(&cfg.model.as_str()),
+            "default model '{}' not in valid tiers",
+            cfg.model
+        );
         assert_eq!(cfg.provider, "ollama");
         assert_eq!(cfg.timeout_s, 120);
         assert!(!cfg.no_llm);
@@ -207,7 +249,11 @@ mod tests {
     fn recommend_model_returns_valid_tier() {
         let model = recommend_model();
         let valid: Vec<&str> = MODEL_TIERS.iter().map(|t| t.name).collect();
-        assert!(valid.contains(&model), "recommended model '{}' not in tiers", model);
+        assert!(
+            valid.contains(&model),
+            "recommended model '{}' not in tiers",
+            model
+        );
     }
 
     #[test]

@@ -43,11 +43,22 @@ pub fn detect_format(text: &str) -> PasteFormat {
     }
 
     // Check for GFF3: tab-separated, 9 fields, recognized feature types
-    let gff_features = ["gene", "mrna", "transcript", "cds", "exon", "three_prime_utr", "five_prime_utr"];
-    let gff_count = lines.iter().filter(|line| {
-        let fields: Vec<&str> = line.split('\t').collect();
-        fields.len() == 9 && gff_features.iter().any(|f| fields[2].to_lowercase() == *f)
-    }).count();
+    let gff_features = [
+        "gene",
+        "mrna",
+        "transcript",
+        "cds",
+        "exon",
+        "three_prime_utr",
+        "five_prime_utr",
+    ];
+    let gff_count = lines
+        .iter()
+        .filter(|line| {
+            let fields: Vec<&str> = line.split('\t').collect();
+            fields.len() == 9 && gff_features.iter().any(|f| fields[2].to_lowercase() == *f)
+        })
+        .count();
     if gff_count >= 1 {
         return PasteFormat::Gff3;
     }
@@ -59,21 +70,41 @@ pub fn detect_format(text: &str) -> PasteFormat {
 
     // Check for NCBI validation errors
     let error_patterns = ["ERROR:", "WARNING:", "SEQ_FEAT.", "SEQ_DESCR.", "SEQ_INST."];
-    let error_count = lines.iter().filter(|l| {
-        error_patterns.iter().any(|p| l.contains(p))
-    }).count();
+    let error_count = lines
+        .iter()
+        .filter(|l| error_patterns.iter().any(|p| l.contains(p)))
+        .count();
     if error_count >= 1 {
         return PasteFormat::ValidationError;
     }
 
     // Check for log output (timestamps, tool names)
-    let log_patterns = ["augustus", "snap", "glimmerhmm", "genemark", "pasa", "evm",
-                        "repeatmasker", "repeatmodeler", "trinity", "busco",
-                        "[INFO]", "[ERROR]", "[WARN]", "ERROR:", "WARNING:"];
-    let log_count = lines.iter().filter(|l| {
-        let lower = l.to_lowercase();
-        log_patterns.iter().any(|p| lower.contains(&p.to_lowercase()))
-    }).count();
+    let log_patterns = [
+        "augustus",
+        "snap",
+        "glimmerhmm",
+        "genemark",
+        "pasa",
+        "evm",
+        "repeatmasker",
+        "repeatmodeler",
+        "trinity",
+        "busco",
+        "[INFO]",
+        "[ERROR]",
+        "[WARN]",
+        "ERROR:",
+        "WARNING:",
+    ];
+    let log_count = lines
+        .iter()
+        .filter(|l| {
+            let lower = l.to_lowercase();
+            log_patterns
+                .iter()
+                .any(|p| lower.contains(&p.to_lowercase()))
+        })
+        .count();
     if log_count >= 2 {
         return PasteFormat::LogOutput;
     }

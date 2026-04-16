@@ -21,7 +21,9 @@ const C_BOLD: &str = "\x1b[1m";
 const C_YELLOW: &str = "\x1b[33m";
 const C_RESET: &str = "\x1b[0m";
 
-const STAGES: &[&str] = &["sort", "mask", "train", "predict", "update", "annotate", "submit"];
+const STAGES: &[&str] = &[
+    "sort", "mask", "train", "predict", "update", "annotate", "submit",
+];
 
 /// Dashboard abstraction — interactive or log-based.
 pub struct Dashboard {
@@ -188,16 +190,27 @@ impl Dashboard {
         if failed == 0 {
             println!(
                 "  {}\u{2500}\u{2500} Batch complete: {}{}{} succeeded {}({}){}",
-                C_DIM, C_GREEN, done, C_RESET,
-                C_DIM, format_duration(elapsed), C_RESET
+                C_DIM,
+                C_GREEN,
+                done,
+                C_RESET,
+                C_DIM,
+                format_duration(elapsed),
+                C_RESET
             );
         } else {
             println!(
                 "  {}\u{2500}\u{2500} Batch complete: {}{}{} succeeded, {}{} failed{} {}({}){}",
                 C_DIM,
-                C_GREEN, done, C_RESET,
-                C_RED, failed, C_RESET,
-                C_DIM, format_duration(elapsed), C_RESET
+                C_GREEN,
+                done,
+                C_RESET,
+                C_RED,
+                failed,
+                C_RESET,
+                C_DIM,
+                format_duration(elapsed),
+                C_RESET
             );
         }
         println!();
@@ -207,12 +220,7 @@ impl Dashboard {
             "  {}{:<30} {:>8} {:>9} {:>8}  {}{}",
             C_BOLD, "Genome", "Genes", "Masked%", "Time", "Status", C_RESET
         );
-        println!(
-            "  {}{}{}",
-            C_DIM,
-            "\u{2500}".repeat(75),
-            C_RESET
-        );
+        println!("  {}{}{}", C_DIM, "\u{2500}".repeat(75), C_RESET);
 
         let mut names: Vec<&String> = state.genomes.keys().collect();
         names.sort();
@@ -245,17 +253,9 @@ impl Dashboard {
             }
         }
 
-        println!(
-            "  {}{}{}",
-            C_DIM,
-            "\u{2500}".repeat(75),
-            C_RESET
-        );
+        println!("  {}{}{}", C_DIM, "\u{2500}".repeat(75), C_RESET);
         println!();
-        println!(
-            "  Logs: {}{}/{}",
-            C_CYAN, state.batch_dir, C_RESET
-        );
+        println!("  Logs: {}{}/{}", C_CYAN, state.batch_dir, C_RESET);
 
         if done >= 2 {
             println!(
@@ -344,7 +344,10 @@ fn timestamp_now() -> String {
         m += 1;
     }
     let d = remaining + 1;
-    format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", y, m, d, hours, mins, s)
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+        y, m, d, hours, mins, s
+    )
 }
 
 /// Format seconds into human-readable duration.

@@ -60,7 +60,10 @@ pub fn run_explain(args: &[String]) -> Result<()> {
     // ── Ethics check (runs on any user-provided text) ──
     let all_input = format!("{} {}", stage_or_paste, dir.as_deref().unwrap_or(""));
     match ethics::classify(&all_input) {
-        ethics::EthicsVerdict::Refuse { rule_id: _, message } => {
+        ethics::EthicsVerdict::Refuse {
+            rule_id: _,
+            message,
+        } => {
             println!("\n  {}{}{}", C_YELLOW, message, C_RESET);
             return Ok(());
         }
@@ -79,7 +82,13 @@ pub fn run_explain(args: &[String]) -> Result<()> {
 
     println!(
         "\n  {}{}myconote explain{} — stage: {}{}{}, dir: {}",
-        C_BOLD, C_CYAN, C_RESET, C_GREEN, stage_name, C_RESET, work_dir.display()
+        C_BOLD,
+        C_CYAN,
+        C_RESET,
+        C_GREEN,
+        stage_name,
+        C_RESET,
+        work_dir.display()
     );
 
     // Hint for first-time users: suggest the relevant learn lesson
@@ -128,7 +137,9 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         render::render_findings(&findings, verbosity);
         render::render_commands(&recs);
         render::render_disclaimer();
-        write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, None, None, 0, 0)?;
+        write_bundle(
+            stage_name, &cfg, &ctx, &findings, &retrieved, &recs, None, None, 0, 0,
+        )?;
         record_history(stage_name, &ctx, &findings, false, &cfg)?;
         return Ok(());
     }
@@ -153,14 +164,26 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         C_BOLD, cfg.model, C_RESET, C_DIM, cfg.endpoint, C_RESET
     );
 
-    let llm_backend = backend::ollama::OllamaBackend::new(&cfg.endpoint, &cfg.model, cfg.timeout_s)?;
+    let llm_backend =
+        backend::ollama::OllamaBackend::new(&cfg.endpoint, &cfg.model, cfg.timeout_s)?;
 
     if !llm_backend.is_available() {
         render::render_llm_unavailable();
         render::render_findings(&findings, verbosity);
         render::render_commands(&recs);
         render::render_disclaimer();
-        write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, Some(&system_prompt), None, 0, 0)?;
+        write_bundle(
+            stage_name,
+            &cfg,
+            &ctx,
+            &findings,
+            &retrieved,
+            &recs,
+            Some(&system_prompt),
+            None,
+            0,
+            0,
+        )?;
         record_history(stage_name, &ctx, &findings, false, &cfg)?;
         return Ok(());
     }
@@ -179,7 +202,18 @@ pub fn run_explain(args: &[String]) -> Result<()> {
             render::render_findings(&findings, verbosity);
             render::render_commands(&recs);
             render::render_disclaimer();
-            write_bundle(stage_name, &cfg, &ctx, &findings, &retrieved, &recs, Some(&system_prompt), None, 0, 0)?;
+            write_bundle(
+                stage_name,
+                &cfg,
+                &ctx,
+                &findings,
+                &retrieved,
+                &recs,
+                Some(&system_prompt),
+                None,
+                0,
+                0,
+            )?;
             record_history(stage_name, &ctx, &findings, false, &cfg)?;
             return Ok(());
         }
@@ -195,16 +229,28 @@ pub fn run_explain(args: &[String]) -> Result<()> {
     render::render_commands(&recs);
 
     if verbosity == render::Verbosity::Trace {
-        render::render_trace(&system_prompt, retrieved.len(), validation.citations_kept, validation.citations_removed);
+        render::render_trace(
+            &system_prompt,
+            retrieved.len(),
+            validation.citations_kept,
+            validation.citations_removed,
+        );
     }
 
     render::render_disclaimer();
 
     // ── Write bundle ──
     write_bundle(
-        stage_name, &cfg, &ctx, &findings, &retrieved, &recs,
-        Some(&system_prompt), Some(&validation.text),
-        validation.citations_kept, validation.citations_removed,
+        stage_name,
+        &cfg,
+        &ctx,
+        &findings,
+        &retrieved,
+        &recs,
+        Some(&system_prompt),
+        Some(&validation.text),
+        validation.citations_kept,
+        validation.citations_removed,
     )?;
 
     // ── Record history ──
@@ -228,7 +274,10 @@ fn run_paste_mode(_cfg: &ChatConfig, verbosity: render::Verbosity) -> Result<()>
 
     // Ethics check on pasted content
     match ethics::classify(&input) {
-        ethics::EthicsVerdict::Refuse { rule_id: _, message } => {
+        ethics::EthicsVerdict::Refuse {
+            rule_id: _,
+            message,
+        } => {
             println!("\n  {}{}{}", C_YELLOW, message, C_RESET);
             return Ok(());
         }
@@ -236,7 +285,11 @@ fn run_paste_mode(_cfg: &ChatConfig, verbosity: render::Verbosity) -> Result<()>
     }
 
     println!("  Detected format: {}{}{}", C_GREEN, format, C_RESET);
-    println!("  Input: {} lines, {} bytes", input.lines().count(), input.len());
+    println!(
+        "  Input: {} lines, {} bytes",
+        input.lines().count(),
+        input.len()
+    );
 
     // For paste mode, determine the most likely stage from the format
     let inferred_stage = match format {
@@ -299,8 +352,16 @@ fn write_bundle(
         version: env!("CARGO_PKG_VERSION").to_string(),
         timestamp: bundle::timestamp(),
         stage: stage_name.to_string(),
-        model: if cfg.no_llm { None } else { Some(cfg.model.clone()) },
-        endpoint: if cfg.no_llm { None } else { Some(cfg.endpoint.clone()) },
+        model: if cfg.no_llm {
+            None
+        } else {
+            Some(cfg.model.clone())
+        },
+        endpoint: if cfg.no_llm {
+            None
+        } else {
+            Some(cfg.endpoint.clone())
+        },
         prompt: prompt.map(|s| s.to_string()),
         context: ctx.clone(),
         findings: findings.to_vec(),
@@ -334,7 +395,11 @@ fn record_history(
         dir: ctx.dir.clone(),
         findings_count: findings.len(),
         llm_used,
-        model: if llm_used { Some(cfg.model.clone()) } else { None },
+        model: if llm_used {
+            Some(cfg.model.clone())
+        } else {
+            None
+        },
     };
     // Non-fatal: don't fail the explain call if history can't be written
     let _ = history::append(&entry);
@@ -356,21 +421,27 @@ fn parse_args(args: &[String]) -> Result<(String, Option<String>, CliOverrides)>
             }
             "--dir" => {
                 if i + 1 >= args.len() {
-                    return Err(MycoNoteError::ChatConfig("--dir requires a path argument".to_string()));
+                    return Err(MycoNoteError::ChatConfig(
+                        "--dir requires a path argument".to_string(),
+                    ));
                 }
                 dir = Some(args[i + 1].clone());
                 i += 2;
             }
             "--model" => {
                 if i + 1 >= args.len() {
-                    return Err(MycoNoteError::ChatConfig("--model requires a value".to_string()));
+                    return Err(MycoNoteError::ChatConfig(
+                        "--model requires a value".to_string(),
+                    ));
                 }
                 cli.model = Some(args[i + 1].clone());
                 i += 2;
             }
             "--endpoint" => {
                 if i + 1 >= args.len() {
-                    return Err(MycoNoteError::ChatConfig("--endpoint requires a URL".to_string()));
+                    return Err(MycoNoteError::ChatConfig(
+                        "--endpoint requires a URL".to_string(),
+                    ));
                 }
                 cli.endpoint = Some(args[i + 1].clone());
                 i += 2;
@@ -405,7 +476,8 @@ fn parse_args(args: &[String]) -> Result<(String, Option<String>, CliOverrides)>
         MycoNoteError::ChatContext(
             "missing stage. Usage: myconote-cli explain <stage> [options]\n  \
              Stages: sort | mask | train | predict | update | annotate | submit\n  \
-             Or use: myconote-cli explain --paste".to_string()
+             Or use: myconote-cli explain --paste"
+                .to_string(),
         )
     })?;
 
@@ -463,11 +535,11 @@ fn print_explain_help() {
         C_DIM, C_RESET
     );
     println!();
-    println!("  {}Usage:{}",  C_BOLD, C_RESET);
+    println!("  {}Usage:{}", C_BOLD, C_RESET);
     println!("    myconote-cli explain <stage> [options]");
     println!("    myconote-cli explain --paste [options]");
     println!();
-    println!("  {}Stages:{}",  C_BOLD, C_RESET);
+    println!("  {}Stages:{}", C_BOLD, C_RESET);
     println!("    sort       Sort + rename genome contigs");
     println!("    mask       Repeat masking results");
     println!("    train      Gene predictor training reports");
@@ -476,7 +548,7 @@ fn print_explain_help() {
     println!("    annotate   Functional annotation coverage");
     println!("    submit     NCBI validation + submission files");
     println!();
-    println!("  {}Options:{}",  C_BOLD, C_RESET);
+    println!("  {}Options:{}", C_BOLD, C_RESET);
     println!("    --dir <path>       Working directory (default: auto-discover)");
     println!("    --model <name>     Ollama model (default: llama3.1)");
     println!("    --endpoint <url>   Ollama endpoint (default: http://localhost:11434)");
@@ -486,13 +558,16 @@ fn print_explain_help() {
     println!("    --dry-run          Print assembled prompt without calling LLM");
     println!("    --paste            Read from stdin instead of scanning a directory");
     println!();
-    println!("  {}Examples:{}",  C_BOLD, C_RESET);
+    println!("  {}Examples:{}", C_BOLD, C_RESET);
     println!("    myconote-cli explain predict");
     println!("    myconote-cli explain predict --no-llm");
     println!("    myconote-cli explain annotate --dir 05_annotate/ --verbose");
     println!("    echo \"ERROR: SEQ_FEAT.NoStop\" | myconote-cli explain --paste");
     println!();
-    println!("  {}Note:{} All findings and interpretations are suggestive, not definitive.",  C_YELLOW, C_RESET);
+    println!(
+        "  {}Note:{} All findings and interpretations are suggestive, not definitive.",
+        C_YELLOW, C_RESET
+    );
     println!("  Always verify results in the context of your organism, assembly, and");
     println!("  research goals before drawing scientific conclusions.");
     println!();

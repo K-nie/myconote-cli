@@ -31,12 +31,15 @@ impl ExplainBundle {
         let dir_name = format!(
             "explain_{}_{}",
             self.stage,
-            self.timestamp.replace([':', ' ', 'T'], "_").replace('+', "")
+            self.timestamp
+                .replace([':', ' ', 'T'], "_")
+                .replace('+', "")
         );
         let dir = PathBuf::from(&dir_name);
 
-        std::fs::create_dir_all(&dir)
-            .map_err(|e| MycoNoteError::ChatContext(format!("cannot create bundle dir {}: {}", dir.display(), e)))?;
+        std::fs::create_dir_all(&dir).map_err(|e| {
+            MycoNoteError::ChatContext(format!("cannot create bundle dir {}: {}", dir.display(), e))
+        })?;
 
         // Write the full bundle as JSON
         let json = serde_json::to_string_pretty(self)
@@ -57,7 +60,10 @@ impl ExplainBundle {
         // Write findings as a human-readable text file
         let mut findings_text = String::new();
         for f in &self.findings {
-            findings_text.push_str(&format!("[{}] {}: {}\n  Evidence: {}\n", f.severity, f.rule_id, f.message, f.evidence));
+            findings_text.push_str(&format!(
+                "[{}] {}: {}\n  Evidence: {}\n",
+                f.severity, f.rule_id, f.message, f.evidence
+            ));
             if let Some(ref cite) = f.citation {
                 findings_text.push_str(&format!("  Citation: {}\n", cite));
             }
@@ -90,7 +96,11 @@ pub fn timestamp() -> String {
     let mut remaining_days = days;
 
     loop {
-        let days_in_year = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) { 366 } else { 365 };
+        let days_in_year = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
+            366
+        } else {
+            365
+        };
         if remaining_days < days_in_year {
             break;
         }
@@ -98,7 +108,24 @@ pub fn timestamp() -> String {
         year += 1;
     }
 
-    let month_days = [31, 28 + if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) { 1 } else { 0 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month_days = [
+        31,
+        28 + if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
+            1
+        } else {
+            0
+        },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1u64;
     for md in &month_days {
         if remaining_days < *md as u64 {
@@ -109,7 +136,10 @@ pub fn timestamp() -> String {
     }
     let day = remaining_days + 1;
 
-    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", year, month, day, hours, minutes, seconds)
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        year, month, day, hours, minutes, seconds
+    )
 }
 
 #[cfg(test)]

@@ -158,9 +158,14 @@ fn parse_sample_sheet(path: &Path, config: &BatchConfig) -> Result<Vec<GenomeEnt
     let cols: Vec<&str> = header.split('\t').collect();
 
     // Find column indices
-    let idx = |name: &str| cols.iter().position(|c| c.trim().eq_ignore_ascii_case(name));
+    let idx = |name: &str| {
+        cols.iter()
+            .position(|c| c.trim().eq_ignore_ascii_case(name))
+    };
     let i_name = idx("name");
-    let i_fasta = idx("fasta").or_else(|| idx("path")).or_else(|| idx("genome"));
+    let i_fasta = idx("fasta")
+        .or_else(|| idx("path"))
+        .or_else(|| idx("genome"));
     let i_kingdom = idx("kingdom");
     let i_species = idx("species");
     let i_code = idx("genetic_code").or_else(|| idx("code"));
@@ -179,10 +184,7 @@ fn parse_sample_sheet(path: &Path, config: &BatchConfig) -> Result<Vec<GenomeEnt
         }
         let fields: Vec<&str> = line.split('\t').collect();
 
-        let fasta = fields
-            .get(i_fasta)
-            .map(|s| s.trim())
-            .unwrap_or("");
+        let fasta = fields.get(i_fasta).map(|s| s.trim()).unwrap_or("");
         if fasta.is_empty() {
             continue;
         }
@@ -327,10 +329,7 @@ fn run_condor_mode(config: &BatchConfig, genomes: &[GenomeEntry]) -> Result<()> 
         config.output_dir.join("run_genome.sh").display()
     );
     println!("\n  To submit:");
-    println!(
-        "    \x1b[33mcondor_submit {}\x1b[0m",
-        sub_path.display()
-    );
+    println!("    \x1b[33mcondor_submit {}\x1b[0m", sub_path.display());
     println!("\n  To monitor:");
     println!("    condor_q");
     println!(
@@ -444,10 +443,9 @@ fn run_local_mode(config: &BatchConfig, genomes: &[GenomeEntry]) -> Result<()> {
                     dash.stage_done(&genome.name, stage_name, &completed);
 
                     let output_str = output_path.as_ref().map(|p| p.display().to_string());
-                    batch_state.genome_mut(&genome.name).complete_stage(
-                        stage_name,
-                        output_str.as_deref(),
-                    );
+                    batch_state
+                        .genome_mut(&genome.name)
+                        .complete_stage(stage_name, output_str.as_deref());
 
                     // Chain outputs
                     if let Some(ref p) = output_path {
@@ -487,9 +485,7 @@ fn run_local_mode(config: &BatchConfig, genomes: &[GenomeEntry]) -> Result<()> {
     // Auto-compare if 2+ genomes succeeded
     let (done, _, _) = batch_state.summary();
     if config.auto_compare && done >= 2 {
-        println!(
-            "  \x1b[2mTip: run comparison with:\x1b[0m"
-        );
+        println!("  \x1b[2mTip: run comparison with:\x1b[0m");
         println!(
             "  \x1b[33mmyconote-cli compare {}/**/annotate_out/*.gff3\x1b[0m\n",
             config.output_dir.display()
@@ -594,7 +590,9 @@ fn run_stage(
         }
         "annotate" => {
             let gff = current_gff.ok_or_else(|| {
-                MycoNoteError::BatchError("annotate requires a GFF3 from predict/update".to_string())
+                MycoNoteError::BatchError(
+                    "annotate requires a GFF3 from predict/update".to_string(),
+                )
             })?;
             let out_dir = genome_dir.join("annotate_out");
             let mut args = vec![
@@ -658,9 +656,9 @@ fn run_myconote_stage(subcommand: &str, args: &[String]) -> Result<()> {
         cmd.arg(arg);
     }
 
-    let output = cmd.output().map_err(|e| {
-        MycoNoteError::BatchError(format!("{} failed to start: {}", subcommand, e))
-    })?;
+    let output = cmd
+        .output()
+        .map_err(|e| MycoNoteError::BatchError(format!("{} failed to start: {}", subcommand, e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -725,19 +723,18 @@ mod tests {
 
         let sheet = tmp.join("samples.tsv");
         let mut f = std::fs::File::create(&sheet).unwrap();
-        writeln!(f, "name\tfasta\tkingdom\tspecies\tgenetic_code\tlocus_prefix").unwrap();
+        writeln!(
+            f,
+            "name\tfasta\tkingdom\tspecies\tgenetic_code\tlocus_prefix"
+        )
+        .unwrap();
         writeln!(
             f,
             "isolate_A\t{}\tfungi\tsaccharomyces\t1\tISOA",
             fasta_a.display()
         )
         .unwrap();
-        writeln!(
-            f,
-            "isolate_B\t{}\tplant\tauto\t1\tGENE",
-            fasta_b.display()
-        )
-        .unwrap();
+        writeln!(f, "isolate_B\t{}\tplant\tauto\t1\tGENE", fasta_b.display()).unwrap();
 
         let config = BatchConfig::default();
         let entries = parse_sample_sheet(&sheet, &config).unwrap();
@@ -785,6 +782,9 @@ mod tests {
 
     #[test]
     fn test_all_stages_order() {
-        assert_eq!(ALL_STAGES, &["sort", "mask", "predict", "annotate", "submit"]);
+        assert_eq!(
+            ALL_STAGES,
+            &["sort", "mask", "predict", "annotate", "submit"]
+        );
     }
 }

@@ -44,10 +44,7 @@ struct ToolEntry {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Generate command recommendations based on the stage, context, and findings.
-pub fn recommend(
-    ctx: &StageContext,
-    findings: &[Finding],
-) -> Vec<CommandRecommendation> {
+pub fn recommend(ctx: &StageContext, findings: &[Finding]) -> Vec<CommandRecommendation> {
     let mut recs = Vec::new();
 
     // Stage-specific recommendations
@@ -75,7 +72,11 @@ pub fn recommend(
 // Per-stage recommenders
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn recommend_after_sort(_ctx: &StageContext, _findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
+fn recommend_after_sort(
+    _ctx: &StageContext,
+    _findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
     recs.push(CommandRecommendation {
         command: "myconote-cli mask <sorted_genome.fa>".to_string(),
         rationale: "Next pipeline step: mask repeats before gene prediction.".to_string(),
@@ -83,8 +84,14 @@ fn recommend_after_sort(_ctx: &StageContext, _findings: &[Finding], recs: &mut V
     });
 }
 
-fn recommend_after_mask(_ctx: &StageContext, findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
-    let has_low_masking = findings.iter().any(|f| f.rule_id.contains("low_masking") || f.rule_id.contains("very_low_masking"));
+fn recommend_after_mask(
+    _ctx: &StageContext,
+    findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
+    let has_low_masking = findings
+        .iter()
+        .any(|f| f.rule_id.contains("low_masking") || f.rule_id.contains("very_low_masking"));
 
     if has_low_masking {
         recs.push(CommandRecommendation {
@@ -101,7 +108,11 @@ fn recommend_after_mask(_ctx: &StageContext, findings: &[Finding], recs: &mut Ve
     });
 }
 
-fn recommend_after_train(_ctx: &StageContext, _findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
+fn recommend_after_train(
+    _ctx: &StageContext,
+    _findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
     recs.push(CommandRecommendation {
         command: "myconote-cli predict <masked_genome.fa> --species <trained_species>".to_string(),
         rationale: "Use your trained Augustus species model for gene prediction.".to_string(),
@@ -109,7 +120,11 @@ fn recommend_after_train(_ctx: &StageContext, _findings: &[Finding], recs: &mut 
     });
 }
 
-fn recommend_after_predict(_ctx: &StageContext, findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
+fn recommend_after_predict(
+    _ctx: &StageContext,
+    findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
     // Always recommend stats
     recs.push(CommandRecommendation {
         command: "myconote-cli stats <consensus.gff3> --format human --taxon fungi".to_string(),
@@ -117,26 +132,35 @@ fn recommend_after_predict(_ctx: &StageContext, findings: &[Finding], recs: &mut
         finding_id: None,
     });
 
-    let has_high_count = findings.iter().any(|f| f.rule_id == "predict.gene_count_high");
+    let has_high_count = findings
+        .iter()
+        .any(|f| f.rule_id == "predict.gene_count_high");
     if has_high_count {
         recs.push(CommandRecommendation {
             command: "myconote-cli explain mask --dir <mask_dir>".to_string(),
-            rationale: "High gene count may indicate masking failure. Check the mask stage.".to_string(),
+            rationale: "High gene count may indicate masking failure. Check the mask stage."
+                .to_string(),
             finding_id: Some("predict.gene_count_high".to_string()),
         });
     } else {
         recs.push(CommandRecommendation {
             command: "myconote-cli update <predicted.gff3> --fasta <genome.fa>".to_string(),
-            rationale: "Next pipeline step: refine gene models with PASA UTR extension.".to_string(),
+            rationale: "Next pipeline step: refine gene models with PASA UTR extension."
+                .to_string(),
             finding_id: None,
         });
     }
 }
 
-fn recommend_after_update(_ctx: &StageContext, _findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
+fn recommend_after_update(
+    _ctx: &StageContext,
+    _findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
     recs.push(CommandRecommendation {
         command: "myconote-cli annotate <updated.gff3> --fasta <genome.fa>".to_string(),
-        rationale: "Next pipeline step: functional annotation with all available databases.".to_string(),
+        rationale: "Next pipeline step: functional annotation with all available databases."
+            .to_string(),
         finding_id: None,
     });
 
@@ -147,34 +171,52 @@ fn recommend_after_update(_ctx: &StageContext, _findings: &[Finding], recs: &mut
     });
 }
 
-fn recommend_after_annotate(_ctx: &StageContext, findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
-    let missing_sources = findings.iter().find(|f| f.rule_id == "annotate.sources_missing");
+fn recommend_after_annotate(
+    _ctx: &StageContext,
+    findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
+    let missing_sources = findings
+        .iter()
+        .find(|f| f.rule_id == "annotate.sources_missing");
     if let Some(f) = missing_sources {
         recs.push(CommandRecommendation {
             command: "myconote-cli annotate <gff3> --fasta <genome.fa>".to_string(),
-            rationale: format!("Some annotation sources are missing. Re-run to add: {}", f.evidence),
+            rationale: format!(
+                "Some annotation sources are missing. Re-run to add: {}",
+                f.evidence
+            ),
             finding_id: Some("annotate.sources_missing".to_string()),
         });
     }
 
     recs.push(CommandRecommendation {
-        command: "myconote-cli submit <annotated.gff3> --fasta <genome.fa> --organism '<name>'".to_string(),
+        command: "myconote-cli submit <annotated.gff3> --fasta <genome.fa> --organism '<name>'"
+            .to_string(),
         rationale: "Next pipeline step: prepare NCBI GenBank submission.".to_string(),
         finding_id: None,
     });
 }
 
-fn recommend_after_submit(_ctx: &StageContext, findings: &[Finding], recs: &mut Vec<CommandRecommendation>) {
-    let has_errors = findings.iter().any(|f| f.rule_id == "submit.validation_errors");
+fn recommend_after_submit(
+    _ctx: &StageContext,
+    findings: &[Finding],
+    recs: &mut Vec<CommandRecommendation>,
+) {
+    let has_errors = findings
+        .iter()
+        .any(|f| f.rule_id == "submit.validation_errors");
 
     if has_errors {
         recs.push(CommandRecommendation {
             command: "myconote-cli fix <annotated.gff3> --fasta <genome.fa>".to_string(),
-            rationale: "NCBI validation errors found. Run fix to auto-repair common issues.".to_string(),
+            rationale: "NCBI validation errors found. Run fix to auto-repair common issues."
+                .to_string(),
             finding_id: Some("submit.validation_errors".to_string()),
         });
         recs.push(CommandRecommendation {
-            command: "myconote-cli submit <fixed.gff3> --fasta <genome.fa> --validate-only".to_string(),
+            command: "myconote-cli submit <fixed.gff3> --fasta <genome.fa> --validate-only"
+                .to_string(),
             rationale: "Re-validate after fixing to confirm errors are resolved.".to_string(),
             finding_id: Some("submit.validation_errors".to_string()),
         });
@@ -204,7 +246,10 @@ fn validate_recommendations(recs: &mut Vec<CommandRecommendation>, catalog: &[To
         let entry = catalog.iter().find(|e| e.name == subcmd);
         if entry.is_none() {
             // Replace with a safe fallback — but our built-in recs should always be valid
-            rec.rationale.push_str(&format!(" (Run `myconote-cli {} --help` for options.)", subcmd));
+            rec.rationale.push_str(&format!(
+                " (Run `myconote-cli {} --help` for options.)",
+                subcmd
+            ));
         }
     }
 }
@@ -214,7 +259,9 @@ fn load_tool_catalog() -> Vec<ToolEntry> {
     match path {
         Some(p) => {
             let text = std::fs::read_to_string(&p).unwrap_or_default();
-            let catalog: ToolCatalog = toml::from_str(&text).unwrap_or(ToolCatalog { commands: Vec::new() });
+            let catalog: ToolCatalog = toml::from_str(&text).unwrap_or(ToolCatalog {
+                commands: Vec::new(),
+            });
             catalog.commands
         }
         None => Vec::new(),
@@ -223,8 +270,12 @@ fn load_tool_catalog() -> Vec<ToolEntry> {
 
 fn find_tool_catalog() -> Option<PathBuf> {
     let candidates = [
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("assets/chat/tool_catalog.toml"))),
-        std::env::var("CARGO_MANIFEST_DIR").ok().map(|d| PathBuf::from(d).join("assets/chat/tool_catalog.toml")),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("assets/chat/tool_catalog.toml"))),
+        std::env::var("CARGO_MANIFEST_DIR")
+            .ok()
+            .map(|d| PathBuf::from(d).join("assets/chat/tool_catalog.toml")),
         Some(PathBuf::from("assets/chat/tool_catalog.toml")),
     ];
 

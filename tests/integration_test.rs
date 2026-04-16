@@ -696,10 +696,17 @@ fn test_explain_predict_no_llm() {
     std::fs::write(
         predict_dir.join("predict_summary.txt"),
         "Gene predictions summary\n  Augustus: 5000 genes\n  Consensus: 4800 genes\n",
-    ).unwrap();
+    )
+    .unwrap();
 
     bin()
-        .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
+        .args([
+            "explain",
+            "predict",
+            "--no-llm",
+            "--dir",
+            predict_dir.to_str().unwrap(),
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Rules-only mode"))
@@ -730,7 +737,13 @@ fn test_explain_predict_no_llm_with_gff3() {
     std::fs::copy(gff3(), predict_dir.join("consensus.gff3")).unwrap();
 
     bin()
-        .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
+        .args([
+            "explain",
+            "predict",
+            "--no-llm",
+            "--dir",
+            predict_dir.to_str().unwrap(),
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Findings"));
@@ -749,7 +762,13 @@ fn test_explain_submit_no_llm() {
     ).unwrap();
 
     bin()
-        .args(["explain", "submit", "--no-llm", "--dir", submit_dir.to_str().unwrap()])
+        .args([
+            "explain",
+            "submit",
+            "--no-llm",
+            "--dir",
+            submit_dir.to_str().unwrap(),
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("NCBI validation"));
@@ -769,7 +788,13 @@ fn test_explain_dry_run() {
     let dir = TempDir::new().unwrap();
 
     bin()
-        .args(["explain", "predict", "--dry-run", "--dir", dir.path().to_str().unwrap()])
+        .args([
+            "explain",
+            "predict",
+            "--dry-run",
+            "--dir",
+            dir.path().to_str().unwrap(),
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("--dry-run"))
@@ -786,10 +811,17 @@ fn test_explain_mask_no_llm() {
     std::fs::write(
         mask_dir.join("genome_masked.fas"),
         ">scaffold_1\nACGTacgtACGTACGTACGTACGT\n",
-    ).unwrap();
+    )
+    .unwrap();
 
     bin()
-        .args(["explain", "mask", "--no-llm", "--dir", mask_dir.to_str().unwrap()])
+        .args([
+            "explain",
+            "mask",
+            "--no-llm",
+            "--dir",
+            mask_dir.to_str().unwrap(),
+        ])
         .assert()
         .success();
 }
@@ -801,7 +833,13 @@ fn test_explain_annotate_no_llm() {
     std::fs::create_dir_all(&ann_dir).unwrap();
 
     bin()
-        .args(["explain", "annotate", "--no-llm", "--dir", ann_dir.to_str().unwrap()])
+        .args([
+            "explain",
+            "annotate",
+            "--no-llm",
+            "--dir",
+            ann_dir.to_str().unwrap(),
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Findings"));

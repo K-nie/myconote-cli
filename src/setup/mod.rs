@@ -138,14 +138,18 @@ pub fn check_databases(db_dir: &Path) {
         if db.key == "ollama" {
             match get_ollama_version() {
                 Some(ver) => {
-                    let model_info = read_configured_model().unwrap_or_else(|| "llama3.1".to_string());
+                    let model_info =
+                        read_configured_model().unwrap_or_else(|| "llama3.1".to_string());
                     println!(
                         "  {:<14} \x1b[32m✓ present\x1b[0m  v{}, model: {}",
                         db.key, ver, model_info
                     );
                 }
                 None => {
-                    println!("  {:<14} \x1b[31m✗ missing\x1b[0m  run: myconote setup --ollama", db.key);
+                    println!(
+                        "  {:<14} \x1b[31m✗ missing\x1b[0m  run: myconote setup --ollama",
+                        db.key
+                    );
                 }
             }
             continue;
@@ -671,15 +675,17 @@ fn download_chat_corpus(db_dir: &Path) -> Result<()> {
     if !manifest_path.exists() {
         println!("  Creating corpus manifest at {}", manifest_path.display());
         let manifest = CORPUS_MANIFEST_TEMPLATE;
-        std::fs::write(&manifest_path, manifest)
-            .map_err(|e| MycoNoteError::Io(e))?;
+        std::fs::write(&manifest_path, manifest).map_err(|e| MycoNoteError::Io(e))?;
     }
 
     // Validate the manifest
     println!("  Validating corpus manifest…");
     match validate_corpus_manifest(&manifest_path) {
         Ok(stats) => {
-            println!("  ✓ Manifest valid: {} papers, all Q1 open-access", stats.total);
+            println!(
+                "  ✓ Manifest valid: {} papers, all Q1 open-access",
+                stats.total
+            );
             if stats.missing_text > 0 {
                 println!(
                     "    ⚠  {} papers have no extracted text yet — place .txt files in {}",
@@ -690,7 +696,10 @@ fn download_chat_corpus(db_dir: &Path) -> Result<()> {
         }
         Err(e) => {
             eprintln!("  ⚠  Manifest validation failed: {}", e);
-            eprintln!("     Fix issues in {} and re-run setup", manifest_path.display());
+            eprintln!(
+                "     Fix issues in {} and re-run setup",
+                manifest_path.display()
+            );
         }
     }
 
@@ -706,12 +715,18 @@ fn download_chat_corpus(db_dir: &Path) -> Result<()> {
     println!("  ✓ Chat corpus ready at {}", papers_dir.display());
     println!();
     println!("  To add papers:");
-    println!("    1. Place extracted .txt files in {}", papers_dir.display());
+    println!(
+        "    1. Place extracted .txt files in {}",
+        papers_dir.display()
+    );
     println!("    2. Add entries to {}", manifest_path.display());
     println!("    3. Each paper must have quartile = \"Q1\" and a valid OA license");
     println!();
     println!("  For personal papers (legally obtained):");
-    println!("    Place .txt files in {}", home_papers.join("local").display());
+    println!(
+        "    Place .txt files in {}",
+        home_papers.join("local").display()
+    );
     println!("    These are used for local retrieval only.");
 
     let _ = write_db_version(db_dir, "chat-corpus", "local-corpus");
@@ -786,7 +801,11 @@ fn setup_ollama(db_dir: &Path) -> Result<()> {
             println!("  Detecting system memory…");
             println!("  Available model tiers:");
             for tier in MODEL_TIERS {
-                let marker = if tier.name == recommended { " ◀ selected" } else { "" };
+                let marker = if tier.name == recommended {
+                    " ◀ selected"
+                } else {
+                    ""
+                };
                 println!("    {:<45} {}{}", tier.name, tier.description, marker);
             }
             recommended.to_string()
@@ -803,7 +822,10 @@ fn setup_ollama(db_dir: &Path) -> Result<()> {
     if pull_ok {
         println!("  ✓ Model '{}' ready", model);
     } else {
-        eprintln!("  ⚠  Failed to pull model '{}'. Try: ollama pull {}", model, model);
+        eprintln!(
+            "  ⚠  Failed to pull model '{}'. Try: ollama pull {}",
+            model, model
+        );
         eprintln!("     Available models: https://ollama.com/library");
     }
 
@@ -826,16 +848,19 @@ fn setup_ollama(db_dir: &Path) -> Result<()> {
     // ── 6. Write version marker ──
     let final_version = get_ollama_version().unwrap_or_else(|| "unknown".to_string());
     let marker = ollama_dir.join("installed.version");
-    let _ = std::fs::write(&marker, format!(
-        "ollama_version={}\nmodel={}\ntimestamp={}\nmyconote_version={}\n",
-        final_version,
-        model,
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-        env!("CARGO_PKG_VERSION"),
-    ));
+    let _ = std::fs::write(
+        &marker,
+        format!(
+            "ollama_version={}\nmodel={}\ntimestamp={}\nmyconote_version={}\n",
+            final_version,
+            model,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            env!("CARGO_PKG_VERSION"),
+        ),
+    );
 
     let _ = write_db_version(db_dir, "ollama", "https://ollama.com");
     println!("  ✓ Ollama setup complete");
@@ -843,16 +868,16 @@ fn setup_ollama(db_dir: &Path) -> Result<()> {
     println!("  Usage:");
     println!("    myconote-cli explain predict              # interpret with LLM");
     println!("    myconote-cli explain predict --no-llm     # rules only, no LLM");
-    println!("    myconote-cli explain predict --model {}   # use this model", model);
+    println!(
+        "    myconote-cli explain predict --model {}   # use this model",
+        model
+    );
     Ok(())
 }
 
 /// Get the installed Ollama version, if any.
 fn get_ollama_version() -> Option<String> {
-    let output = Command::new("ollama")
-        .args(["--version"])
-        .output()
-        .ok()?;
+    let output = Command::new("ollama").args(["--version"]).output().ok()?;
 
     if !output.status.success() {
         return None;
@@ -860,14 +885,19 @@ fn get_ollama_version() -> Option<String> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // "ollama version is 0.3.14" or "ollama version 0.3.14"
-    let version = stdout.trim()
+    let version = stdout
+        .trim()
         .rsplit(' ')
         .next()
         .unwrap_or("")
         .trim()
         .to_string();
 
-    if version.is_empty() { None } else { Some(version) }
+    if version.is_empty() {
+        None
+    } else {
+        Some(version)
+    }
 }
 
 /// Check the latest available Ollama version from GitHub releases.
@@ -876,8 +906,10 @@ fn check_ollama_latest_version() -> Option<String> {
     let output = Command::new("curl")
         .args([
             "-sL",
-            "--max-time", "10",
-            "-H", "Accept: application/json",
+            "--max-time",
+            "10",
+            "-H",
+            "Accept: application/json",
             "https://api.github.com/repos/ollama/ollama/releases/latest",
         ])
         .output()
@@ -912,9 +944,7 @@ fn install_ollama() -> Result<()> {
 
         if !ok {
             // Try upgrade if already installed
-            let _ = Command::new("brew")
-                .args(["upgrade", "ollama"])
-                .status();
+            let _ = Command::new("brew").args(["upgrade", "ollama"]).status();
         }
         return Ok(());
     }
@@ -969,7 +999,8 @@ fn read_configured_model() -> Option<String> {
     let config_path = home_myconote_dir().join("config.toml");
     let text = std::fs::read_to_string(&config_path).ok()?;
     let table: toml::Value = text.parse().ok()?;
-    table.get("chat")?
+    table
+        .get("chat")?
         .get("model")?
         .as_str()
         .map(|s| s.to_string())
@@ -986,7 +1017,14 @@ fn home_myconote_dir() -> PathBuf {
 // Corpus manifest validation
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VALID_LICENSES: &[&str] = &["CC-BY", "CC-BY-SA", "CC-BY-4.0", "CC-BY-SA-4.0", "CC0", "public-domain"];
+const VALID_LICENSES: &[&str] = &[
+    "CC-BY",
+    "CC-BY-SA",
+    "CC-BY-4.0",
+    "CC-BY-SA-4.0",
+    "CC0",
+    "public-domain",
+];
 const VALID_QUARTILES: &[&str] = &["Q1"];
 
 #[derive(Debug)]
@@ -999,10 +1037,12 @@ fn validate_corpus_manifest(path: &Path) -> std::result::Result<CorpusStats, Str
     let contents = std::fs::read_to_string(path)
         .map_err(|e| format!("cannot read {}: {}", path.display(), e))?;
 
-    let table: toml::Value = contents.parse()
+    let table: toml::Value = contents
+        .parse()
         .map_err(|e| format!("invalid TOML: {}", e))?;
 
-    let papers = table.get("paper")
+    let papers = table
+        .get("paper")
         .and_then(|v| v.as_array())
         .ok_or_else(|| "missing [[paper]] array".to_string())?;
 
@@ -1010,7 +1050,10 @@ fn validate_corpus_manifest(path: &Path) -> std::result::Result<CorpusStats, Str
     let mut missing_text = 0usize;
 
     for (i, paper) in papers.iter().enumerate() {
-        let doi = paper.get("doi").and_then(|v| v.as_str()).unwrap_or("<missing>");
+        let doi = paper
+            .get("doi")
+            .and_then(|v| v.as_str())
+            .unwrap_or("<missing>");
         let quartile = paper.get("quartile").and_then(|v| v.as_str());
         let license = paper.get("license").and_then(|v| v.as_str());
         let text_file = paper.get("text_file").and_then(|v| v.as_str());
@@ -1018,14 +1061,34 @@ fn validate_corpus_manifest(path: &Path) -> std::result::Result<CorpusStats, Str
         // Validate quartile
         match quartile {
             Some(q) if VALID_QUARTILES.contains(&q) => {}
-            Some(q) => return Err(format!("paper #{} ({}): quartile '{}' is not Q1", i + 1, doi, q)),
-            None => return Err(format!("paper #{} ({}): missing quartile field", i + 1, doi)),
+            Some(q) => {
+                return Err(format!(
+                    "paper #{} ({}): quartile '{}' is not Q1",
+                    i + 1,
+                    doi,
+                    q
+                ))
+            }
+            None => {
+                return Err(format!(
+                    "paper #{} ({}): missing quartile field",
+                    i + 1,
+                    doi
+                ))
+            }
         }
 
         // Validate license
         match license {
             Some(l) if VALID_LICENSES.contains(&l) => {}
-            Some(l) => return Err(format!("paper #{} ({}): license '{}' is not open-access", i + 1, doi, l)),
+            Some(l) => {
+                return Err(format!(
+                    "paper #{} ({}): license '{}' is not open-access",
+                    i + 1,
+                    doi,
+                    l
+                ))
+            }
             None => return Err(format!("paper #{} ({}): missing license field", i + 1, doi)),
         }
 
@@ -1046,7 +1109,10 @@ fn validate_corpus_manifest(path: &Path) -> std::result::Result<CorpusStats, Str
         return Err("no papers in manifest".to_string());
     }
 
-    Ok(CorpusStats { total, missing_text })
+    Ok(CorpusStats {
+        total,
+        missing_text,
+    })
 }
 
 const CORPUS_MANIFEST_TEMPLATE: &str = r#"# myconote-cli chat corpus manifest
@@ -1128,7 +1194,9 @@ mod tests {
     fn validate_manifest_valid() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = dir.path().join("corpus_manifest.toml");
-        std::fs::write(&manifest, r#"
+        std::fs::write(
+            &manifest,
+            r#"
 [[paper]]
 doi = "10.1186/test"
 title = "Test Paper"
@@ -1138,7 +1206,9 @@ quartile = "Q1"
 license = "CC-BY-4.0"
 tags = ["test"]
 text_file = "test.txt"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
         // text file doesn't exist, so missing_text should be 1
         let result = validate_corpus_manifest(&manifest).unwrap();
         assert_eq!(result.total, 1);
@@ -1151,7 +1221,9 @@ text_file = "test.txt"
         let manifest = dir.path().join("corpus_manifest.toml");
         let text_file = dir.path().join("test.txt");
         std::fs::write(&text_file, "Some paper content here.").unwrap();
-        std::fs::write(&manifest, r#"
+        std::fs::write(
+            &manifest,
+            r#"
 [[paper]]
 doi = "10.1186/test"
 title = "Test Paper"
@@ -1161,7 +1233,9 @@ quartile = "Q1"
 license = "CC-BY-4.0"
 tags = ["test"]
 text_file = "test.txt"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
         let result = validate_corpus_manifest(&manifest).unwrap();
         assert_eq!(result.total, 1);
         assert_eq!(result.missing_text, 0);
@@ -1171,7 +1245,9 @@ text_file = "test.txt"
     fn validate_manifest_rejects_non_q1() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = dir.path().join("corpus_manifest.toml");
-        std::fs::write(&manifest, r#"
+        std::fs::write(
+            &manifest,
+            r#"
 [[paper]]
 doi = "10.1186/test"
 title = "Test"
@@ -1180,7 +1256,9 @@ year = 2020
 quartile = "Q3"
 license = "CC-BY-4.0"
 tags = []
-"#).unwrap();
+"#,
+        )
+        .unwrap();
         let result = validate_corpus_manifest(&manifest);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not Q1"));
@@ -1190,7 +1268,9 @@ tags = []
     fn validate_manifest_rejects_non_oa_license() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = dir.path().join("corpus_manifest.toml");
-        std::fs::write(&manifest, r#"
+        std::fs::write(
+            &manifest,
+            r#"
 [[paper]]
 doi = "10.1186/test"
 title = "Test"
@@ -1199,7 +1279,9 @@ year = 2020
 quartile = "Q1"
 license = "proprietary"
 tags = []
-"#).unwrap();
+"#,
+        )
+        .unwrap();
         let result = validate_corpus_manifest(&manifest);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not open-access"));

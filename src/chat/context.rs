@@ -102,8 +102,18 @@ fn build_sort_context(dir: &Path) -> Result<StageContext> {
     let mut notes = Vec::new();
 
     // Look for name_map.tsv and genome FASTA
-    collect_matching_files(dir, &["name_map.tsv", "rename_table.tsv"], &mut artifacts, &mut notes);
-    collect_matching_files_by_ext(dir, &["fa", "fas", "fasta", "fna"], &mut artifacts, &mut notes);
+    collect_matching_files(
+        dir,
+        &["name_map.tsv", "rename_table.tsv"],
+        &mut artifacts,
+        &mut notes,
+    );
+    collect_matching_files_by_ext(
+        dir,
+        &["fa", "fas", "fasta", "fna"],
+        &mut artifacts,
+        &mut notes,
+    );
 
     if artifacts.is_empty() {
         notes.push("No sort output files found in directory.".to_string());
@@ -122,8 +132,18 @@ fn build_mask_context(dir: &Path) -> Result<StageContext> {
     let mut artifacts = Vec::new();
     let mut notes = Vec::new();
 
-    collect_matching_files_by_ext(dir, &["fa", "fas", "fasta", "fna"], &mut artifacts, &mut notes);
-    collect_matching_files(dir, &["families.fa", "families.fasta"], &mut artifacts, &mut notes);
+    collect_matching_files_by_ext(
+        dir,
+        &["fa", "fas", "fasta", "fna"],
+        &mut artifacts,
+        &mut notes,
+    );
+    collect_matching_files(
+        dir,
+        &["families.fa", "families.fasta"],
+        &mut artifacts,
+        &mut notes,
+    );
 
     // Calculate masking percentage from FASTA if available
     let masked_fasta = find_file_containing(dir, "masked");
@@ -164,7 +184,12 @@ fn build_predict_context(dir: &Path) -> Result<StageContext> {
     let mut notes = Vec::new();
 
     // Look for predict_summary.txt
-    collect_matching_files(dir, &["predict_summary.txt", "summary.txt"], &mut artifacts, &mut notes);
+    collect_matching_files(
+        dir,
+        &["predict_summary.txt", "summary.txt"],
+        &mut artifacts,
+        &mut notes,
+    );
 
     // Collect GFF3 files
     collect_matching_files_by_ext(dir, &["gff3", "gff"], &mut artifacts, &mut notes);
@@ -208,7 +233,15 @@ fn build_annotate_context(dir: &Path) -> Result<StageContext> {
     let stats = find_gff3_and_compute_stats(dir, &mut notes);
 
     // Count functional annotation sources that have non-empty results
-    let annotation_sources = ["pfam", "eggnog", "cazyme", "merops", "interproscan", "busco", "mmseqs"];
+    let annotation_sources = [
+        "pfam",
+        "eggnog",
+        "cazyme",
+        "merops",
+        "interproscan",
+        "busco",
+        "mmseqs",
+    ];
     let mut found_sources = Vec::new();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -225,7 +258,10 @@ fn build_annotate_context(dir: &Path) -> Result<StageContext> {
         }
     }
     if !found_sources.is_empty() {
-        notes.push(format!("Annotation sources found: {}", found_sources.join(", ")));
+        notes.push(format!(
+            "Annotation sources found: {}",
+            found_sources.join(", ")
+        ));
     }
 
     Ok(StageContext {
@@ -301,8 +337,9 @@ fn collect_matching_files_by_ext(
 
 /// Build an ArtifactSummary for a file. Inline small text files.
 fn summarize_file(path: &Path) -> Result<ArtifactSummary> {
-    let meta = std::fs::metadata(path)
-        .map_err(|e| MycoNoteError::ChatContext(format!("cannot stat {}: {}", path.display(), e)))?;
+    let meta = std::fs::metadata(path).map_err(|e| {
+        MycoNoteError::ChatContext(format!("cannot stat {}: {}", path.display(), e))
+    })?;
 
     let name = path
         .file_name()
@@ -349,8 +386,8 @@ fn summarize_file(path: &Path) -> Result<ArtifactSummary> {
 /// Heuristic: is the file likely a text file?
 fn is_likely_text(path: &Path) -> bool {
     let text_exts = [
-        "txt", "tsv", "csv", "log", "gff3", "gff", "gtf", "bed", "val", "tbl", "fsa", "fa",
-        "fas", "fasta", "fna",
+        "txt", "tsv", "csv", "log", "gff3", "gff", "gtf", "bed", "val", "tbl", "fsa", "fa", "fas",
+        "fasta", "fna",
     ];
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) => text_exts.iter().any(|e| ext.eq_ignore_ascii_case(e)),
@@ -361,7 +398,12 @@ fn is_likely_text(path: &Path) -> bool {
 /// Find the first GFF3 file in a directory and compute GenomeStatistics.
 fn find_gff3_and_compute_stats(dir: &Path, notes: &mut Vec<String>) -> Option<serde_json::Value> {
     // Prefer "consensus" or "final" GFF3
-    let preferred = ["consensus.gff3", "final.gff3", "annotated.gff3", "updated.gff3"];
+    let preferred = [
+        "consensus.gff3",
+        "final.gff3",
+        "annotated.gff3",
+        "updated.gff3",
+    ];
     let mut gff_path: Option<PathBuf> = None;
 
     if let Ok(entries) = std::fs::read_dir(dir) {
@@ -382,7 +424,10 @@ fn find_gff3_and_compute_stats(dir: &Path, notes: &mut Vec<String>) -> Option<se
     }
 
     let path = gff_path?;
-    notes.push(format!("GFF3 used for stats: {}", path.file_name().unwrap_or_default().to_string_lossy()));
+    notes.push(format!(
+        "GFF3 used for stats: {}",
+        path.file_name().unwrap_or_default().to_string_lossy()
+    ));
 
     let selector = RegionSelector::new();
     match GenomeStatistics::from_gff_with_selector(&path, &selector, false) {
@@ -414,8 +459,9 @@ fn find_file_containing(dir: &Path, substr: &str) -> Option<PathBuf> {
 
 /// Compute the percentage of lowercase (soft-masked) bases in a FASTA.
 fn compute_mask_percentage(path: &Path) -> Result<f64> {
-    let text = std::fs::read_to_string(path)
-        .map_err(|e| MycoNoteError::ChatContext(format!("cannot read {}: {}", path.display(), e)))?;
+    let text = std::fs::read_to_string(path).map_err(|e| {
+        MycoNoteError::ChatContext(format!("cannot read {}: {}", path.display(), e))
+    })?;
 
     let mut total: u64 = 0;
     let mut masked: u64 = 0;
@@ -461,7 +507,9 @@ mod tests {
 
     #[test]
     fn stage_name_roundtrip() {
-        for s in ["sort", "mask", "train", "predict", "update", "annotate", "submit"] {
+        for s in [
+            "sort", "mask", "train", "predict", "update", "annotate", "submit",
+        ] {
             let stage = Stage::from_str(s).unwrap();
             assert_eq!(stage.name(), s);
         }

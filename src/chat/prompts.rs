@@ -27,8 +27,12 @@ pub fn render(
     prompt.push_str("- If a claim cannot be cited, omit it.\n");
     prompt.push_str("- Do not invent numbers. Use only values from the context below.\n");
     prompt.push_str("- If a critical file is missing, recommend rerunning the stage.\n");
-    prompt.push_str("- End your response with 1-3 recommended next commands from the tool catalog.\n");
-    prompt.push_str("- Format commands as: `myconote-cli <command> [args]` with a one-sentence rationale.\n");
+    prompt.push_str(
+        "- End your response with 1-3 recommended next commands from the tool catalog.\n",
+    );
+    prompt.push_str(
+        "- Format commands as: `myconote-cli <command> [args]` with a one-sentence rationale.\n",
+    );
     prompt.push_str("- Your interpretation is suggestive, not definitive. Remind the user to verify findings in the context of their specific organism, assembly, and research goals.\n\n");
 
     // Stage-specific reference ranges
@@ -56,7 +60,10 @@ pub fn render(
     if !retrieved.is_empty() {
         prompt.push_str("RETRIEVED KNOWLEDGE:\n");
         for c in retrieved {
-            prompt.push_str(&format!("[{}] (score: {:.2})\n{}\n\n", c.id, c.score, c.snippet));
+            prompt.push_str(&format!(
+                "[{}] (score: {:.2})\n{}\n\n",
+                c.id, c.score, c.snippet
+            ));
         }
     }
 
@@ -90,39 +97,46 @@ fn stage_reference_ranges(stage: &str) -> String {
     match stage {
         "sort" => "- Total contigs: <100 is well-assembled; >1000 suggests fragmentation\n\
                    - Shortest contig: <500 bp may be noise, consider --min-length filter\n\
-                   - Assembly naming: NCBI requires clean IDs without special characters\n".to_string(),
+                   - Assembly naming: NCBI requires clean IDs without special characters\n"
+            .to_string(),
 
         "mask" => "- Fungi: 3-10% masked content is typical\n\
                    - Plants: 50-85% is typical (extensive transposons)\n\
                    - Animals: 30-50% is typical\n\
                    - <1% masked: likely masking failure, will cause over-prediction\n\
-                   - >85%: unusual except for large plant genomes\n".to_string(),
+                   - >85%: unusual except for large plant genomes\n"
+            .to_string(),
 
         "train" => "- Augustus training needs a close starting species model\n\
                     - Trinity assembly should produce >10,000 transcripts\n\
-                    - >20M paired-end reads recommended for training\n".to_string(),
+                    - >20M paired-end reads recommended for training\n"
+            .to_string(),
 
         "predict" => "- Fungal genomes: 5,000-15,000 genes typical\n\
                       - Plants: 20,000-50,000 genes typical\n\
                       - Animals: 15,000-25,000 genes typical\n\
                       - >15,000 genes in fungi usually = over-prediction from unmasked repeats\n\
-                      - Augustus vs SNAP disagreement <20% is normal\n".to_string(),
+                      - Augustus vs SNAP disagreement <20% is normal\n"
+            .to_string(),
 
         "update" => "- Gene count may decrease 1-5% (overlapping models merged by PASA)\n\
                      - Average gene length should increase (UTR addition)\n\
                      - >10% gene count increase after update: investigate\n\
-                     - >20% decrease: PASA may have over-merged\n".to_string(),
+                     - >20% decrease: PASA may have over-merged\n"
+            .to_string(),
 
         "annotate" => "- Swiss-Prot: 40-70% of genes should have hits\n\
                        - Pfam: 50-80% of genes should have domains\n\
                        - BUSCO completeness: >90% expected\n\
                        - EggNOG: 60-85% classified\n\
-                       - CAZyme: 1-3% for fungi, 1-5% for plants\n".to_string(),
+                       - CAZyme: 1-3% for fungi, 1-5% for plants\n"
+            .to_string(),
 
         "submit" => "- Zero errors in errorsummary.val required for submission\n\
                      - Common errors: NoStop (wrong genetic code), InternalStop, PartialProblem\n\
                      - Warnings are acceptable but should be reviewed\n\
-                     - .sqn file = ready for NCBI upload\n".to_string(),
+                     - .sqn file = ready for NCBI upload\n"
+            .to_string(),
 
         _ => String::new(),
     }
@@ -200,9 +214,15 @@ mod tests {
 
     #[test]
     fn reference_ranges_exist_for_all_stages() {
-        for stage in ["sort", "mask", "train", "predict", "update", "annotate", "submit"] {
+        for stage in [
+            "sort", "mask", "train", "predict", "update", "annotate", "submit",
+        ] {
             let ranges = stage_reference_ranges(stage);
-            assert!(!ranges.is_empty(), "no reference ranges for stage '{}'", stage);
+            assert!(
+                !ranges.is_empty(),
+                "no reference ranges for stage '{}'",
+                stage
+            );
         }
     }
 }

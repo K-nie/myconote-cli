@@ -1,6 +1,6 @@
-use crate::learn::{C_BOLD, C_CYAN, C_DIM, C_GREEN, C_RED, C_RESET, C_YELLOW};
 use super::commands::CommandRecommendation;
 use super::rules::{Finding, Severity};
+use crate::learn::{C_BOLD, C_CYAN, C_DIM, C_GREEN, C_RED, C_RESET, C_YELLOW};
 
 /// Verbosity level for output rendering.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -50,7 +50,14 @@ pub fn render_commands(recs: &[CommandRecommendation]) {
     println!("  {}{}{}", C_DIM, "─".repeat(60), C_RESET);
 
     for (i, rec) in recs.iter().enumerate() {
-        println!("  {}{}. {}{}{}", C_BOLD, i + 1, C_GREEN, rec.command, C_RESET);
+        println!(
+            "  {}{}. {}{}{}",
+            C_BOLD,
+            i + 1,
+            C_GREEN,
+            rec.command,
+            C_RESET
+        );
         println!("     {}{}{}", C_DIM, rec.rationale, C_RESET);
     }
     println!();
@@ -101,10 +108,7 @@ pub fn render_llm_unavailable() {
 
 /// Render a "rules-only mode" header.
 pub fn render_rules_only_header() {
-    println!(
-        "\n  {}Rules-only mode{} — no LLM call.",
-        C_YELLOW, C_RESET
-    );
+    println!("\n  {}Rules-only mode{} — no LLM call.", C_YELLOW, C_RESET);
 }
 
 /// Render the scientific disclaimer. This must appear in every explain output.

@@ -113,8 +113,9 @@ impl BatchState {
         let path = PathBuf::from(&self.batch_dir).join("status.json");
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| MycoNoteError::BatchError(format!("cannot serialize state: {}", e)))?;
-        std::fs::write(&path, json)
-            .map_err(|e| MycoNoteError::BatchError(format!("cannot write {}: {}", path.display(), e)))?;
+        std::fs::write(&path, json).map_err(|e| {
+            MycoNoteError::BatchError(format!("cannot write {}: {}", path.display(), e))
+        })?;
         Ok(())
     }
 
@@ -127,7 +128,11 @@ impl BatchState {
 
     /// Count genomes by status.
     pub fn summary(&self) -> (usize, usize, usize) {
-        let done = self.genomes.values().filter(|g| !g.failed && !g.completed_stages.is_empty()).count();
+        let done = self
+            .genomes
+            .values()
+            .filter(|g| !g.failed && !g.completed_stages.is_empty())
+            .count();
         let failed = self.genomes.values().filter(|g| g.failed).count();
         let pending = self.genomes.len() - done - failed;
         (done, failed, pending)
@@ -174,7 +179,10 @@ fn chrono_now() -> String {
     }
     let d = remaining + 1;
 
-    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, m, d, hours, mins, s)
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        y, m, d, hours, mins, s
+    )
 }
 
 fn is_leap(y: u64) -> bool {
@@ -239,7 +247,9 @@ mod tests {
             stages: vec!["sort".to_string()],
         };
         let mut state = BatchState::new(Path::new("/tmp/test_batch"), settings);
-        state.genome_mut("genome.fa").complete_stage("sort", Some("/out/sorted.fa"));
+        state
+            .genome_mut("genome.fa")
+            .complete_stage("sort", Some("/out/sorted.fa"));
 
         let json = serde_json::to_string_pretty(&state).unwrap();
         let loaded: BatchState = serde_json::from_str(&json).unwrap();

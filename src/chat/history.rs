@@ -28,8 +28,9 @@ pub fn append(entry: &HistoryEntry) -> Result<()> {
         .open(&file)
         .map_err(|e| MycoNoteError::ChatConfig(format!("cannot open {}: {}", file.display(), e)))?;
 
-    writeln!(f, "{}", json)
-        .map_err(|e| MycoNoteError::ChatConfig(format!("cannot write to {}: {}", file.display(), e)))?;
+    writeln!(f, "{}", json).map_err(|e| {
+        MycoNoteError::ChatConfig(format!("cannot write to {}: {}", file.display(), e))
+    })?;
 
     Ok(())
 }
@@ -38,8 +39,9 @@ fn history_dir() -> Result<PathBuf> {
     let base = super::config::myconote_dir()?;
     let dir = base.join("chat_history");
     if !dir.exists() {
-        std::fs::create_dir_all(&dir)
-            .map_err(|e| MycoNoteError::ChatConfig(format!("cannot create {}: {}", dir.display(), e)))?;
+        std::fs::create_dir_all(&dir).map_err(|e| {
+            MycoNoteError::ChatConfig(format!("cannot create {}: {}", dir.display(), e))
+        })?;
     }
     Ok(dir)
 }

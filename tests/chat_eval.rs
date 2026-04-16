@@ -14,9 +14,7 @@
 use myconote_cli::chat::{
     commands,
     context::{ArtifactSummary, StageContext},
-    ethics,
-    paste,
-    rules,
+    ethics, paste, rules,
 };
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -103,13 +101,19 @@ struct EvalScore {
 
 impl EvalScore {
     fn rule_recall_pct(&self) -> f64 {
-        if self.rule_recall_total == 0 { 100.0 }
-        else { self.rule_recall_ok as f64 / self.rule_recall_total as f64 * 100.0 }
+        if self.rule_recall_total == 0 {
+            100.0
+        } else {
+            self.rule_recall_ok as f64 / self.rule_recall_total as f64 * 100.0
+        }
     }
 
     fn rule_precision_pct(&self) -> f64 {
-        if self.rule_precision_total == 0 { 100.0 }
-        else { self.rule_precision_ok as f64 / self.rule_precision_total as f64 * 100.0 }
+        if self.rule_precision_total == 0 {
+            100.0
+        } else {
+            self.rule_precision_ok as f64 / self.rule_precision_total as f64 * 100.0
+        }
     }
 }
 
@@ -125,12 +129,16 @@ fn fixture_to_stage_context(fc: &FixtureContext) -> StageContext {
     StageContext {
         stage: fc.stage.clone(),
         dir: fc.dir.clone(),
-        artifacts: fc.artifacts.iter().map(|a| ArtifactSummary {
-            name: a.name.clone(),
-            size_bytes: a.size_bytes,
-            line_count: a.line_count,
-            preview: a.preview.clone(),
-        }).collect(),
+        artifacts: fc
+            .artifacts
+            .iter()
+            .map(|a| ArtifactSummary {
+                name: a.name.clone(),
+                size_bytes: a.size_bytes,
+                line_count: a.line_count,
+                preview: a.preview.clone(),
+            })
+            .collect(),
         stats: fc.stats.clone(),
         notes: fc.notes.clone(),
     }
@@ -185,7 +193,10 @@ fn eval_rule_fixture(fixture_path: &str) -> EvalScore {
 
         score.command_substring_total = ec.must_contain_substring.len();
         for sub in &ec.must_contain_substring {
-            if recs.iter().any(|r| r.command.contains(sub) || r.rationale.contains(sub)) {
+            if recs
+                .iter()
+                .any(|r| r.command.contains(sub) || r.rationale.contains(sub))
+            {
                 score.command_substring_ok += 1;
             } else {
                 eprintln!(
@@ -220,7 +231,11 @@ fn eval_predict_fungal_normal() {
 #[test]
 fn eval_predict_fungal_overpredicted() {
     let score = eval_rule_fixture("predict_fungal_overpredicted.json");
-    assert!(score.passed, "predict_fungal_overpredicted failed: {:?}", score);
+    assert!(
+        score.passed,
+        "predict_fungal_overpredicted failed: {:?}",
+        score
+    );
     assert_eq!(score.rule_recall_pct(), 100.0);
 }
 
@@ -244,12 +259,17 @@ fn eval_ethics_refuse_biosecurity() {
 
     let verdict = ethics::classify(&fixture.input);
     match verdict {
-        ethics::EthicsVerdict::Refuse { rule_id, message: _ } => {
+        ethics::EthicsVerdict::Refuse {
+            rule_id,
+            message: _,
+        } => {
             assert_eq!(fixture.expected_verdict, "refuse");
             if let Some(prefix) = &fixture.expected_rule_id_prefix {
                 assert!(
                     rule_id.contains(prefix),
-                    "rule_id '{}' does not contain prefix '{}'", rule_id, prefix
+                    "rule_id '{}' does not contain prefix '{}'",
+                    rule_id,
+                    prefix
                 );
             }
         }
@@ -289,7 +309,8 @@ fn eval_paste_gff_line() {
     let format_name = format!("{:?}", detected);
     assert_eq!(
         format_name, fixture.expected_format,
-        "Format mismatch for: {}", fixture.description
+        "Format mismatch for: {}",
+        fixture.description
     );
 }
 
@@ -303,7 +324,8 @@ fn eval_paste_ncbi_error() {
     let format_name = format!("{:?}", detected);
     assert_eq!(
         format_name, fixture.expected_format,
-        "Format mismatch for: {}", fixture.description
+        "Format mismatch for: {}",
+        fixture.description
     );
 }
 
@@ -330,7 +352,10 @@ fn eval_scoreboard_summary() {
 
     // Print scoreboard
     println!("\n━━━ Eval Scoreboard ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("{:<40} {:>8} {:>8} {:>6}", "Fixture", "Recall%", "Prec%", "Pass");
+    println!(
+        "{:<40} {:>8} {:>8} {:>6}",
+        "Fixture", "Recall%", "Prec%", "Pass"
+    );
     println!("{}", "─".repeat(66));
     for s in &scores {
         println!(

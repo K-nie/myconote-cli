@@ -73,8 +73,9 @@ pub fn generate_condor_submit(
         ));
     }
 
-    std::fs::create_dir_all(batch_dir)
-        .map_err(|e| MycoNoteError::BatchError(format!("cannot create {}: {}", batch_dir.display(), e)))?;
+    std::fs::create_dir_all(batch_dir).map_err(|e| {
+        MycoNoteError::BatchError(format!("cannot create {}: {}", batch_dir.display(), e))
+    })?;
 
     // ── 1. Write genome list ──
     let genome_list_path = batch_dir.join("condor_genomes.txt");
@@ -204,9 +205,7 @@ echo "[$(date -Iseconds)] $NAME | ALL | done"
     sub.push_str("# Submit with:  condor_submit condor.sub\n\n");
     sub.push_str("universe = vanilla\n");
     sub.push_str(&format!("executable = {}\n", script_path.display()));
-    sub.push_str(&format!(
-        "arguments = $(Process)\n"
-    ));
+    sub.push_str(&format!("arguments = $(Process)\n"));
     sub.push_str(&format!("request_cpus = {}\n", config.cpus));
     sub.push_str(&format!("request_memory = {}\n", config.memory));
     sub.push_str(&format!("request_disk = {}\n", config.disk));
@@ -349,13 +348,7 @@ mod tests {
     #[test]
     fn test_empty_genomes_errors() {
         let tmp = std::env::temp_dir().join("myconote_condor_empty");
-        let result = generate_condor_submit(
-            &tmp,
-            &[],
-            &CondorConfig::default(),
-            &["sort"],
-            4,
-        );
+        let result = generate_condor_submit(&tmp, &[], &CondorConfig::default(), &["sort"], 4);
         assert!(result.is_err());
         let _ = std::fs::remove_dir_all(&tmp);
     }

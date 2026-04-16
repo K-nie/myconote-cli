@@ -101,7 +101,11 @@ impl BM25Index {
             });
         }
 
-        let avg_dl = if bm25_docs.is_empty() { 1.0 } else { total_length as f64 / bm25_docs.len() as f64 };
+        let avg_dl = if bm25_docs.is_empty() {
+            1.0
+        } else {
+            total_length as f64 / bm25_docs.len() as f64
+        };
 
         let mut idf = HashMap::new();
         for (term, count) in &df {
@@ -109,7 +113,11 @@ impl BM25Index {
             idf.insert(term.clone(), idf_val.max(0.0));
         }
 
-        Self { docs: bm25_docs, avg_dl, idf }
+        Self {
+            docs: bm25_docs,
+            avg_dl,
+            idf,
+        }
     }
 
     fn search(&self, query: &str, top_k: usize) -> Vec<(String, String, f32)> {
@@ -121,8 +129,8 @@ impl BM25Index {
             for token in &query_tokens {
                 let tf = *doc.terms.get(token).unwrap_or(&0) as f64;
                 let idf = *self.idf.get(token).unwrap_or(&0.0);
-                let norm = tf * (BM25_K1 + 1.0) /
-                    (tf + BM25_K1 * (1.0 - BM25_B + BM25_B * doc.length as f64 / self.avg_dl));
+                let norm = tf * (BM25_K1 + 1.0)
+                    / (tf + BM25_K1 * (1.0 - BM25_B + BM25_B * doc.length as f64 / self.avg_dl));
                 score += idf * norm;
             }
             if score > 0.0 {
@@ -133,10 +141,13 @@ impl BM25Index {
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         scores.truncate(top_k);
 
-        scores.into_iter().map(|(idx, score)| {
-            let doc = &self.docs[idx];
-            (doc.id.clone(), doc.content.clone(), score as f32)
-        }).collect()
+        scores
+            .into_iter()
+            .map(|(idx, score)| {
+                let doc = &self.docs[idx];
+                (doc.id.clone(), doc.content.clone(), score as f32)
+            })
+            .collect()
     }
 }
 
@@ -160,32 +171,40 @@ pub fn retrieve_knowledge(stage: &str, query: &str, top_k: usize) -> Vec<Citatio
         return Vec::new();
     }
 
-    let docs: Vec<(String, String)> = entries.iter().map(|e| {
-        let text = format!("{} {} {}", e.title, e.content, e.tags.join(" "));
-        (e.id.clone(), text)
-    }).collect();
+    let docs: Vec<(String, String)> = entries
+        .iter()
+        .map(|e| {
+            let text = format!("{} {} {}", e.title, e.content, e.tags.join(" "));
+            (e.id.clone(), text)
+        })
+        .collect();
 
     let index = BM25Index::new(docs);
     let results = index.search(query, top_k);
 
-    results.into_iter().map(|(id, snippet, score)| {
-        // Find the original entry to get the clean content
-        let original = entries.iter().find(|e| e.id == id);
-        let clean_snippet = original.map(|e| e.content.clone()).unwrap_or(snippet);
+    results
+        .into_iter()
+        .map(|(id, snippet, score)| {
+            // Find the original entry to get the clean content
+            let original = entries.iter().find(|e| e.id == id);
+            let clean_snippet = original.map(|e| e.content.clone()).unwrap_or(snippet);
 
-        Citation {
-            source_type: SourceType::Knowledge,
-            id: format!("knowledge:{}", id),
-            snippet: clean_snippet,
-            score,
-        }
-    }).collect()
+            Citation {
+                source_type: SourceType::Knowledge,
+                id: format!("knowledge:{}", id),
+                snippet: clean_snippet,
+                score,
+            }
+        })
+        .collect()
 }
 
 /// Load all knowledge entries for a stage from TOML files.
 fn load_knowledge_entries(stage: &str) -> Vec<KnowledgeEntry> {
     let knowledge_dir = find_assets_knowledge_dir();
-    let Some(dir) = knowledge_dir else { return Vec::new() };
+    let Some(dir) = knowledge_dir else {
+        return Vec::new();
+    };
 
     let stage_file = dir.join(format!("{}.toml", stage));
     if !stage_file.exists() {
@@ -207,8 +226,12 @@ fn load_knowledge_entries(stage: &str) -> Vec<KnowledgeEntry> {
 
 fn find_assets_knowledge_dir() -> Option<PathBuf> {
     let candidates = [
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("assets/chat/knowledge"))),
-        std::env::var("CARGO_MANIFEST_DIR").ok().map(|d| PathBuf::from(d).join("assets/chat/knowledge")),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("assets/chat/knowledge"))),
+        std::env::var("CARGO_MANIFEST_DIR")
+            .ok()
+            .map(|d| PathBuf::from(d).join("assets/chat/knowledge")),
         Some(PathBuf::from("assets/chat/knowledge")),
     ];
 
@@ -227,7 +250,11 @@ fn find_assets_knowledge_dir() -> Option<PathBuf> {
 /// Searches the corpus at `~/.myconote/papers/` (or the configured corpus_dir).
 /// Only papers listed in `corpus_manifest.toml` with quartile=Q1 and a valid
 /// OA license are considered. Returns empty if no corpus is available.
-pub fn retrieve_papers(query: &str, top_k: usize, corpus_dir: Option<&std::path::Path>) -> Vec<Citation> {
+pub fn retrieve_papers(
+    query: &str,
+    top_k: usize,
+    corpus_dir: Option<&std::path::Path>,
+) -> Vec<Citation> {
     let dir = match corpus_dir {
         Some(d) => d.to_path_buf(),
         None => {
@@ -236,7 +263,10 @@ pub fn retrieve_papers(query: &str, top_k: usize, corpus_dir: Option<&std::path:
                 .or_else(|_| std::env::var("USERPROFILE"))
                 .unwrap_or_else(|_| "/tmp".to_string());
             let home_papers = PathBuf::from(&home).join(".myconote").join("papers");
-            let dbs_papers = PathBuf::from(&home).join(".myconote").join("dbs").join("papers");
+            let dbs_papers = PathBuf::from(&home)
+                .join(".myconote")
+                .join("dbs")
+                .join("papers");
             if home_papers.join("corpus_manifest.toml").exists() {
                 home_papers
             } else if dbs_papers.join("corpus_manifest.toml").exists() {
@@ -270,7 +300,10 @@ pub fn retrieve_papers(query: &str, top_k: usize, corpus_dir: Option<&std::path:
     // Load text for each paper with a text_file
     let mut docs: Vec<(String, String)> = Vec::new();
     for paper in papers {
-        let doi = paper.get("doi").and_then(|v| v.as_str()).unwrap_or_default();
+        let doi = paper
+            .get("doi")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
         let text_file = match paper.get("text_file").and_then(|v| v.as_str()) {
             Some(tf) => tf,
             None => continue,
@@ -287,7 +320,8 @@ pub fn retrieve_papers(query: &str, top_k: usize, corpus_dir: Option<&std::path:
         }
 
         // Split into paragraphs for finer-grained retrieval
-        let paragraphs: Vec<&str> = content.split("\n\n")
+        let paragraphs: Vec<&str> = content
+            .split("\n\n")
             .filter(|p| p.trim().len() > 50)
             .collect();
 
@@ -304,21 +338,24 @@ pub fn retrieve_papers(query: &str, top_k: usize, corpus_dir: Option<&std::path:
     let index = BM25Index::new(docs);
     let results = index.search(query, top_k);
 
-    results.into_iter().map(|(id, snippet, score)| {
-        // Truncate snippet to ~500 chars for prompt budget
-        let truncated = if snippet.len() > 500 {
-            format!("{}…", &snippet[..500])
-        } else {
-            snippet
-        };
+    results
+        .into_iter()
+        .map(|(id, snippet, score)| {
+            // Truncate snippet to ~500 chars for prompt budget
+            let truncated = if snippet.len() > 500 {
+                format!("{}…", &snippet[..500])
+            } else {
+                snippet
+            };
 
-        Citation {
-            source_type: SourceType::Paper,
-            id: format!("paper:{}", id),
-            snippet: truncated,
-            score,
-        }
-    }).collect()
+            Citation {
+                source_type: SourceType::Paper,
+                id: format!("paper:{}", id),
+                snippet: truncated,
+                score,
+            }
+        })
+        .collect()
 }
 
 /// Check if a paper corpus is available and report status.
@@ -328,13 +365,23 @@ pub fn corpus_status() -> Option<String> {
         .unwrap_or_else(|_| "/tmp".to_string());
 
     let candidates = [
-        PathBuf::from(&home).join(".myconote").join("papers").join("corpus_manifest.toml"),
-        PathBuf::from(&home).join(".myconote").join("dbs").join("papers").join("corpus_manifest.toml"),
+        PathBuf::from(&home)
+            .join(".myconote")
+            .join("papers")
+            .join("corpus_manifest.toml"),
+        PathBuf::from(&home)
+            .join(".myconote")
+            .join("dbs")
+            .join("papers")
+            .join("corpus_manifest.toml"),
     ];
 
     for path in &candidates {
         if path.exists() {
-            return Some(format!("Corpus at {}", path.parent().unwrap_or(path).display()));
+            return Some(format!(
+                "Corpus at {}",
+                path.parent().unwrap_or(path).display()
+            ));
         }
     }
     None
@@ -360,9 +407,18 @@ mod tests {
     #[test]
     fn bm25_ranking() {
         let docs = vec![
-            ("doc1".to_string(), "gene prediction fungal genome annotation".to_string()),
-            ("doc2".to_string(), "repeat masking transposon repeat content".to_string()),
-            ("doc3".to_string(), "gene count over-prediction unmasked repeats".to_string()),
+            (
+                "doc1".to_string(),
+                "gene prediction fungal genome annotation".to_string(),
+            ),
+            (
+                "doc2".to_string(),
+                "repeat masking transposon repeat content".to_string(),
+            ),
+            (
+                "doc3".to_string(),
+                "gene count over-prediction unmasked repeats".to_string(),
+            ),
         ];
 
         let index = BM25Index::new(docs);

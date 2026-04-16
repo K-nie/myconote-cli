@@ -646,6 +646,7 @@ fn main() -> Result<()> {
                 println!("  merops       MEROPS protease DIAMOND database — used by annotate --merops");
                 println!("  busco        BUSCO fungi lineage data — used by annotate");
                 println!("  chat-corpus  Q1 open-access paper corpus — used by explain");
+                println!("  ollama       Ollama LLM runtime + model — used by explain");
                 println!("\nExamples:");
                 println!("  myconote-cli setup --list");
                 println!("  myconote-cli setup                     # download everything");
@@ -2407,6 +2408,11 @@ fn handle_setup(args: &[String]) -> Result<()> {
             // Convenience: myconote setup --chat-corpus
             "--chat-corpus" => {
                 keys.push("chat-corpus".to_string());
+                i += 1;
+            }
+            // Convenience: myconote setup --ollama
+            "--ollama" => {
+                keys.push("ollama".to_string());
                 i += 1;
             }
             // Legacy: myconote annotate --download-dbs

@@ -158,9 +158,48 @@ myconote-cli convert annotate_out/annotated.gff3 --to genbank --fasta assembly_m
 
 ---
 
+## 9. Interpret your results with AI
+
+```bash
+# Interpret prediction results (local LLM, no data leaves your machine)
+myconote-cli explain predict
+
+# Rules-only mode (no Ollama needed)
+myconote-cli explain predict --no-llm
+
+# Analyze a pasted error
+echo "ERROR: SEQ_FEAT.NoStop" | myconote-cli explain --paste
+```
+
+First-time setup for the AI interpreter:
+
+```bash
+myconote-cli setup ollama        # install Ollama + best model for your hardware
+myconote-cli setup chat-corpus   # optional: Q1 paper corpus for grounded citations
+```
+
+---
+
+## 10. Annotate multiple genomes at once
+
+```bash
+# From a directory of FASTAs
+myconote-cli batch genomes/ --kingdom fungi --threads 8
+
+# From a sample sheet with per-genome settings
+myconote-cli batch samples.tsv --parallel 4
+
+# Generate HTCondor submit files for HPC
+myconote-cli batch genomes/ --condor --condor-mem 64G
+```
+
+---
+
 ## Next steps
 
 - Learn interactively: `myconote-cli learn`
+- Interpret results: `myconote-cli explain <stage>` ([docs](analysis/explain.md))
+- Annotate many genomes: `myconote-cli batch genomes/` ([docs](analysis/batch.md))
 - Build a phylogenetic tree: [phylogeny](analysis/phylogeny.md)
 - Compare two genomes: `myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa`
 - Full workshop tutorial: [Workshop Lesson](lesson.md)

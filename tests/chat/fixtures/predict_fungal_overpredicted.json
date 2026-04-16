@@ -1,0 +1,36 @@
+{
+  "description": "Overpredicted fungal genome — expect gene_count_high warning",
+  "stage": "predict",
+  "context": {
+    "stage": "predict",
+    "dir": "/tmp/test/02_predict",
+    "artifacts": [
+      {
+        "name": "predict_summary.txt",
+        "size_bytes": 1500,
+        "line_count": 30,
+        "preview": "Gene predictions summary\n  Augustus: 28000 genes\n  GeneMark: 26000 genes\n  Consensus: 27000 genes"
+      }
+    ],
+    "stats": {
+      "total_genes": 27000,
+      "total_transcripts": 28500,
+      "total_cds": 27000,
+      "total_exons": 56700,
+      "mean_gene_length": 950.0,
+      "mean_exon_count": 2.1,
+      "mean_intron_length": 60.0
+    },
+    "notes": []
+  },
+  "expected_findings": {
+    "must_fire": ["predict.gene_count_high"],
+    "must_not_fire": ["predict.gene_count_normal", "predict.gene_count_low", "predict.no_genes"]
+  },
+  "expected_commands": {
+    "min_count": 1,
+    "max_count": 3,
+    "must_contain_substring": ["mask"]
+  },
+  "ethics": "pass"
+}

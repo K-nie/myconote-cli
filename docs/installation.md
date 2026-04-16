@@ -109,6 +109,41 @@ Core databases (~2.5 GB):
 
 ---
 
+## Ollama setup (for `explain` AI interpreter)
+
+The `explain` command uses a local LLM via Ollama for privacy-first result interpretation. No data leaves your machine.
+
+```bash
+myconote-cli setup ollama        # install Ollama, detect RAM, pull best model
+```
+
+This will:
+
+1. Install Ollama (latest version from GitHub releases)
+2. Start the Ollama server
+3. Auto-detect your system RAM and select the most capable model
+4. Pull and verify the model
+
+Available model tiers:
+
+| RAM | Model | Quality |
+|-----|-------|---------|
+| 48+ GB | llama3.3:70b-instruct-q4_K_M | Best |
+| 24+ GB | qwen2.5:32b-instruct-q4_K_M | Excellent |
+| 16+ GB | mistral-small:22b | Strong |
+| 12+ GB | qwen2.5:14b | Good |
+| 8+ GB | llama3.1:8b | Baseline |
+
+Override with `MYCONOTE_CHAT_MODEL=<model>` or `--model <model>` on the `explain` command.
+
+Optionally download Q1 open-access papers for grounded citations:
+
+```bash
+myconote-cli setup chat-corpus   # ~50 MB, CC-BY licensed papers only
+```
+
+---
+
 ## Getting started
 
 After installation:

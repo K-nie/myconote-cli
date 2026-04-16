@@ -60,3 +60,6 @@ HMM/
 
 # Shell scripts (dev-only)
 build_and_check.sh
+
+# Explain reproducibility bundles (generated at runtime)
+explain_*/

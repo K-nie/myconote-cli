@@ -1,0 +1,44 @@
+# Knowledge base: submit stage
+
+[[entries]]
+id = "submit.ncbi_validation"
+title = "Common NCBI validation errors and fixes"
+content = """
+Frequent errors in errorsummary.val and their solutions:
+
+ERROR: SEQ_FEAT.NoStop — gene model has no stop codon
+  Fix: check genetic code (--genetic-code), or mark as pseudo-gene
+
+ERROR: SEQ_FEAT.PartialProblem — partial gene at contig boundary
+  Fix: mark with partial location (handled by myconote-cli submit)
+
+ERROR: SEQ_FEAT.InternalStop — internal stop codon in CDS
+  Fix: wrong genetic code, or gene model error. Run `myconote-cli fix`
+
+WARNING: SEQ_FEAT.NotSpliceConsensus — non-canonical splice sites
+  Fix: usually benign (GT-AG is canonical, GC-AG is accepted)
+
+WARNING: SEQ_FEAT.ShortExon — exon shorter than 15 bp
+  Fix: review gene model, may be annotation artifact
+
+ERROR: SEQ_DESCR.BioSourceMissing — no organism specified
+  Fix: add --organism flag to submit command
+"""
+tags = ["submit", "validation", "ncbi", "errors"]
+
+[[entries]]
+id = "submit.genetic_codes"
+title = "NCBI genetic codes for common organisms"
+content = """
+Common genetic codes (--genetic-code flag):
+- 1: Standard (most organisms)
+- 4: Mold/Protozoan mitochondrial (some fungi use this for nuclear genes)
+- 6: Ciliate nuclear
+- 11: Bacterial/archaeal
+- 12: Alternative yeast nuclear (Candida, CTG clade: CUG→Ser)
+- 26: Pachysolen tannophilus nuclear
+
+Wrong genetic code causes internal stop codon errors in validation.
+Check your organism's genetic code at NCBI Taxonomy before submitting.
+"""
+tags = ["submit", "genetic_code", "ncbi"]

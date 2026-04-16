@@ -95,6 +95,22 @@ pub const DATABASES: &[DbEntry] = &[
         marker_file: "busco/fungi_odb10",
         index_cmd:   "",
     },
+    DbEntry {
+        key:         "chat-corpus",
+        description: "Q1 open-access paper corpus for explain citations",
+        size_hint:   "~50 MB",
+        urls: &[],  // built from corpus_manifest.toml at ~/.myconote/papers/
+        marker_file: "papers/corpus_manifest.toml",
+        index_cmd:   "",
+    },
+    DbEntry {
+        key:         "ollama",
+        description: "Ollama local LLM runtime + model for explain",
+        size_hint:   "~4 GB (model dependent)",
+        urls: &[],  // installed via install script or package manager
+        marker_file: "ollama/installed.version",
+        index_cmd:   "",
+    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,6 +134,23 @@ pub fn check_databases(db_dir: &Path) {
     println!("{:<14} {:<12} {}", "Key", "Status", "Version / Date");
     println!("{}", "─".repeat(60));
     for db in DATABASES {
+        // Special handling for ollama — check the binary, not just a marker file
+        if db.key == "ollama" {
+            match get_ollama_version() {
+                Some(ver) => {
+                    let model_info = read_configured_model().unwrap_or_else(|| "llama3.1".to_string());
+                    println!(
+                        "  {:<14} \x1b[32m✓ present\x1b[0m  v{}, model: {}",
+                        db.key, ver, model_info
+                    );
+                }
+                None => {
+                    println!("  {:<14} \x1b[31m✗ missing\x1b[0m  run: myconote setup --ollama", db.key);
+                }
+            }
+            continue;
+        }
+
         let marker = db_dir.join(db.marker_file);
         if marker.exists() {
             let version_info =
@@ -266,6 +299,8 @@ pub fn download_databases(db_dir: &Path, keys: &[String], force: bool) -> Result
             "dbcan" => download_dbcan(db_dir)?,
             "merops" => download_merops(db_dir)?,
             "busco" => download_busco(db_dir)?,
+            "chat-corpus" => download_chat_corpus(db_dir)?,
+            "ollama" => setup_ollama(db_dir)?,
             other => println!("  ⚠  No download handler for '{}'", other),
         }
     }
@@ -620,4 +655,576 @@ fn download_busco(db_dir: &Path) -> Result<()> {
 
     println!("  ✓ BUSCO lineages ready at {}", busco_dir.display());
     Ok(())
+}
+
+fn download_chat_corpus(db_dir: &Path) -> Result<()> {
+    let papers_dir = db_dir.join("papers");
+    std::fs::create_dir_all(&papers_dir).map_err(MycoNoteError::Io)?;
+
+    // Also create the user-local papers dir at ~/.myconote/papers/
+    let home_papers = home_myconote_dir().join("papers");
+    std::fs::create_dir_all(&home_papers).map_err(MycoNoteError::Io)?;
+    let _ = std::fs::create_dir_all(home_papers.join("local"));
+
+    // Write a skeleton corpus_manifest.toml if one doesn't exist
+    let manifest_path = papers_dir.join("corpus_manifest.toml");
+    if !manifest_path.exists() {
+        println!("  Creating corpus manifest at {}", manifest_path.display());
+        let manifest = CORPUS_MANIFEST_TEMPLATE;
+        std::fs::write(&manifest_path, manifest)
+            .map_err(|e| MycoNoteError::Io(e))?;
+    }
+
+    // Validate the manifest
+    println!("  Validating corpus manifest…");
+    match validate_corpus_manifest(&manifest_path) {
+        Ok(stats) => {
+            println!("  ✓ Manifest valid: {} papers, all Q1 open-access", stats.total);
+            if stats.missing_text > 0 {
+                println!(
+                    "    ⚠  {} papers have no extracted text yet — place .txt files in {}",
+                    stats.missing_text,
+                    papers_dir.display()
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!("  ⚠  Manifest validation failed: {}", e);
+            eprintln!("     Fix issues in {} and re-run setup", manifest_path.display());
+        }
+    }
+
+    // Symlink ~/.myconote/papers → db_dir/papers if they differ
+    let symlink_target = home_papers.join("corpus_manifest.toml");
+    if !symlink_target.exists() && manifest_path.exists() {
+        #[cfg(unix)]
+        {
+            let _ = std::os::unix::fs::symlink(&manifest_path, &symlink_target);
+        }
+    }
+
+    println!("  ✓ Chat corpus ready at {}", papers_dir.display());
+    println!();
+    println!("  To add papers:");
+    println!("    1. Place extracted .txt files in {}", papers_dir.display());
+    println!("    2. Add entries to {}", manifest_path.display());
+    println!("    3. Each paper must have quartile = \"Q1\" and a valid OA license");
+    println!();
+    println!("  For personal papers (legally obtained):");
+    println!("    Place .txt files in {}", home_papers.join("local").display());
+    println!("    These are used for local retrieval only.");
+
+    let _ = write_db_version(db_dir, "chat-corpus", "local-corpus");
+    Ok(())
+}
+
+fn setup_ollama(db_dir: &Path) -> Result<()> {
+    let ollama_dir = db_dir.join("ollama");
+    std::fs::create_dir_all(&ollama_dir).map_err(MycoNoteError::Io)?;
+
+    // ── 1. Check if Ollama is installed ──
+    let installed_version = get_ollama_version();
+
+    match &installed_version {
+        Some(ver) => println!("  Ollama found: v{}", ver),
+        None => {
+            println!("  Ollama not found — installing latest version…");
+            install_ollama()?;
+
+            // Verify installation
+            match get_ollama_version() {
+                Some(ver) => println!("  ✓ Ollama installed: v{}", ver),
+                None => {
+                    eprintln!("  ⚠  Ollama installation did not succeed.");
+                    eprintln!("     Install manually: https://ollama.com/download");
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    // ── 2. Check for updates ──
+    let current_version = get_ollama_version().unwrap_or_default();
+    let latest_version = check_ollama_latest_version();
+
+    if let Some(ref latest) = latest_version {
+        if !current_version.is_empty() && latest != &current_version {
+            println!("  Update available: v{} → v{}", current_version, latest);
+            println!("  Updating Ollama…");
+            install_ollama()?;
+            if let Some(new_ver) = get_ollama_version() {
+                println!("  ✓ Ollama updated to v{}", new_ver);
+            }
+        } else {
+            println!("  ✓ Ollama is up to date (v{})", current_version);
+        }
+    }
+
+    // ── 3. Ensure Ollama is running ──
+    let is_running = check_ollama_running();
+    if !is_running {
+        println!("  Starting Ollama server…");
+        start_ollama_server();
+        // Give it a moment to start
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        if !check_ollama_running() {
+            eprintln!("  ⚠  Could not start Ollama. Run `ollama serve` manually.");
+        } else {
+            println!("  ✓ Ollama server running");
+        }
+    } else {
+        println!("  ✓ Ollama server already running");
+    }
+
+    // ── 4. Select and pull the best model for this machine ──
+    let model = std::env::var("MYCONOTE_CHAT_MODEL").unwrap_or_else(|_| {
+        let config_model = read_configured_model();
+        config_model.unwrap_or_else(|| {
+            // Auto-select the most capable model for available memory
+            use crate::chat::config::{recommend_model, MODEL_TIERS};
+            let recommended = recommend_model();
+            println!("  Detecting system memory…");
+            println!("  Available model tiers:");
+            for tier in MODEL_TIERS {
+                let marker = if tier.name == recommended { " ◀ selected" } else { "" };
+                println!("    {:<45} {}{}", tier.name, tier.description, marker);
+            }
+            recommended.to_string()
+        })
+    });
+
+    println!("  Pulling model '{}' (latest version)…", model);
+    let pull_ok = Command::new("ollama")
+        .args(["pull", &model])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    if pull_ok {
+        println!("  ✓ Model '{}' ready", model);
+    } else {
+        eprintln!("  ⚠  Failed to pull model '{}'. Try: ollama pull {}", model, model);
+        eprintln!("     Available models: https://ollama.com/library");
+    }
+
+    // ── 5. Verify the model works ──
+    if check_ollama_running() {
+        println!("  Verifying model…");
+        let verify_ok = Command::new("ollama")
+            .args(["run", &model, "Say OK"])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+
+        if verify_ok {
+            println!("  ✓ Model '{}' verified", model);
+        } else {
+            eprintln!("  ⚠  Model verification failed — the model may still be loading");
+        }
+    }
+
+    // ── 6. Write version marker ──
+    let final_version = get_ollama_version().unwrap_or_else(|| "unknown".to_string());
+    let marker = ollama_dir.join("installed.version");
+    let _ = std::fs::write(&marker, format!(
+        "ollama_version={}\nmodel={}\ntimestamp={}\nmyconote_version={}\n",
+        final_version,
+        model,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        env!("CARGO_PKG_VERSION"),
+    ));
+
+    let _ = write_db_version(db_dir, "ollama", "https://ollama.com");
+    println!("  ✓ Ollama setup complete");
+    println!();
+    println!("  Usage:");
+    println!("    myconote-cli explain predict              # interpret with LLM");
+    println!("    myconote-cli explain predict --no-llm     # rules only, no LLM");
+    println!("    myconote-cli explain predict --model {}   # use this model", model);
+    Ok(())
+}
+
+/// Get the installed Ollama version, if any.
+fn get_ollama_version() -> Option<String> {
+    let output = Command::new("ollama")
+        .args(["--version"])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // "ollama version is 0.3.14" or "ollama version 0.3.14"
+    let version = stdout.trim()
+        .rsplit(' ')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    if version.is_empty() { None } else { Some(version) }
+}
+
+/// Check the latest available Ollama version from GitHub releases.
+fn check_ollama_latest_version() -> Option<String> {
+    // Use GitHub API to get latest release tag
+    let output = Command::new("curl")
+        .args([
+            "-sL",
+            "--max-time", "10",
+            "-H", "Accept: application/json",
+            "https://api.github.com/repos/ollama/ollama/releases/latest",
+        ])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let body = String::from_utf8_lossy(&output.stdout);
+    // Parse "tag_name":"v0.3.14" — simple extraction without a JSON crate
+    let tag_prefix = "\"tag_name\":\"";
+    let start = body.find(tag_prefix)? + tag_prefix.len();
+    let end = body[start..].find('"')? + start;
+    let tag = &body[start..end];
+
+    // Strip leading 'v' if present
+    Some(tag.strip_prefix('v').unwrap_or(tag).to_string())
+}
+
+/// Install or update Ollama using the official install script (Linux)
+/// or brew (macOS).
+fn install_ollama() -> Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        println!("  Attempting: brew install ollama");
+        let ok = Command::new("brew")
+            .args(["install", "ollama"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !ok {
+            // Try upgrade if already installed
+            let _ = Command::new("brew")
+                .args(["upgrade", "ollama"])
+                .status();
+        }
+        return Ok(());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        println!("  Attempting: curl -fsSL https://ollama.com/install.sh | sh");
+        let ok = Command::new("sh")
+            .args(["-c", "curl -fsSL https://ollama.com/install.sh | sh"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !ok {
+            eprintln!("  ⚠  Automatic install failed.");
+            eprintln!("     Install manually: https://ollama.com/download");
+        }
+        return Ok(());
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        eprintln!("  ⚠  Automatic Ollama install not supported on this platform.");
+        eprintln!("     Download from: https://ollama.com/download");
+        Ok(())
+    }
+}
+
+/// Check if the Ollama server is reachable.
+fn check_ollama_running() -> bool {
+    let endpoint = std::env::var("MYCONOTE_CHAT_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+
+    Command::new("curl")
+        .args(["-s", "--max-time", "3", &endpoint])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// Start Ollama server in the background.
+fn start_ollama_server() {
+    let _ = Command::new("ollama")
+        .arg("serve")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// Read the model from ~/.myconote/config.toml if it exists.
+fn read_configured_model() -> Option<String> {
+    let config_path = home_myconote_dir().join("config.toml");
+    let text = std::fs::read_to_string(&config_path).ok()?;
+    let table: toml::Value = text.parse().ok()?;
+    table.get("chat")?
+        .get("model")?
+        .as_str()
+        .map(|s| s.to_string())
+}
+
+fn home_myconote_dir() -> PathBuf {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| "/tmp".to_string());
+    PathBuf::from(home).join(".myconote")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Corpus manifest validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+const VALID_LICENSES: &[&str] = &["CC-BY", "CC-BY-SA", "CC-BY-4.0", "CC-BY-SA-4.0", "CC0", "public-domain"];
+const VALID_QUARTILES: &[&str] = &["Q1"];
+
+#[derive(Debug)]
+struct CorpusStats {
+    total: usize,
+    missing_text: usize,
+}
+
+fn validate_corpus_manifest(path: &Path) -> std::result::Result<CorpusStats, String> {
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| format!("cannot read {}: {}", path.display(), e))?;
+
+    let table: toml::Value = contents.parse()
+        .map_err(|e| format!("invalid TOML: {}", e))?;
+
+    let papers = table.get("paper")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "missing [[paper]] array".to_string())?;
+
+    let mut total = 0usize;
+    let mut missing_text = 0usize;
+
+    for (i, paper) in papers.iter().enumerate() {
+        let doi = paper.get("doi").and_then(|v| v.as_str()).unwrap_or("<missing>");
+        let quartile = paper.get("quartile").and_then(|v| v.as_str());
+        let license = paper.get("license").and_then(|v| v.as_str());
+        let text_file = paper.get("text_file").and_then(|v| v.as_str());
+
+        // Validate quartile
+        match quartile {
+            Some(q) if VALID_QUARTILES.contains(&q) => {}
+            Some(q) => return Err(format!("paper #{} ({}): quartile '{}' is not Q1", i + 1, doi, q)),
+            None => return Err(format!("paper #{} ({}): missing quartile field", i + 1, doi)),
+        }
+
+        // Validate license
+        match license {
+            Some(l) if VALID_LICENSES.contains(&l) => {}
+            Some(l) => return Err(format!("paper #{} ({}): license '{}' is not open-access", i + 1, doi, l)),
+            None => return Err(format!("paper #{} ({}): missing license field", i + 1, doi)),
+        }
+
+        // Check text file presence
+        if let Some(tf) = text_file {
+            let text_path = path.parent().unwrap_or(Path::new(".")).join(tf);
+            if !text_path.exists() {
+                missing_text += 1;
+            }
+        } else {
+            missing_text += 1;
+        }
+
+        total += 1;
+    }
+
+    if total == 0 {
+        return Err("no papers in manifest".to_string());
+    }
+
+    Ok(CorpusStats { total, missing_text })
+}
+
+const CORPUS_MANIFEST_TEMPLATE: &str = r#"# myconote-cli chat corpus manifest
+#
+# Each [[paper]] entry describes a Q1 open-access paper used for
+# citation-backed explanations in `myconote explain`.
+#
+# Requirements:
+#   - quartile must be "Q1"
+#   - license must be an open-access license (CC-BY, CC-BY-SA, CC0, etc.)
+#   - text_file points to extracted plain text (relative to this directory)
+#
+# To add papers:
+#   1. Download the paper (open-access only)
+#   2. Extract text to a .txt file in this directory
+#   3. Add an entry below
+#
+# Journals accepted (Q1, open-access):
+#   Genome Biology, Genome Research, NAR, Bioinformatics, PLOS Biology,
+#   Nature Communications (OA), BMC Genomics, GigaScience, Molecular
+#   Biology and Evolution, PNAS (OA)
+
+[[paper]]
+doi = "10.1186/s13059-019-1832-y"
+title = "Funannotate: a comprehensive tool for functional annotation of fungal genomes"
+journal = "Genome Biology"
+year = 2019
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["annotation", "fungi", "pipeline"]
+text_file = "funannotate_2019.txt"
+
+[[paper]]
+doi = "10.1093/nar/gkab065"
+title = "InterPro in 2021: an integrative protein signature database"
+journal = "Nucleic Acids Research"
+year = 2021
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["functional-annotation", "domains", "interpro"]
+text_file = "interpro_2021.txt"
+
+[[paper]]
+doi = "10.1093/bioinformatics/btv351"
+title = "BUSCO: assessing genome assembly and annotation completeness"
+journal = "Bioinformatics"
+year = 2015
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["quality", "completeness", "busco"]
+text_file = "busco_2015.txt"
+
+[[paper]]
+doi = "10.1093/nar/gkaa913"
+title = "Pfam: the protein families database in 2021"
+journal = "Nucleic Acids Research"
+year = 2021
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["domains", "pfam", "functional-annotation"]
+text_file = "pfam_2021.txt"
+
+[[paper]]
+doi = "10.1186/s13059-019-1715-2"
+title = "Repeat masking and genome annotation in fungal genomes"
+journal = "Genome Biology"
+year = 2019
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["repeats", "masking", "fungi"]
+text_file = "repeatmasking_2019.txt"
+"#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_manifest_valid() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("corpus_manifest.toml");
+        std::fs::write(&manifest, r#"
+[[paper]]
+doi = "10.1186/test"
+title = "Test Paper"
+journal = "Genome Biology"
+year = 2020
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["test"]
+text_file = "test.txt"
+"#).unwrap();
+        // text file doesn't exist, so missing_text should be 1
+        let result = validate_corpus_manifest(&manifest).unwrap();
+        assert_eq!(result.total, 1);
+        assert_eq!(result.missing_text, 1);
+    }
+
+    #[test]
+    fn validate_manifest_with_text_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("corpus_manifest.toml");
+        let text_file = dir.path().join("test.txt");
+        std::fs::write(&text_file, "Some paper content here.").unwrap();
+        std::fs::write(&manifest, r#"
+[[paper]]
+doi = "10.1186/test"
+title = "Test Paper"
+journal = "Genome Biology"
+year = 2020
+quartile = "Q1"
+license = "CC-BY-4.0"
+tags = ["test"]
+text_file = "test.txt"
+"#).unwrap();
+        let result = validate_corpus_manifest(&manifest).unwrap();
+        assert_eq!(result.total, 1);
+        assert_eq!(result.missing_text, 0);
+    }
+
+    #[test]
+    fn validate_manifest_rejects_non_q1() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("corpus_manifest.toml");
+        std::fs::write(&manifest, r#"
+[[paper]]
+doi = "10.1186/test"
+title = "Test"
+journal = "Low Impact Journal"
+year = 2020
+quartile = "Q3"
+license = "CC-BY-4.0"
+tags = []
+"#).unwrap();
+        let result = validate_corpus_manifest(&manifest);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not Q1"));
+    }
+
+    #[test]
+    fn validate_manifest_rejects_non_oa_license() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("corpus_manifest.toml");
+        std::fs::write(&manifest, r#"
+[[paper]]
+doi = "10.1186/test"
+title = "Test"
+journal = "Good Journal"
+year = 2020
+quartile = "Q1"
+license = "proprietary"
+tags = []
+"#).unwrap();
+        let result = validate_corpus_manifest(&manifest);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not open-access"));
+    }
+
+    #[test]
+    fn validate_manifest_empty_papers() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("corpus_manifest.toml");
+        std::fs::write(&manifest, "# empty manifest\n[metadata]\nversion = 1\n").unwrap();
+        let result = validate_corpus_manifest(&manifest);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn template_parses_as_valid_toml() {
+        let table: toml::Value = CORPUS_MANIFEST_TEMPLATE.parse().unwrap();
+        let papers = table.get("paper").unwrap().as_array().unwrap();
+        assert_eq!(papers.len(), 5);
+    }
+
+    #[test]
+    fn database_catalog_has_chat_corpus() {
+        let entry = DATABASES.iter().find(|d| d.key == "chat-corpus");
+        assert!(entry.is_some());
+        assert!(entry.unwrap().marker_file.contains("corpus_manifest"));
+    }
 }

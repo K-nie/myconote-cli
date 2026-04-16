@@ -1,0 +1,34 @@
+{
+  "description": "NCBI submission with validation errors — expect critical finding",
+  "stage": "submit",
+  "context": {
+    "stage": "submit",
+    "dir": "/tmp/test/06_submit",
+    "artifacts": [
+      {
+        "name": "errorsummary.val",
+        "size_bytes": 2500,
+        "line_count": 45,
+        "preview": "ERROR: valid [SEQ_FEAT.NoStop] No stop codon found\nERROR: valid [SEQ_FEAT.InternalStop] Internal stop codon\nWARNING: valid [SEQ_FEAT.NotSpliceConsensus] Splice site not consensus\nWARNING: valid [SEQ_DESCR.BioSourceMissing] BioSource missing"
+      },
+      {
+        "name": "genome.sqn",
+        "size_bytes": 15000000,
+        "line_count": null,
+        "preview": null
+      }
+    ],
+    "stats": null,
+    "notes": []
+  },
+  "expected_findings": {
+    "must_fire": ["submit.validation_errors"],
+    "must_not_fire": ["submit.validation_clean", "submit.no_validation"]
+  },
+  "expected_commands": {
+    "min_count": 1,
+    "max_count": 3,
+    "must_contain_substring": ["fix"]
+  },
+  "ethics": "pass"
+}

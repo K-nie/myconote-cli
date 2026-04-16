@@ -1,0 +1,8 @@
+# Deterministic rules for the mask stage.
+# These are evaluated via the TOML rule engine in src/chat/rules.rs.
+# Note: most mask rules are built-in (parsed from notes), but additional
+# threshold-based rules can be added here.
+
+# Currently empty — mask rules are computed from FASTA content in Rust.
+# Add rules here to extend the built-in masking checks.
+rules = []

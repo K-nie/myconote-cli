@@ -1,0 +1,51 @@
+# Knowledge base: mask stage
+# Repeat content norms and masking troubleshooting.
+
+[[entries]]
+id = "mask.repeat_content_norms"
+title = "Expected repeat content by kingdom"
+content = """
+Typical repeat content (soft-masked) by kingdom:
+- Fungi: 3–10% (compact genomes, low repeat content)
+- Ascomycota: 2–8%
+- Basidiomycota: 5–15% (higher due to transposon activity)
+- Plants: 50–85% (extensive transposon amplification, LTR-retrotransposons)
+- Maize/wheat: 80–85%
+- Arabidopsis: 10–15% (unusually low for a plant)
+- Animals: 30–50%
+- Mammals: 40–50% (SINEs, LINEs dominate)
+- Insects: 15–40%
+
+Values significantly outside these ranges warrant investigation.
+"""
+tags = ["repeat_content", "masking", "kingdom", "reference_range"]
+
+[[entries]]
+id = "mask.masking_failure"
+title = "Signs of masking failure"
+content = """
+If masking produces <1% masked content:
+1. RepeatModeler may not have built a repeat library (check for families file)
+2. RepeatMasker may have used the wrong species/library
+3. The genome may be too fragmented for RepeatModeler to detect repeats
+4. Check that the masked FASTA has lowercase letters (soft-masking)
+
+Downstream impact: unmasked repeats cause severe gene over-prediction.
+Augustus and SNAP will call genes inside transposons.
+"""
+tags = ["masking", "failure", "troubleshooting"]
+
+[[entries]]
+id = "mask.repeat_families"
+title = "Repeat family interpretation"
+content = """
+The repeat families file (*-families.fa) from RepeatModeler contains:
+- DNA transposons (DNA/hAT, DNA/TcMar, DNA/Helitron)
+- LTR retrotransposons (LTR/Copia, LTR/Gypsy)
+- Non-LTR retrotransposons (LINE, SINE)
+- Unknown/unclassified repeats
+
+A high proportion of 'Unknown' repeats is common in non-model organisms.
+10-50 repeat families is typical for fungi; plants may have hundreds.
+"""
+tags = ["repeat_families", "repeatmodeler", "transposons"]

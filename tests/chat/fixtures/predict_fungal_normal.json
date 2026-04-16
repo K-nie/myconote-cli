@@ -1,0 +1,42 @@
+{
+  "description": "Normal fungal gene prediction — expect info-level finding, no warnings",
+  "stage": "predict",
+  "context": {
+    "stage": "predict",
+    "dir": "/tmp/test/02_predict",
+    "artifacts": [
+      {
+        "name": "predict_summary.txt",
+        "size_bytes": 1200,
+        "line_count": 25,
+        "preview": "Gene predictions summary\n  Augustus: 5200 genes\n  GeneMark: 5100 genes\n  SNAP: 5300 genes\n  Consensus: 5150 genes"
+      },
+      {
+        "name": "consensus.gff3",
+        "size_bytes": 2500000,
+        "line_count": 52000,
+        "preview": null
+      }
+    ],
+    "stats": {
+      "total_genes": 5150,
+      "total_transcripts": 5400,
+      "total_cds": 5150,
+      "total_exons": 16480,
+      "mean_gene_length": 1850.5,
+      "mean_exon_count": 3.2,
+      "mean_intron_length": 85.0
+    },
+    "notes": []
+  },
+  "expected_findings": {
+    "must_fire": ["predict.gene_count_normal"],
+    "must_not_fire": ["predict.gene_count_high", "predict.gene_count_low", "predict.no_genes"]
+  },
+  "expected_commands": {
+    "min_count": 1,
+    "max_count": 3,
+    "must_contain_substring": ["stats", "update"]
+  },
+  "ethics": "pass"
+}

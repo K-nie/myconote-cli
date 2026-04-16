@@ -4,7 +4,9 @@ use std::path::PathBuf;
 
 pub mod align;
 pub mod annotate;
+pub mod batch;
 pub mod blast;
+pub mod chat;
 pub mod check;
 pub mod cli;
 pub mod compare;
@@ -95,6 +97,7 @@ fn print_main_help() {
     println!("  annotate Functionally annotate genes (MMseqs2 + Pfam + EggNog + CAZyme + MEROPS + tRNAscan + ...)");
     println!("  submit   Prepare NCBI GenBank submission (validation + table2asn)");
     println!("  remote   Submit proteins to remote annotation servers (Phobius, InterProScan)");
+    println!("  batch    Annotate multiple genomes (directory or sample sheet, HTCondor support)");
     println!("\nAnalysis commands:");
     println!("  stats    Calculate statistics from annotation files");
     println!("  plot     Generate genome maps (linear PNG / circular PNG)");
@@ -644,6 +647,8 @@ fn main() -> Result<()> {
                 println!("  dbcan        CAZyme DIAMOND database — used by annotate --cazyme");
                 println!("  merops       MEROPS protease DIAMOND database — used by annotate --merops");
                 println!("  busco        BUSCO fungi lineage data — used by annotate");
+                println!("  chat-corpus  Q1 open-access paper corpus — used by explain");
+                println!("  ollama       Ollama LLM runtime + model — used by explain");
                 println!("\nExamples:");
                 println!("  myconote-cli setup --list");
                 println!("  myconote-cli setup                     # download everything");
@@ -755,6 +760,46 @@ fn main() -> Result<()> {
         "learn" | "tutorial" | "swirl" => {
             learn::run_learn(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
+        "explain" => {
+            chat::run_explain(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
+        "batch" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli batch <genomes_dir|sample_sheet.tsv> [options]");
+                println!("\nAnnotate multiple genomes in one command. Accepts a directory of");
+                println!("FASTA files or a sample sheet (TSV) with per-genome settings.");
+                println!("\nSample sheet columns (TSV, header required):");
+                println!("  name    fasta    kingdom    species    genetic_code    locus_prefix");
+                println!("  (only 'fasta' is required; others use defaults)");
+                println!("\nPipeline options:");
+                println!("  --output <dir>          Batch output directory (default: batch_out)");
+                println!("  --stages <list>         Comma-separated stages (default: sort,mask,predict,annotate,submit)");
+                println!("  --kingdom <k>           Default kingdom (default: fungi)");
+                println!("  --threads <n>           Threads per genome (default: 4)");
+                println!("  --parallel <n>          Max genomes in parallel (default: 2)");
+                println!("  --min-length <bp>       Min contig length for sort (default: 500)");
+                println!("  --mask-engine <engine>  Masking engine (default: repeatmodeler)");
+                println!("  --genetic-code <n>      Default translation table (default: 1)");
+                println!("  --locus-prefix <str>    Default locus prefix (default: GENE)");
+                println!("  --no-compare            Skip auto-compare after completion");
+                println!("  --resume <dir>          Resume a previous batch run");
+                println!("\nHTCondor options:");
+                println!("  --condor                Generate HTCondor submit files (don't run locally)");
+                println!("  --condor-cpus <n>       CPUs per job (default: 8)");
+                println!("  --condor-mem <size>     Memory per job (default: 32G)");
+                println!("  --condor-disk <size>    Disk per job (default: 50G)");
+                println!("  --condor-queue <name>   HTCondor accounting group");
+                println!("  --condor-extra <file>   Extra submit directives to append");
+                println!("\nExamples:");
+                println!("  myconote-cli batch genomes/");
+                println!("  myconote-cli batch samples.tsv --threads 8 --parallel 4");
+                println!("  myconote-cli batch genomes/ --condor --condor-mem 64G");
+                println!("  myconote-cli batch genomes/ --stages sort,mask,predict");
+                println!("  myconote-cli batch --resume batch_out/");
+                return Ok(());
+            }
+            handle_batch(&args[2..])?;
+        }
         "submit" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
                 println!("Usage: myconote-cli submit <annotated.gff3> --fasta <genome.fa> [options]");
@@ -783,7 +828,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -2399,6 +2444,16 @@ fn handle_setup(args: &[String]) -> Result<()> {
                 do_check = true;
                 i += 1;
             }
+            // Convenience: myconote setup --chat-corpus
+            "--chat-corpus" => {
+                keys.push("chat-corpus".to_string());
+                i += 1;
+            }
+            // Convenience: myconote setup --ollama
+            "--ollama" => {
+                keys.push("ollama".to_string());
+                i += 1;
+            }
             // Legacy: myconote annotate --download-dbs
             "--download-dbs" | "--download" => {
                 i += 1;
@@ -2614,5 +2669,126 @@ fn handle_submit(gff_path: &str, args: &[String]) -> Result<()> {
         submit::run_table2asn(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
     }
 
+    Ok(())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// batch command: multi-genome annotation
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn handle_batch(args: &[String]) -> Result<()> {
+    use batch::{run_batch, BatchConfig};
+
+    let mut config = BatchConfig::default();
+
+    // First positional arg is input (directory or sample sheet)
+    // Handle --resume specially
+    let mut i = 0;
+    let mut input_set = false;
+
+    while i < args.len() {
+        match args[i].as_str() {
+            "--resume" if i + 1 < args.len() => {
+                config.resume = Some(PathBuf::from(&args[i + 1]));
+                config.output_dir = PathBuf::from(&args[i + 1]);
+                // Input is not required for resume
+                input_set = true;
+                i += 2;
+            }
+            "--output" | "-o" if i + 1 < args.len() => {
+                config.output_dir = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            "--stages" if i + 1 < args.len() => {
+                config.stages = args[i + 1]
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect();
+                i += 2;
+            }
+            "--kingdom" if i + 1 < args.len() => {
+                config.kingdom = args[i + 1].clone();
+                i += 2;
+            }
+            "--threads" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.threads = n;
+                }
+                i += 2;
+            }
+            "--parallel" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.max_parallel = n;
+                }
+                i += 2;
+            }
+            "--min-length" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.min_length = n;
+                }
+                i += 2;
+            }
+            "--mask-engine" if i + 1 < args.len() => {
+                config.mask_engine = args[i + 1].clone();
+                i += 2;
+            }
+            "--genetic-code" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u8>() {
+                    config.genetic_code = n;
+                }
+                i += 2;
+            }
+            "--locus-prefix" if i + 1 < args.len() => {
+                config.locus_prefix = args[i + 1].clone();
+                i += 2;
+            }
+            "--no-compare" => {
+                config.auto_compare = false;
+                i += 1;
+            }
+            "--condor" => {
+                config.condor = true;
+                i += 1;
+            }
+            "--condor-cpus" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.condor_cpus = n;
+                }
+                i += 2;
+            }
+            "--condor-mem" if i + 1 < args.len() => {
+                config.condor_mem = args[i + 1].clone();
+                i += 2;
+            }
+            "--condor-disk" if i + 1 < args.len() => {
+                config.condor_disk = args[i + 1].clone();
+                i += 2;
+            }
+            "--condor-queue" if i + 1 < args.len() => {
+                config.condor_queue = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--condor-extra" if i + 1 < args.len() => {
+                config.condor_extra = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            other if !other.starts_with('-') && !input_set => {
+                config.input = PathBuf::from(other);
+                input_set = true;
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+
+    if !input_set {
+        return Err(anyhow::anyhow!(
+            "No input provided. Pass a directory of FASTAs or a sample sheet TSV.\n\
+             Run 'myconote-cli batch --help' for usage."
+        ));
+    }
+
+    println!("── Batch Annotation ─────────────────────────────────────────");
+    run_batch(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
     Ok(())
 }

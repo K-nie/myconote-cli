@@ -20,9 +20,11 @@ Each step is a separate subcommand, giving you full control over where to start,
 
 ## Key Features
 
-- **21 CLI commands** covering the full genome annotation lifecycle
+- **23 CLI commands** covering the full genome annotation lifecycle
 - **15 annotation sources** -- MMseqs2, Pfam (hmmsearch), InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms, and more
 - **Multi-tool gene prediction** -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, configurable EVM consensus
+- **AI-powered interpretation** -- `myconote-cli explain` uses a local LLM (Ollama) to interpret results with grounded citations and command recommendations. No data leaves your machine.
+- **Multi-genome batch mode** -- `myconote-cli batch` annotates many genomes from a directory or sample sheet with HTCondor support, resume capability, and a live dashboard
 - **18 NCBI genetic code tables** -- Candida CTG clade, mitochondrial genomes, etc.
 - **NCBI submission prep** -- GFF3 validation, .tbl generation, table2asn integration
 - **Ploidy awareness** -- allelic duplicate detection for polyploid genomes
@@ -34,7 +36,7 @@ Each step is a separate subcommand, giving you full control over where to start,
 - **Reproducibility** -- workflow reports (JSON), database version tracking, output validation
 - **Docker + Singularity** containers for HPC and cloud environments
 - **CI/CD** -- GitHub Actions (fmt, clippy, test, build, security audit)
-- **89 tests** passing on real genome data (*Brettanomyces bruxellensis*, *Candida tropicalis*)
+- **332 tests** passing on real genome data (*Brettanomyces bruxellensis*, *Candida tropicalis*)
 
 ---
 
@@ -80,3 +82,5 @@ Pfam uses hmmsearch instead of hmmscan for a ~6x speedup on large proteomes.
 - [Quick Start](quickstart.md) -- annotate a genome in under an hour
 - [Workshop Lesson](lesson.md) -- full tutorial (~3 hours)
 - **Interactive tutorial**: `myconote-cli learn` -- 8 self-paced lessons in your terminal
+- [Explain (AI interpreter)](analysis/explain.md) -- local LLM-powered result interpretation
+- [Batch annotation](analysis/batch.md) -- multi-genome annotation with HTCondor support

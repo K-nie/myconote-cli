@@ -658,3 +658,290 @@ help_test!(test_help_view, "view", "Usage");
 help_test!(test_help_convert, "convert", "Usage");
 help_test!(test_help_clean, "clean", "Usage");
 help_test!(test_help_synteny, "synteny", "Usage");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Explain command integration tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_explain_help() {
+    bin()
+        .args(["explain", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("myconote explain"))
+        .stdout(predicate::str::contains("Stages"))
+        .stdout(predicate::str::contains("predict"))
+        .stdout(predicate::str::contains("--no-llm"))
+        .stdout(predicate::str::contains("--paste"));
+}
+
+#[test]
+fn test_explain_unknown_stage() {
+    bin()
+        .args(["explain", "bogus"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown stage"));
+}
+
+#[test]
+fn test_explain_predict_no_llm() {
+    // Run explain in rules-only mode on a temp directory
+    let dir = TempDir::new().unwrap();
+
+    // Create a minimal predict directory structure
+    let predict_dir = dir.path().join("02_predict");
+    std::fs::create_dir_all(&predict_dir).unwrap();
+    std::fs::write(
+        predict_dir.join("predict_summary.txt"),
+        "Gene predictions summary\n  Augustus: 5000 genes\n  Consensus: 4800 genes\n",
+    ).unwrap();
+
+    bin()
+        .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Rules-only mode"))
+        .stdout(predicate::str::contains("suggestive, not definitive"));
+}
+
+#[test]
+fn test_explain_help_shows_disclaimer() {
+    bin()
+        .args(["explain", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("suggestive, not definitive"));
+}
+
+#[test]
+fn test_explain_predict_no_llm_with_gff3() {
+    // Test with an actual GFF3 file
+    if !gff3().exists() {
+        return; // skip if test data not available
+    }
+
+    let dir = TempDir::new().unwrap();
+    let predict_dir = dir.path().join("02_predict");
+    std::fs::create_dir_all(&predict_dir).unwrap();
+
+    // Copy the test GFF3
+    std::fs::copy(gff3(), predict_dir.join("consensus.gff3")).unwrap();
+
+    bin()
+        .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Findings"));
+}
+
+#[test]
+fn test_explain_submit_no_llm() {
+    let dir = TempDir::new().unwrap();
+    let submit_dir = dir.path().join("06_submit");
+    std::fs::create_dir_all(&submit_dir).unwrap();
+
+    // Create errorsummary.val with some errors
+    std::fs::write(
+        submit_dir.join("errorsummary.val"),
+        "ERROR: valid [SEQ_FEAT.NoStop] No stop codon found\nWARNING: valid [SEQ_FEAT.NotSpliceConsensus]\n",
+    ).unwrap();
+
+    bin()
+        .args(["explain", "submit", "--no-llm", "--dir", submit_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("NCBI validation"));
+}
+
+#[test]
+fn test_explain_missing_dir() {
+    bin()
+        .args(["explain", "predict", "--dir", "/nonexistent/path/really"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("directory not found"));
+}
+
+#[test]
+fn test_explain_dry_run() {
+    let dir = TempDir::new().unwrap();
+
+    bin()
+        .args(["explain", "predict", "--dry-run", "--dir", dir.path().to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--dry-run"))
+        .stdout(predicate::str::contains("Prompt length"));
+}
+
+#[test]
+fn test_explain_mask_no_llm() {
+    let dir = TempDir::new().unwrap();
+    let mask_dir = dir.path().join("01_mask");
+    std::fs::create_dir_all(&mask_dir).unwrap();
+
+    // Create a minimal masked FASTA with some lowercase
+    std::fs::write(
+        mask_dir.join("genome_masked.fas"),
+        ">scaffold_1\nACGTacgtACGTACGTACGTACGT\n",
+    ).unwrap();
+
+    bin()
+        .args(["explain", "mask", "--no-llm", "--dir", mask_dir.to_str().unwrap()])
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_explain_annotate_no_llm() {
+    let dir = TempDir::new().unwrap();
+    let ann_dir = dir.path().join("05_annotate");
+    std::fs::create_dir_all(&ann_dir).unwrap();
+
+    bin()
+        .args(["explain", "annotate", "--no-llm", "--dir", ann_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Findings"));
+}
+
+#[test]
+fn test_setup_list_includes_chat_corpus() {
+    bin()
+        .args(["setup", "--list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("chat-corpus"));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Batch subcommand
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_batch_help() {
+    bin()
+        .args(["batch", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Annotate multiple genomes"))
+        .stdout(predicate::str::contains("--condor"))
+        .stdout(predicate::str::contains("HTCondor"))
+        .stdout(predicate::str::contains("sample sheet"));
+}
+
+#[test]
+fn test_batch_no_input_shows_help() {
+    bin()
+        .args(["batch"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Annotate multiple genomes"));
+}
+
+#[test]
+fn test_batch_empty_directory() {
+    let tmp = TempDir::new().unwrap();
+    bin()
+        .args(["batch", tmp.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("no FASTA files found"));
+}
+
+#[test]
+fn test_batch_condor_generates_submit_files() {
+    let tmp = TempDir::new().unwrap();
+    let genomes_dir = tmp.path().join("genomes");
+    std::fs::create_dir_all(&genomes_dir).unwrap();
+    std::fs::write(genomes_dir.join("test_a.fa"), ">seq1\nACGT\n").unwrap();
+    std::fs::write(genomes_dir.join("test_b.fa"), ">seq1\nACGT\n").unwrap();
+
+    let out_dir = tmp.path().join("batch_out");
+    bin()
+        .args([
+            "batch",
+            genomes_dir.to_str().unwrap(),
+            "--condor",
+            "--output",
+            out_dir.to_str().unwrap(),
+            "--condor-mem",
+            "64G",
+            "--condor-cpus",
+            "16",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("HTCondor submit files generated"))
+        .stdout(predicate::str::contains("condor_submit"));
+
+    // Verify files were created
+    assert!(out_dir.join("condor.sub").exists());
+    assert!(out_dir.join("condor_genomes.txt").exists());
+    assert!(out_dir.join("run_genome.sh").exists());
+    assert!(out_dir.join("condor_logs").exists());
+
+    // Check submit file content
+    let sub = std::fs::read_to_string(out_dir.join("condor.sub")).unwrap();
+    assert!(sub.contains("request_cpus = 16"));
+    assert!(sub.contains("request_memory = 64G"));
+    assert!(sub.contains("queue 2"));
+}
+
+#[test]
+fn test_batch_sample_sheet_condor() {
+    let tmp = TempDir::new().unwrap();
+
+    // Create FASTA files
+    let fasta_a = tmp.path().join("genome_a.fa");
+    let fasta_b = tmp.path().join("genome_b.fa");
+    std::fs::write(&fasta_a, ">seq1\nACGT\n").unwrap();
+    std::fs::write(&fasta_b, ">seq1\nACGT\n").unwrap();
+
+    // Create sample sheet
+    let sheet = tmp.path().join("samples.tsv");
+    let sheet_content = format!(
+        "name\tfasta\tkingdom\tspecies\tgenetic_code\tlocus_prefix\n\
+         isolate_A\t{}\tfungi\tsaccharomyces\t1\tISOA\n\
+         isolate_B\t{}\tfungi\tauto\t12\tISOB\n",
+        fasta_a.display(),
+        fasta_b.display()
+    );
+    std::fs::write(&sheet, &sheet_content).unwrap();
+
+    let out_dir = tmp.path().join("batch_out");
+    bin()
+        .args([
+            "batch",
+            sheet.to_str().unwrap(),
+            "--condor",
+            "--output",
+            out_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("HTCondor submit files generated"));
+
+    // Verify genome list has both entries
+    let list = std::fs::read_to_string(out_dir.join("condor_genomes.txt")).unwrap();
+    assert!(list.contains("isolate_A"));
+    assert!(list.contains("isolate_B"));
+}
+
+#[test]
+fn test_batch_nonexistent_input_errors() {
+    bin()
+        .args(["batch", "/nonexistent/path/to/genomes"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_batch_in_main_help() {
+    bin()
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("batch"));
+}

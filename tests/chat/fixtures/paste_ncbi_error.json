@@ -1,0 +1,6 @@
+{
+  "description": "Pasted NCBI validation error - detect as validation error format",
+  "input": "ERROR: valid [SEQ_FEAT.NoStop] No stop codon found for CDS\nWARNING: valid [SEQ_FEAT.NotSpliceConsensus] Splice site not consensus\nERROR: valid [SEQ_INST.StopInProtein] Internal stop codon in protein",
+  "expected_format": "ValidationError",
+  "expected_stage": "submit"
+}

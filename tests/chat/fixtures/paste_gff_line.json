@@ -1,0 +1,6 @@
+{
+  "description": "Pasted GFF3 line - detect as GFF3 format",
+  "input": "scaffold_1\tmyconote\tgene\t1\t1000\t.\t+\t.\tID=gene1;Name=gene1",
+  "expected_format": "Gff3",
+  "expected_stage": "predict"
+}

@@ -1,0 +1,39 @@
+{
+  "description": "Annotation with missing functional sources — expect missing sources warning",
+  "stage": "annotate",
+  "context": {
+    "stage": "annotate",
+    "dir": "/tmp/test/05_annotate",
+    "artifacts": [
+      {
+        "name": "annotated.gff3",
+        "size_bytes": 3000000,
+        "line_count": 60000,
+        "preview": null
+      }
+    ],
+    "stats": {
+      "total_genes": 5000,
+      "total_transcripts": 5200,
+      "total_cds": 5000,
+      "total_exons": 15000,
+      "mean_gene_length": 1800.0,
+      "mean_exon_count": 3.0,
+      "mean_intron_length": 80.0
+    },
+    "notes": [
+      "No Pfam annotation files found",
+      "No EggNOG annotation files found"
+    ]
+  },
+  "expected_findings": {
+    "must_fire": ["annotate.sources_missing"],
+    "must_not_fire": []
+  },
+  "expected_commands": {
+    "min_count": 1,
+    "max_count": 3,
+    "must_contain_substring": ["annotate"]
+  },
+  "ethics": "pass"
+}

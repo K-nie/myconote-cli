@@ -1590,9 +1590,11 @@
 <hr />
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>21 CLI commands</strong> covering the full genome annotation lifecycle</li>
+<li><strong>23 CLI commands</strong> covering the full genome annotation lifecycle</li>
 <li><strong>15 annotation sources</strong> -- MMseqs2, Pfam (hmmsearch), InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms, and more</li>
 <li><strong>Multi-tool gene prediction</strong> -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, configurable EVM consensus</li>
+<li><strong>AI-powered interpretation</strong> -- <code>myconote-cli explain</code> uses a local LLM (Ollama) to interpret results with grounded citations and command recommendations. No data leaves your machine.</li>
+<li><strong>Multi-genome batch mode</strong> -- <code>myconote-cli batch</code> annotates many genomes from a directory or sample sheet with HTCondor support, resume capability, and a live dashboard</li>
 <li><strong>18 NCBI genetic code tables</strong> -- Candida CTG clade, mitochondrial genomes, etc.</li>
 <li><strong>NCBI submission prep</strong> -- GFF3 validation, .tbl generation, table2asn integration</li>
 <li><strong>Ploidy awareness</strong> -- allelic duplicate detection for polyploid genomes</li>
@@ -1604,7 +1606,7 @@
 <li><strong>Reproducibility</strong> -- workflow reports (JSON), database version tracking, output validation</li>
 <li><strong>Docker + Singularity</strong> containers for HPC and cloud environments</li>
 <li><strong>CI/CD</strong> -- GitHub Actions (fmt, clippy, test, build, security audit)</li>
-<li><strong>89 tests</strong> passing on real genome data (<em>Brettanomyces bruxellensis</em>, <em>Candida tropicalis</em>)</li>
+<li><strong>332 tests</strong> passing on real genome data (<em>Brettanomyces bruxellensis</em>, <em>Candida tropicalis</em>)</li>
 </ul>
 <hr />
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
@@ -1673,6 +1675,8 @@
 <li><a href="quickstart/">Quick Start</a> -- annotate a genome in under an hour</li>
 <li><a href="lesson/">Workshop Lesson</a> -- full tutorial (~3 hours)</li>
 <li><strong>Interactive tutorial</strong>: <code>myconote-cli learn</code> -- 8 self-paced lessons in your terminal</li>
+<li><a href="analysis/explain/">Explain (AI interpreter)</a> -- local LLM-powered result interpretation</li>
+<li><a href="analysis/batch/">Batch annotation</a> -- multi-genome annotation with HTCondor support</li>
 </ul>
 
 

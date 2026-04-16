@@ -696,6 +696,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#multi-genome-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-genome mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-powered-interpretation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI-powered interpretation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#common-flags" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1471,6 +1493,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#multi-genome-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-genome mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-powered-interpretation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI-powered interpretation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#common-flags" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1571,7 +1615,22 @@
 </tr>
 </tbody>
 </table>
+<p>| 7 | <code>submit</code> | Prepare NCBI GenBank submission | table2asn, built-in validation |</p>
 <p>You can start the pipeline at any step if you already have intermediate files. For example, if you have a masked genome and trained Augustus parameters, you can jump straight to <code>predict</code>.</p>
+<hr />
+<h2 id="multi-genome-mode">Multi-genome mode<a class="headerlink" href="#multi-genome-mode" title="Permanent link">&para;</a></h2>
+<p>For projects with multiple genomes, use <code>batch</code> to run the full pipeline across all of them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>genomes/<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>samples.tsv<span class="w"> </span>--condor<span class="w">   </span><span class="c1"># HTCondor HPC submission</span>
+</code></pre></div>
+<p>See <a href="../../analysis/batch/">batch documentation</a> for details on sample sheets, HTCondor, and resume.</p>
+<hr />
+<h2 id="ai-powered-interpretation">AI-powered interpretation<a class="headerlink" href="#ai-powered-interpretation" title="Permanent link">&para;</a></h2>
+<p>After any stage, use <code>explain</code> to interpret the results:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict<span class="w">              </span><span class="c1"># full: rules + local LLM</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict<span class="w"> </span>--no-llm<span class="w">     </span><span class="c1"># rules only</span>
+</code></pre></div>
+<p>See <a href="../../analysis/explain/">explain documentation</a> for details.</p>
 <hr />
 <h2 id="common-flags">Common flags<a class="headerlink" href="#common-flags" title="Permanent link">&para;</a></h2>
 <p>Most pipeline commands accept:</p>
@@ -1630,6 +1689,18 @@
 <tr>
 <td><code>EVM_HOME</code></td>
 <td>Path to EvidenceModeler installation</td>
+</tr>
+<tr>
+<td><code>MYCONOTE_CHAT_ENDPOINT</code></td>
+<td>Override Ollama endpoint for <code>explain</code></td>
+</tr>
+<tr>
+<td><code>MYCONOTE_CHAT_MODEL</code></td>
+<td>Override LLM model for <code>explain</code></td>
+</tr>
+<tr>
+<td><code>MYCONOTE_CHAT_API_KEY</code></td>
+<td>Optional API key for LLM endpoint</td>
 </tr>
 </tbody>
 </table>

@@ -17,7 +17,35 @@ Myconote_CLI organises genome annotation into six sequential commands. Each comm
 | 5 | `update` | Refine models with RNA-seq | PASA update |
 | 6 | `annotate` | Assign functional annotations | BLAST, eggNOG, dbCAN, InterProScan |
 
+| 7 | `submit` | Prepare NCBI GenBank submission | table2asn, built-in validation |
+
 You can start the pipeline at any step if you already have intermediate files. For example, if you have a masked genome and trained Augustus parameters, you can jump straight to `predict`.
+
+---
+
+## Multi-genome mode
+
+For projects with multiple genomes, use `batch` to run the full pipeline across all of them:
+
+```bash
+myconote-cli batch genomes/ --kingdom fungi --threads 8
+myconote-cli batch samples.tsv --condor   # HTCondor HPC submission
+```
+
+See [batch documentation](../analysis/batch.md) for details on sample sheets, HTCondor, and resume.
+
+---
+
+## AI-powered interpretation
+
+After any stage, use `explain` to interpret the results:
+
+```bash
+myconote-cli explain predict              # full: rules + local LLM
+myconote-cli explain predict --no-llm     # rules only
+```
+
+See [explain documentation](../analysis/explain.md) for details.
 
 ---
 
@@ -43,3 +71,6 @@ Most pipeline commands accept:
 | `NCBI_EMAIL` | Used by BLAST remote queries |
 | `AUGUSTUS_CONFIG_PATH` | Override Augustus config directory |
 | `EVM_HOME` | Path to EvidenceModeler installation |
+| `MYCONOTE_CHAT_ENDPOINT` | Override Ollama endpoint for `explain` |
+| `MYCONOTE_CHAT_MODEL` | Override LLM model for `explain` |
+| `MYCONOTE_CHAT_API_KEY` | Optional API key for LLM endpoint |

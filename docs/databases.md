@@ -20,6 +20,8 @@ myconote db setup --kingdom fungi --all  # full set including eggNOG (~75 GB)
 | GO ontology (`go.obo`) | ~35 MB | GO term mapping | Gene Ontology |
 | eggNOG | ~50 GB | eggNOG-mapper | Orthology + COG + KEGG. Download only if needed |
 | RepeatMasker libraries | ~1 GB | Repeat masking | Downloaded by RepeatModeler2 during `mask` |
+| Ollama + LLM model | 4-48 GB | `explain` (AI interpreter) | Local LLM, auto-selected by RAM. Setup: `myconote-cli setup ollama` |
+| Chat paper corpus | ~50 MB | `explain` (citations) | Q1 open-access papers (CC-BY). Setup: `myconote-cli setup chat-corpus` |
 
 ---
 

@@ -109,6 +109,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `update` | Refine gene models with RNA-seq evidence (PASA or lightweight UTR extension) |
 | `annotate` | Functional annotation (MMseqs2, Pfam, InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome) |
 | `submit` | NCBI GenBank submission prep (GFF3 validation + .tbl + table2asn + .sqn) |
+| `batch` | Annotate multiple genomes in one command (directory or sample sheet, HTCondor support, resume) |
 
 ---
 
@@ -130,13 +131,21 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 
 ---
 
+## AI-powered interpretation
+
+| Command | Description |
+|---------|-------------|
+| `explain` | LLM-powered interpreter for any pipeline stage -- grounded findings, paper citations, next-command recommendations |
+
+---
+
 ## Utility commands
 
 | Command | Description |
 |---------|-------------|
 | `install` | Install missing tools via conda/mamba (30+ bioinformatics tools) |
 | `check` | Check which external tools are installed and their versions |
-| `setup` | Download and index annotation databases (Swiss-Prot, Pfam, EggNOG, BUSCO, dbCAN, MEROPS) |
+| `setup` | Download and index annotation databases (Swiss-Prot, Pfam, EggNOG, BUSCO, dbCAN, MEROPS, Ollama, paper corpus) |
 | `remote` | Submit proteins to remote servers (Phobius, InterProScan, DeepLoc) |
 | `species` | List all Augustus species models (grouped by kingdom) |
 | `learn` | Interactive tutorial system -- 8 lessons, swirl-style, right in your terminal |
@@ -249,6 +258,111 @@ myconote-cli automatically validates all outputs:
 - **GFF3**: ID uniqueness, Parent reference consistency, coordinate ordering, feature hierarchy
 - **Protein FASTA**: internal stop codons, invalid amino acid characters, minimum length
 - **NCBI compliance**: duplicate locus_tags, orphan features, missing qualifiers
+
+---
+
+## Explain: AI-powered result interpreter
+
+Interpret any pipeline stage's output with grounded, citation-backed explanations. Runs locally via Ollama -- no data leaves your machine.
+
+```bash
+# Full interpretation (deterministic rules + local LLM)
+myconote-cli explain predict
+
+# Rules only, no LLM needed
+myconote-cli explain predict --no-llm
+
+# Analyze pasted output (auto-detects GFF3, FASTA, NCBI errors, logs)
+echo "ERROR: SEQ_FEAT.NoStop" | myconote-cli explain --paste
+
+# Verbose mode shows all findings with evidence
+myconote-cli explain predict --verbose
+
+# Dry-run: see the assembled prompt without calling the LLM
+myconote-cli explain predict --dry-run
+```
+
+**How it works:**
+
+1. **Deterministic rule engine** evaluates your stage output against TOML-defined rules (gene count ranges, masking thresholds, validation error patterns)
+2. **BM25 retrieval** searches a built-in knowledge base and optional Q1 paper corpus for relevant context
+3. **Local LLM** (via Ollama) produces a natural-language interpretation grounded in the retrieved context
+4. **Citation validator** strips any claim the LLM cannot back with a retrieved source
+5. **Command recommender** suggests 1-3 copy-pasteable next commands
+
+**Smart model selection:** The tool auto-detects your system RAM and picks the most capable local model:
+
+| RAM | Model | Quality |
+|-----|-------|---------|
+| 48+ GB | llama3.3:70b-instruct-q4_K_M | Best |
+| 24+ GB | qwen2.5:32b-instruct-q4_K_M | Excellent |
+| 16+ GB | mistral-small:22b | Strong |
+| 12+ GB | qwen2.5:14b | Good |
+| 8+ GB | llama3.1:8b | Baseline |
+
+**Privacy first:** All inference runs locally. No data ever leaves your machine. Override the model with `--model <name>` or `MYCONOTE_CHAT_MODEL` env var.
+
+**Scientific disclaimer:** All interpretations are suggestive, not definitive. Findings must be independently verified in the context of your research.
+
+Setup:
+
+```bash
+myconote-cli setup ollama        # install Ollama + pull best model for your hardware
+myconote-cli setup chat-corpus   # download Q1 open-access papers for grounded citations
+```
+
+---
+
+## Batch: multi-genome annotation
+
+Annotate multiple genomes in one command. Accepts a directory of FASTA files or a TSV sample sheet with per-genome settings.
+
+```bash
+# Annotate all FASTAs in a directory
+myconote-cli batch genomes/ --kingdom fungi --threads 8
+
+# Use a sample sheet for per-genome settings
+myconote-cli batch samples.tsv --parallel 4
+
+# Select specific stages
+myconote-cli batch genomes/ --stages sort,mask,predict
+
+# Resume after interruption
+myconote-cli batch --resume batch_out/
+```
+
+**Sample sheet format** (TSV, header required):
+
+```
+name        fasta                kingdom    species          genetic_code    locus_prefix
+isolate_A   /data/isolate_A.fa   fungi      saccharomyces    1               ISOA
+isolate_B   /data/isolate_B.fa   fungi      auto             12              ISOB
+isolate_C   /data/isolate_C.fa   plant      arabidopsis      1               ISOC
+```
+
+Only the `fasta` column is required; all others use defaults.
+
+**Dashboard:** Auto-detects your environment. On interactive terminals, shows live progress bars per genome. On HPC batch jobs (no TTY), prints timestamped log lines suitable for `tail -f`.
+
+**Resume:** A `status.json` file tracks per-genome/per-stage progress. If your run is interrupted (server reboot, SSH disconnect), `--resume batch_out/` picks up where it left off.
+
+**HTCondor support:**
+
+```bash
+# Generate HTCondor submit files (does not run locally)
+myconote-cli batch genomes/ --condor --condor-mem 64G --condor-cpus 16
+
+# Then submit to the cluster
+condor_submit batch_out/condor.sub
+
+# Monitor
+condor_q
+tail -f batch_out/condor_logs/job_0.out
+```
+
+Generates `condor.sub`, `run_genome.sh` (per-job wrapper), and `condor_genomes.txt` (argument list). Each genome runs as a separate job. Works with shared filesystems.
+
+**Auto-compare:** When 2+ genomes succeed, suggests a `compare` command to run comparative analysis.
 
 ---
 

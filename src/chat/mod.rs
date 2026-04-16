@@ -88,9 +88,23 @@ pub fn run_explain(args: &[String]) -> Result<()> {
     // ── Run rule engine ──
     let findings = rules::evaluate(&ctx);
 
-    // ── Retrieve knowledge ──
+    // ── Retrieve knowledge + papers ──
     let query = build_retrieval_query(&ctx, &findings);
-    let retrieved = retrieval::retrieve_knowledge(stage_name, &query, 5);
+    let mut retrieved = retrieval::retrieve_knowledge(stage_name, &query, 5);
+
+    // Retrieve from paper corpus (if available)
+    let corpus_dir = cfg.corpus_dir.as_deref();
+    let paper_citations = retrieval::retrieve_papers(&query, 3, corpus_dir);
+    if paper_citations.is_empty() && retrieval::corpus_status().is_none() {
+        // Only mention on first run (when trace is enabled)
+        if verbosity == render::Verbosity::Trace {
+            println!(
+                "  {}Paper citations unavailable — run `myconote-cli setup --chat-corpus` to enable.{}",
+                C_DIM, C_RESET
+            );
+        }
+    }
+    retrieved.extend(paper_citations);
 
     // ── Generate command recommendations ──
     let recs = commands::recommend(&ctx, &findings);

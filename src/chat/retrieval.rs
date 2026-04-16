@@ -222,6 +222,124 @@ fn find_assets_knowledge_dir() -> Option<PathBuf> {
     None
 }
 
+/// Retrieve relevant paper citations from the local corpus.
+///
+/// Searches the corpus at `~/.myconote/papers/` (or the configured corpus_dir).
+/// Only papers listed in `corpus_manifest.toml` with quartile=Q1 and a valid
+/// OA license are considered. Returns empty if no corpus is available.
+pub fn retrieve_papers(query: &str, top_k: usize, corpus_dir: Option<&std::path::Path>) -> Vec<Citation> {
+    let dir = match corpus_dir {
+        Some(d) => d.to_path_buf(),
+        None => {
+            // Try ~/.myconote/papers/ then ~/.myconote/dbs/papers/
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| "/tmp".to_string());
+            let home_papers = PathBuf::from(&home).join(".myconote").join("papers");
+            let dbs_papers = PathBuf::from(&home).join(".myconote").join("dbs").join("papers");
+            if home_papers.join("corpus_manifest.toml").exists() {
+                home_papers
+            } else if dbs_papers.join("corpus_manifest.toml").exists() {
+                dbs_papers
+            } else {
+                return Vec::new();
+            }
+        }
+    };
+
+    let manifest_path = dir.join("corpus_manifest.toml");
+    if !manifest_path.exists() {
+        return Vec::new();
+    }
+
+    let manifest_text = match std::fs::read_to_string(&manifest_path) {
+        Ok(t) => t,
+        Err(_) => return Vec::new(),
+    };
+
+    let manifest: toml::Value = match manifest_text.parse() {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    let papers = match manifest.get("paper").and_then(|v| v.as_array()) {
+        Some(p) => p,
+        None => return Vec::new(),
+    };
+
+    // Load text for each paper with a text_file
+    let mut docs: Vec<(String, String)> = Vec::new();
+    for paper in papers {
+        let doi = paper.get("doi").and_then(|v| v.as_str()).unwrap_or_default();
+        let text_file = match paper.get("text_file").and_then(|v| v.as_str()) {
+            Some(tf) => tf,
+            None => continue,
+        };
+
+        let text_path = dir.join(text_file);
+        let content = match std::fs::read_to_string(&text_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        if content.is_empty() {
+            continue;
+        }
+
+        // Split into paragraphs for finer-grained retrieval
+        let paragraphs: Vec<&str> = content.split("\n\n")
+            .filter(|p| p.trim().len() > 50)
+            .collect();
+
+        for (i, para) in paragraphs.iter().enumerate() {
+            let doc_id = format!("{}#p{}", doi, i);
+            docs.push((doc_id, para.to_string()));
+        }
+    }
+
+    if docs.is_empty() {
+        return Vec::new();
+    }
+
+    let index = BM25Index::new(docs);
+    let results = index.search(query, top_k);
+
+    results.into_iter().map(|(id, snippet, score)| {
+        // Truncate snippet to ~500 chars for prompt budget
+        let truncated = if snippet.len() > 500 {
+            format!("{}…", &snippet[..500])
+        } else {
+            snippet
+        };
+
+        Citation {
+            source_type: SourceType::Paper,
+            id: format!("paper:{}", id),
+            snippet: truncated,
+            score,
+        }
+    }).collect()
+}
+
+/// Check if a paper corpus is available and report status.
+pub fn corpus_status() -> Option<String> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| "/tmp".to_string());
+
+    let candidates = [
+        PathBuf::from(&home).join(".myconote").join("papers").join("corpus_manifest.toml"),
+        PathBuf::from(&home).join(".myconote").join("dbs").join("papers").join("corpus_manifest.toml"),
+    ];
+
+    for path in &candidates {
+        if path.exists() {
+            return Some(format!("Corpus at {}", path.parent().unwrap_or(path).display()));
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

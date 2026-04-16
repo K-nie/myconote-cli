@@ -26,13 +26,13 @@ use std::path::PathBuf;
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct RuleFixture {
     description: String,
     stage: String,
     context: FixtureContext,
     expected_findings: ExpectedFindings,
     expected_commands: Option<ExpectedCommands>,
-    #[allow(dead_code)]
     ethics: Option<String>,
 }
 

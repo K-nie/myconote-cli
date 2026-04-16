@@ -33,8 +33,8 @@ impl Message {
 
 /// Backend trait for LLM providers.
 ///
-/// v1 ships only `OllamaBackend`; the trait exists so future providers
-/// (Anthropic, OpenAI) can be added without touching the orchestration code.
+/// Ships with `OllamaBackend` — local models only, privacy-first.
+/// No data ever leaves the user's machine.
 pub trait ChatBackend {
     fn chat(&self, messages: &[Message]) -> Result<Message>;
 }

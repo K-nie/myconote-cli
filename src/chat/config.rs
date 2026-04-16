@@ -3,8 +3,59 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 const DEFAULT_ENDPOINT: &str = "http://localhost:11434";
-const DEFAULT_MODEL: &str = "llama3.1";
 const DEFAULT_TIMEOUT_S: u64 = 120;
+
+/// Recommended local models ranked by capability.
+/// The setup system picks the best one that fits in the user's available memory.
+///
+/// All models are local-only via Ollama — no data leaves the machine.
+pub const MODEL_TIERS: &[ModelTier] = &[
+    ModelTier { name: "llama3.3:70b-instruct-q4_K_M", min_ram_gb: 48, description: "Best quality — needs 48 GB RAM/VRAM" },
+    ModelTier { name: "qwen2.5:32b-instruct-q4_K_M",  min_ram_gb: 24, description: "Excellent quality — needs 24 GB RAM/VRAM" },
+    ModelTier { name: "mistral-small:22b",             min_ram_gb: 16, description: "Strong quality — needs 16 GB RAM/VRAM" },
+    ModelTier { name: "qwen2.5:14b",                   min_ram_gb: 12, description: "Good quality — needs 12 GB RAM/VRAM" },
+    ModelTier { name: "llama3.1:8b",                   min_ram_gb: 8,  description: "Baseline — needs 8 GB RAM/VRAM" },
+];
+
+pub struct ModelTier {
+    pub name: &'static str,
+    pub min_ram_gb: u64,
+    pub description: &'static str,
+}
+
+/// Select the most capable model that fits in the available system memory.
+pub fn recommend_model() -> &'static str {
+    let available_gb = detect_available_memory_gb();
+
+    for tier in MODEL_TIERS {
+        if available_gb >= tier.min_ram_gb {
+            return tier.name;
+        }
+    }
+
+    // Fallback: smallest model
+    "llama3.1:8b"
+}
+
+/// Detect available system memory in GB.
+fn detect_available_memory_gb() -> u64 {
+    // Try /proc/meminfo on Linux
+    if let Ok(text) = std::fs::read_to_string("/proc/meminfo") {
+        for line in text.lines() {
+            if line.starts_with("MemTotal:") {
+                let kb: u64 = line
+                    .split_whitespace()
+                    .nth(1)
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(0);
+                return kb / 1_048_576; // KB to GB
+            }
+        }
+    }
+
+    // Fallback: assume 16 GB (conservative default)
+    16
+}
 
 /// Configuration for the `explain` subcommand.
 #[derive(Debug, Clone)]
@@ -27,7 +78,7 @@ impl Default for ChatConfig {
         Self {
             enabled: true,
             endpoint: DEFAULT_ENDPOINT.to_string(),
-            model: DEFAULT_MODEL.to_string(),
+            model: recommend_model().to_string(),
             api_key: None,
             provider: "ollama".to_string(),
             timeout_s: DEFAULT_TIMEOUT_S,
@@ -140,13 +191,33 @@ mod tests {
         let cfg = ChatConfig::default();
         assert!(cfg.enabled);
         assert_eq!(cfg.endpoint, "http://localhost:11434");
-        assert_eq!(cfg.model, "llama3.1");
+        // Model is auto-selected based on system memory — just verify it's a valid tier
+        let valid_models: Vec<&str> = MODEL_TIERS.iter().map(|t| t.name).collect();
+        assert!(valid_models.contains(&cfg.model.as_str()),
+            "default model '{}' not in valid tiers", cfg.model);
         assert_eq!(cfg.provider, "ollama");
         assert_eq!(cfg.timeout_s, 120);
         assert!(!cfg.no_llm);
         assert!(!cfg.verbose);
         assert!(!cfg.trace);
         assert!(!cfg.dry_run);
+    }
+
+    #[test]
+    fn recommend_model_returns_valid_tier() {
+        let model = recommend_model();
+        let valid: Vec<&str> = MODEL_TIERS.iter().map(|t| t.name).collect();
+        assert!(valid.contains(&model), "recommended model '{}' not in tiers", model);
+    }
+
+    #[test]
+    fn model_tiers_are_descending_by_ram() {
+        for i in 1..MODEL_TIERS.len() {
+            assert!(
+                MODEL_TIERS[i - 1].min_ram_gb >= MODEL_TIERS[i].min_ram_gb,
+                "model tiers must be ordered by descending RAM requirement"
+            );
+        }
     }
 
     #[test]

@@ -776,11 +776,21 @@ fn setup_ollama(db_dir: &Path) -> Result<()> {
         println!("  ✓ Ollama server already running");
     }
 
-    // ── 4. Pull the configured model ──
+    // ── 4. Select and pull the best model for this machine ──
     let model = std::env::var("MYCONOTE_CHAT_MODEL").unwrap_or_else(|_| {
-        // Read from config if available
         let config_model = read_configured_model();
-        config_model.unwrap_or_else(|| "llama3.1".to_string())
+        config_model.unwrap_or_else(|| {
+            // Auto-select the most capable model for available memory
+            use crate::chat::config::{recommend_model, MODEL_TIERS};
+            let recommended = recommend_model();
+            println!("  Detecting system memory…");
+            println!("  Available model tiers:");
+            for tier in MODEL_TIERS {
+                let marker = if tier.name == recommended { " ◀ selected" } else { "" };
+                println!("    {:<45} {}{}", tier.name, tier.description, marker);
+            }
+            recommended.to_string()
+        })
     });
 
     println!("  Pulling model '{}' (latest version)…", model);

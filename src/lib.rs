@@ -1,5 +1,6 @@
 pub mod align;
 pub mod annotate;
+pub mod batch;
 pub mod blast;
 pub mod chat;
 pub mod check;

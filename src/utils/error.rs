@@ -41,6 +41,9 @@ pub enum MycoNoteError {
 
     #[error("Chat refused: {0}")]
     ChatRefused(String),
+
+    #[error("Batch error: {0}")]
+    BatchError(String),
 }
 
 impl From<plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>>

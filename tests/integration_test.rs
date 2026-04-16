@@ -815,3 +815,133 @@ fn test_setup_list_includes_chat_corpus() {
         .success()
         .stdout(predicate::str::contains("chat-corpus"));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Batch subcommand
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_batch_help() {
+    bin()
+        .args(["batch", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Annotate multiple genomes"))
+        .stdout(predicate::str::contains("--condor"))
+        .stdout(predicate::str::contains("HTCondor"))
+        .stdout(predicate::str::contains("sample sheet"));
+}
+
+#[test]
+fn test_batch_no_input_shows_help() {
+    bin()
+        .args(["batch"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Annotate multiple genomes"));
+}
+
+#[test]
+fn test_batch_empty_directory() {
+    let tmp = TempDir::new().unwrap();
+    bin()
+        .args(["batch", tmp.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("no FASTA files found"));
+}
+
+#[test]
+fn test_batch_condor_generates_submit_files() {
+    let tmp = TempDir::new().unwrap();
+    let genomes_dir = tmp.path().join("genomes");
+    std::fs::create_dir_all(&genomes_dir).unwrap();
+    std::fs::write(genomes_dir.join("test_a.fa"), ">seq1\nACGT\n").unwrap();
+    std::fs::write(genomes_dir.join("test_b.fa"), ">seq1\nACGT\n").unwrap();
+
+    let out_dir = tmp.path().join("batch_out");
+    bin()
+        .args([
+            "batch",
+            genomes_dir.to_str().unwrap(),
+            "--condor",
+            "--output",
+            out_dir.to_str().unwrap(),
+            "--condor-mem",
+            "64G",
+            "--condor-cpus",
+            "16",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("HTCondor submit files generated"))
+        .stdout(predicate::str::contains("condor_submit"));
+
+    // Verify files were created
+    assert!(out_dir.join("condor.sub").exists());
+    assert!(out_dir.join("condor_genomes.txt").exists());
+    assert!(out_dir.join("run_genome.sh").exists());
+    assert!(out_dir.join("condor_logs").exists());
+
+    // Check submit file content
+    let sub = std::fs::read_to_string(out_dir.join("condor.sub")).unwrap();
+    assert!(sub.contains("request_cpus = 16"));
+    assert!(sub.contains("request_memory = 64G"));
+    assert!(sub.contains("queue 2"));
+}
+
+#[test]
+fn test_batch_sample_sheet_condor() {
+    let tmp = TempDir::new().unwrap();
+
+    // Create FASTA files
+    let fasta_a = tmp.path().join("genome_a.fa");
+    let fasta_b = tmp.path().join("genome_b.fa");
+    std::fs::write(&fasta_a, ">seq1\nACGT\n").unwrap();
+    std::fs::write(&fasta_b, ">seq1\nACGT\n").unwrap();
+
+    // Create sample sheet
+    let sheet = tmp.path().join("samples.tsv");
+    let sheet_content = format!(
+        "name\tfasta\tkingdom\tspecies\tgenetic_code\tlocus_prefix\n\
+         isolate_A\t{}\tfungi\tsaccharomyces\t1\tISOA\n\
+         isolate_B\t{}\tfungi\tauto\t12\tISOB\n",
+        fasta_a.display(),
+        fasta_b.display()
+    );
+    std::fs::write(&sheet, &sheet_content).unwrap();
+
+    let out_dir = tmp.path().join("batch_out");
+    bin()
+        .args([
+            "batch",
+            sheet.to_str().unwrap(),
+            "--condor",
+            "--output",
+            out_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("HTCondor submit files generated"));
+
+    // Verify genome list has both entries
+    let list = std::fs::read_to_string(out_dir.join("condor_genomes.txt")).unwrap();
+    assert!(list.contains("isolate_A"));
+    assert!(list.contains("isolate_B"));
+}
+
+#[test]
+fn test_batch_nonexistent_input_errors() {
+    bin()
+        .args(["batch", "/nonexistent/path/to/genomes"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_batch_in_main_help() {
+    bin()
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("batch"));
+}

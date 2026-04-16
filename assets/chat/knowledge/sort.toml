@@ -1,0 +1,27 @@
+# Knowledge base: sort stage
+
+[[entries]]
+id = "sort.contig_naming"
+title = "Contig naming conventions"
+content = """
+Sorted contigs are renamed to sequential IDs (scaffold_1, scaffold_2, ...) by
+length (longest first). This ensures consistent identifiers throughout the pipeline.
+
+The rename table (name_map.tsv) maps old→new IDs and should be preserved for
+traceability. NCBI requires clean contig IDs without special characters.
+"""
+tags = ["sorting", "naming", "contigs"]
+
+[[entries]]
+id = "sort.assembly_quality"
+title = "Assembly quality indicators from sorting"
+content = """
+From the sorted genome:
+- Total contigs: <100 is well-assembled; >1000 suggests fragmentation
+- Shortest contig: contigs <500 bp are often noise
+- N50: for fungi ~1-5 Mb is good; for plants varies widely
+- Total assembly size: compare to expected genome size for the species
+
+Use --min-length to filter short contigs (recommended: 500-1000 bp).
+"""
+tags = ["assembly", "quality", "n50", "contigs"]

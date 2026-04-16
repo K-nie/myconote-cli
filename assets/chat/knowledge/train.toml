@@ -1,0 +1,32 @@
+# Knowledge base: train stage
+
+[[entries]]
+id = "train.species_selection"
+title = "Augustus species selection for training"
+content = """
+Training Augustus requires selecting a starting species model:
+- Use the closest available species (run `myconote-cli species` to list)
+- For novel species, train with RNA-seq data for best results
+- Common starting models: saccharomyces (yeast), neurospora (filamentous fungi),
+  arabidopsis (plants), human (mammals), fly (insects)
+
+Poor species selection leads to missed genes and incorrect splice sites.
+"""
+tags = ["training", "augustus", "species"]
+
+[[entries]]
+id = "train.rna_seq_quality"
+title = "RNA-seq quality for training"
+content = """
+Quality RNA-seq data for training should have:
+- >20 million paired-end reads (50-100M preferred)
+- Read length ≥100 bp
+- Multiple tissues/conditions for better gene coverage
+- Trinity assembly should produce >10,000 transcripts for good training
+
+If Trinity assembly is small (<5,000 transcripts), consider:
+1. Adding more RNA-seq libraries
+2. Relaxing Trinity parameters
+3. Using protein evidence instead
+"""
+tags = ["training", "rna_seq", "trinity"]

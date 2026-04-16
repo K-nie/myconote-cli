@@ -1,0 +1,32 @@
+# Ethics rules for the explain subcommand.
+#
+# These define narrow, specific refusal categories. Over-refusal is avoided:
+# legitimate biology questions (pathogens, AMR genes, virulence factors,
+# genome editing, toxins) are NOT refused.
+#
+# Refusal behavior: honest, non-moralizing, one-sentence acknowledgement.
+# No query content is logged — only the rule ID.
+
+[[rules]]
+id = "ethics.biosecurity_design"
+category = "biosecurity"
+patterns = ["design.*pathogen", "enhance.*virulence", "gain.of.function.*create", "engineer.*select.agent", "synthesize.*toxin.*weapon", "create.*bioweapon"]
+message = "This request involves biosecurity-sensitive design. I can't help with that, but I can help you interpret your annotation results."
+
+[[rules]]
+id = "ethics.fabrication"
+category = "fabrication"
+patterns = ["fabricat.*results", "fake.*data", "invent.*statistics", "generat.*fake.*genes", "make.up.*numbers"]
+message = "This request involves data fabrication. I can't help with that, but I can help you interpret your real annotation results."
+
+[[rules]]
+id = "ethics.embargo_violation"
+category = "embargo"
+patterns = ["circumvent.*embargo", "bypass.*ncbi.*hold", "release.*before.*date", "violat.*data.*sharing"]
+message = "This request involves embargo violation. I can't help with that. See NCBI's data release policies for guidance."
+
+[[rules]]
+id = "ethics.academic_misconduct"
+category = "misconduct"
+patterns = ["ghostwrit.*paper", "plagiariz", "writ.*as.if.*human.*wrote", "fabricat.*methods.*section"]
+message = "This request involves academic misconduct. I can't help with that, but I can help you draft accurate methods based on your actual pipeline run."

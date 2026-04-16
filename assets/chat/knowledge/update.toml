@@ -1,0 +1,31 @@
+# Knowledge base: update stage
+
+[[entries]]
+id = "update.pasa_utr"
+title = "PASA UTR extension"
+content = """
+The update stage uses PASA to:
+- Add UTR regions (5' and 3' untranslated regions) to gene models
+- Refine splice sites using RNA-seq alignments
+- Merge overlapping gene models when evidence supports it
+
+Expected changes:
+- Gene count may decrease slightly (merges)
+- Average gene length should increase (UTR addition)
+- CDS count and exon count remain similar
+"""
+tags = ["update", "pasa", "utr"]
+
+[[entries]]
+id = "update.gene_count_change"
+title = "Gene count changes after update"
+content = """
+Normal: gene count decreases by 1-5% (overlapping models merged)
+Concerning: gene count increases >10% (may indicate contamination or errors)
+Concerning: gene count decreases >20% (PASA may have over-merged)
+
+Compare gene counts between predict and update stages using:
+  myconote-cli stats predict.gff3 --format json
+  myconote-cli stats updated.gff3 --format json
+"""
+tags = ["update", "gene_count", "comparison"]

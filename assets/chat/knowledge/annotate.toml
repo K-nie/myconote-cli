@@ -1,0 +1,35 @@
+# Knowledge base: annotate stage
+
+[[entries]]
+id = "annotate.functional_coverage"
+title = "Expected functional annotation coverage"
+content = """
+Typical annotation coverage targets:
+- Swiss-Prot/MMseqs2: 40-70% of genes should have hits
+- Pfam domains: 50-80% of genes should contain ≥1 domain
+- EggNOG: 60-85% of genes classified
+- BUSCO completeness: >90% expected for well-annotated genomes
+- InterProScan: 70-90% of genes with at least one signature
+- CAZyme: varies by organism (fungi: 1-3% of genes, plants: 1-5%)
+- MEROPS proteases: typically 1-3% of genes
+
+Low Swiss-Prot hits may indicate a divergent organism (use UniRef90 instead).
+"""
+tags = ["annotation", "coverage", "functional"]
+
+[[entries]]
+id = "annotate.busco_interpretation"
+title = "BUSCO completeness interpretation"
+content = """
+BUSCO assesses genome/annotation completeness against lineage-specific markers:
+- Complete >95%: excellent annotation
+- Complete 90-95%: good, typical for draft annotations
+- Complete 80-90%: moderate, consider improving gene prediction
+- Complete <80%: poor, may indicate assembly or prediction problems
+
+Duplication rate:
+- <5%: normal for haploid organisms
+- 5-20%: may indicate residual haplotig duplication or recent WGD
+- >20%: investigate assembly for duplication artifacts
+"""
+tags = ["busco", "completeness", "quality"]

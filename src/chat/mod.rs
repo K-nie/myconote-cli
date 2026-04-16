@@ -11,6 +11,8 @@
 pub mod backend;
 pub mod config;
 pub mod context;
+pub mod ethics;
+pub mod retrieval;
 pub mod rules;
 
 use crate::learn::{C_BOLD, C_CYAN, C_DIM, C_GREEN, C_RESET, C_YELLOW};

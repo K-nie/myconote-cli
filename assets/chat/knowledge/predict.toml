@@ -1,0 +1,67 @@
+# Knowledge base: predict stage
+# Reference ranges, failure modes, and kingdom-specific norms for gene prediction.
+
+[[entries]]
+id = "predict.gene_count_ranges"
+title = "Expected gene counts by kingdom"
+content = """
+Typical eukaryotic gene counts by kingdom:
+- Fungi: 5,000–15,000 genes (compact genomes, few introns)
+- Ascomycota: 6,000–12,000 genes
+- Basidiomycota: 8,000–20,000 genes
+- Plants: 20,000–50,000 genes (polyploidy and WGD common)
+- Animals: 15,000–25,000 genes
+- Mammals: 19,000–23,000 genes
+- Insects: 10,000–20,000 genes
+
+Gene counts significantly above these ranges usually indicate over-prediction
+from unmasked repeats. Counts below may indicate incomplete assembly or
+aggressive filtering.
+"""
+tags = ["gene_count", "kingdom", "reference_range"]
+
+[[entries]]
+id = "predict.predictor_agreement"
+title = "Gene predictor agreement norms"
+content = """
+When using multiple ab initio predictors (Augustus, SNAP, GlimmerHMM, GeneMark):
+- Agreement <20% between predictors is normal for divergent species
+- Agreement >80% suggests high-quality training or well-studied clade
+- Augustus typically predicts the most complete gene models
+- SNAP tends to over-predict in repeat-rich regions
+- Protein evidence from Swiss-Prot/UniProt should corroborate 40-70% of predictions
+
+Evidence Modeler (EVM) consensus weights determine the final gene set.
+Default weights: augustus=10, snap=3, protein=25, est=8.
+"""
+tags = ["predictor", "agreement", "evm", "augustus", "snap"]
+
+[[entries]]
+id = "predict.overprediction_causes"
+title = "Common causes of gene over-prediction"
+content = """
+If gene count is abnormally high (e.g. >15,000 for fungi):
+1. Unmasked repeats: most common cause. RepeatMasker/RepeatModeler may have
+   failed or used wrong repeat library. Re-run masking.
+2. Fragmented assembly: many short contigs produce partial gene models at
+   contig boundaries.
+3. Contamination: bacterial or organellar DNA produces spurious predictions.
+4. Wrong species model: using a distant Augustus species model leads to
+   false positive gene calls.
+5. Tandem duplications: true biology, but verify with BUSCO duplication rate.
+"""
+tags = ["overprediction", "troubleshooting", "repeats"]
+
+[[entries]]
+id = "predict.underprediction_causes"
+title = "Common causes of gene under-prediction"
+content = """
+If gene count is abnormally low (e.g. <5,000 for a eukaryote):
+1. Over-masking: aggressive repeat masking hid real genes.
+2. Incomplete assembly: genome is fragmented, missing chromosomes/contigs.
+3. Wrong kingdom/species: Augustus model doesn't match the organism.
+4. No protein evidence: ab initio only prediction misses genes without
+   clear signals.
+5. Stringent EVM filtering: low-weight predictions were discarded.
+"""
+tags = ["underprediction", "troubleshooting"]

@@ -658,3 +658,150 @@ help_test!(test_help_view, "view", "Usage");
 help_test!(test_help_convert, "convert", "Usage");
 help_test!(test_help_clean, "clean", "Usage");
 help_test!(test_help_synteny, "synteny", "Usage");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Explain command integration tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_explain_help() {
+    bin()
+        .args(["explain", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("myconote explain"))
+        .stdout(predicate::str::contains("Stages"))
+        .stdout(predicate::str::contains("predict"))
+        .stdout(predicate::str::contains("--no-llm"))
+        .stdout(predicate::str::contains("--paste"));
+}
+
+#[test]
+fn test_explain_unknown_stage() {
+    bin()
+        .args(["explain", "bogus"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown stage"));
+}
+
+#[test]
+fn test_explain_predict_no_llm() {
+    // Run explain in rules-only mode on a temp directory
+    let dir = TempDir::new().unwrap();
+
+    // Create a minimal predict directory structure
+    let predict_dir = dir.path().join("02_predict");
+    std::fs::create_dir_all(&predict_dir).unwrap();
+    std::fs::write(
+        predict_dir.join("predict_summary.txt"),
+        "Gene predictions summary\n  Augustus: 5000 genes\n  Consensus: 4800 genes\n",
+    ).unwrap();
+
+    bin()
+        .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Rules-only mode"));
+}
+
+#[test]
+fn test_explain_predict_no_llm_with_gff3() {
+    // Test with an actual GFF3 file
+    if !gff3().exists() {
+        return; // skip if test data not available
+    }
+
+    let dir = TempDir::new().unwrap();
+    let predict_dir = dir.path().join("02_predict");
+    std::fs::create_dir_all(&predict_dir).unwrap();
+
+    // Copy the test GFF3
+    std::fs::copy(gff3(), predict_dir.join("consensus.gff3")).unwrap();
+
+    bin()
+        .args(["explain", "predict", "--no-llm", "--dir", predict_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Findings"));
+}
+
+#[test]
+fn test_explain_submit_no_llm() {
+    let dir = TempDir::new().unwrap();
+    let submit_dir = dir.path().join("06_submit");
+    std::fs::create_dir_all(&submit_dir).unwrap();
+
+    // Create errorsummary.val with some errors
+    std::fs::write(
+        submit_dir.join("errorsummary.val"),
+        "ERROR: valid [SEQ_FEAT.NoStop] No stop codon found\nWARNING: valid [SEQ_FEAT.NotSpliceConsensus]\n",
+    ).unwrap();
+
+    bin()
+        .args(["explain", "submit", "--no-llm", "--dir", submit_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("NCBI validation"));
+}
+
+#[test]
+fn test_explain_missing_dir() {
+    bin()
+        .args(["explain", "predict", "--dir", "/nonexistent/path/really"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("directory not found"));
+}
+
+#[test]
+fn test_explain_dry_run() {
+    let dir = TempDir::new().unwrap();
+
+    bin()
+        .args(["explain", "predict", "--dry-run", "--dir", dir.path().to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--dry-run"))
+        .stdout(predicate::str::contains("Prompt length"));
+}
+
+#[test]
+fn test_explain_mask_no_llm() {
+    let dir = TempDir::new().unwrap();
+    let mask_dir = dir.path().join("01_mask");
+    std::fs::create_dir_all(&mask_dir).unwrap();
+
+    // Create a minimal masked FASTA with some lowercase
+    std::fs::write(
+        mask_dir.join("genome_masked.fas"),
+        ">scaffold_1\nACGTacgtACGTACGTACGTACGT\n",
+    ).unwrap();
+
+    bin()
+        .args(["explain", "mask", "--no-llm", "--dir", mask_dir.to_str().unwrap()])
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_explain_annotate_no_llm() {
+    let dir = TempDir::new().unwrap();
+    let ann_dir = dir.path().join("05_annotate");
+    std::fs::create_dir_all(&ann_dir).unwrap();
+
+    bin()
+        .args(["explain", "annotate", "--no-llm", "--dir", ann_dir.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Findings"));
+}
+
+#[test]
+fn test_setup_list_includes_chat_corpus() {
+    bin()
+        .args(["setup", "--list"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("chat-corpus"));
+}

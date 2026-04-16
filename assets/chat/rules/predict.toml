@@ -1,0 +1,22 @@
+# Deterministic rules for the predict stage.
+# These extend the built-in Rust rules in src/chat/rules.rs.
+# Condition operators: gt, lt, gte, lte, eq
+
+[[rules]]
+id = "predict.exon_ratio_high"
+stage = "predict"
+field = "total_exons"
+condition = "gt"
+threshold = 100000
+severity = "warning"
+message = "Very high exon count (>100,000). This may indicate fragmented gene models or annotation artifacts."
+citation = "knowledge:predict.gene_count_ranges"
+
+[[rules]]
+id = "predict.no_cds"
+stage = "predict"
+field = "total_cds"
+condition = "lt"
+threshold = 1
+severity = "critical"
+message = "No CDS features found. Gene prediction may have produced gene/mRNA features without coding sequences."

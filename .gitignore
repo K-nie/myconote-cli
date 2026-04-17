@@ -67,3 +67,5 @@ explain_*/
 # Python bytecode caches
 __pycache__/
 *.pyc
+e2e_test/
+.claude/scheduled_tasks.lock

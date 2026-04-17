@@ -278,6 +278,18 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
         }
     }
 
+    // Build ID → record index so we can walk the Parent chain
+    // (CDS → mRNA → gene) when looking up `product`. Annotate writes the
+    // product on the gene row only; without this walk every CDS in a
+    // annotated.gff3 would fall through to "hypothetical protein" in the
+    // emitted .tbl — exactly the bug caught by the E2E pipeline run.
+    let mut by_id: HashMap<String, &GFFRecord> = HashMap::new();
+    for rec in &records {
+        if let Some(id) = rec.attributes.get("ID") {
+            by_id.insert(id.clone(), rec);
+        }
+    }
+
     let mut f = std::fs::File::create(output_tbl).map_err(MycoNoteError::Io)?;
     let mut current_seqid = String::new();
     let mut feature_count = 0usize;
@@ -303,6 +315,17 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
                 if let Some(gene_name) = rec.attributes.get("Name") {
                     writeln!(f, "\t\t\tgene\t{}", gene_name).map_err(MycoNoteError::Io)?;
                 }
+                // Surface cross-references written by annotate (Dbxref=UniProtKB:...).
+                // NCBI's .tbl syntax uses `db_xref` at the gene level so downstream
+                // asnval / tbl2asn accept the reference.
+                if let Some(dbxref) = rec.attributes.get("Dbxref") {
+                    for xref in dbxref.split(',') {
+                        let xref = xref.trim();
+                        if !xref.is_empty() {
+                            writeln!(f, "\t\t\tdb_xref\t{}", xref).map_err(MycoNoteError::Io)?;
+                        }
+                    }
+                }
                 feature_count += 1;
             }
             "mRNA" => {
@@ -320,7 +343,7 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
                 if cdss.is_empty() {
                     continue;
                 }
-                emit_joined_feature(&mut f, cdss, "CDS", rec, config)?;
+                emit_joined_feature(&mut f, cdss, "CDS", rec, &by_id, config)?;
                 feature_count += 1;
             }
             "tRNA" => {
@@ -358,7 +381,7 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
                         continue;
                     }
                     if let Some(cdss) = cds_by_parent.get(&parent) {
-                        emit_joined_feature(&mut f, cdss, "CDS", rec, config)?;
+                        emit_joined_feature(&mut f, cdss, "CDS", rec, &by_id, config)?;
                         feature_count += 1;
                     }
                 }
@@ -379,16 +402,51 @@ fn coords_for_strand(rec: &GFFRecord) -> (u64, u64) {
     }
 }
 
+/// Walk up the GFF3 Parent chain from `start` looking for the first record
+/// whose attributes contain `key`. Annotate writes functional qualifiers
+/// (product, Name, locus_tag, Ontology_term, Dbxref) on the `gene` row only,
+/// so a CDS → mRNA → gene walk is needed to surface them in the emitted
+/// feature table.
+fn attr_from_parent_chain<'a>(
+    by_id: &'a std::collections::HashMap<String, &'a GFFRecord>,
+    start: &'a GFFRecord,
+    key: &str,
+) -> Option<String> {
+    if let Some(v) = start.attributes.get(key) {
+        return Some(v.clone());
+    }
+    let mut current = start;
+    for _ in 0..8 {
+        let parent_attr = match current.attributes.get("Parent") {
+            Some(p) => p,
+            None => return None,
+        };
+        let parent_id = parent_attr.split(',').next().unwrap_or(parent_attr);
+        let parent_rec = match by_id.get(parent_id) {
+            Some(r) => *r,
+            None => return None,
+        };
+        if let Some(v) = parent_rec.attributes.get(key) {
+            return Some(v.clone());
+        }
+        current = parent_rec;
+    }
+    None
+}
+
 /// Emit a multi-segment feature block (CDS or exon-set) using NCBI's
 /// implicit `join()`: header line has `start\tend\tFEATURE`, subsequent
 /// interval lines are just `start\tend`, and qualifiers come after the last
 /// interval. `meta_source` supplies the `product`, `codon_start`, etc. —
-/// typically the mRNA row or (fallback) the first CDS row.
+/// typically the mRNA row or (fallback) the first CDS row. `by_id` lets the
+/// function walk up the Parent chain to find product/Name on the gene row
+/// when the mRNA/CDS don't carry them.
 fn emit_joined_feature<W: Write>(
     f: &mut W,
     segments: &[&GFFRecord],
     feature_key: &str,
     meta_source: &GFFRecord,
+    by_id: &std::collections::HashMap<String, &GFFRecord>,
     config: &SubmitConfig,
 ) -> Result<()> {
     if segments.is_empty() {
@@ -415,11 +473,20 @@ fn emit_joined_feature<W: Write>(
     }
 
     // Qualifiers — emit once per feature, after all interval lines.
+    // Look on the provided meta_source (mRNA row), then the first CDS
+    // segment, then walk up the Parent chain to the gene row (where
+    // annotate actually writes `product=` in annotated.gff3).
     let product = meta_source
         .attributes
         .get("product")
         .cloned()
         .or_else(|| sorted.first().and_then(|r| r.attributes.get("product").cloned()))
+        .or_else(|| attr_from_parent_chain(by_id, meta_source, "product"))
+        .or_else(|| {
+            sorted
+                .first()
+                .and_then(|r| attr_from_parent_chain(by_id, r, "product"))
+        })
         .unwrap_or_else(|| "hypothetical protein".to_string());
     writeln!(f, "\t\t\tproduct\t{}", product).map_err(MycoNoteError::Io)?;
 

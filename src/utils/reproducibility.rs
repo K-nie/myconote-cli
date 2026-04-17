@@ -360,7 +360,7 @@ fn get_tool_version(tool: &str) -> Option<String> {
         "mmseqs" | "diamond" => &["version"],
         "blastp" => &["-version"],
         "hmmscan" => &["-h"],
-        "snap" | "glimmerhmm" | "FastTree" => &["--help"],
+        "snap" | "glimmerhmm" => &["--help"],
         "iqtree" | "iqtree2" => &["--version"],
         _ => &["--version"],
     };

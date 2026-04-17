@@ -374,6 +374,7 @@ fn main() -> Result<()> {
                 println!("  --partition <file>    Partition file for multi-gene/multi-locus analysis");
                 println!("  --threads <n>         Threads (default: 4)");
                 println!("  --prefix <name>       Output prefix (default: alignment filename stem)");
+                println!("  --force               Overwrite an existing <prefix>.treefile (default: skip)");
                 println!("\nOutput:");
                 println!("  <prefix>.treefile     Best-fit ML tree in Newick format");
                 println!("  <prefix>.iqtree       Full IQ-TREE run report");
@@ -405,6 +406,9 @@ fn main() -> Result<()> {
                     }
                     "--prefix" if i + 1 < args.len() => {
                         config.prefix = Some(args[i + 1].clone()); i += 2;
+                    }
+                    "--force" => {
+                        config.force = true; i += 1;
                     }
                     _ => { i += 1; }
                 }
@@ -700,6 +704,8 @@ fn main() -> Result<()> {
                 println!("  --deeploc               Run DeepLoc 2 (subcellular localisation)");
                 println!("  --email <address>       Email for InterProScan (required by EBI)");
                 println!("  --batch-size <n>        Proteins per batch (default: 100)");
+                println!("  --poll-interval <secs>  Seconds between status polls (default: 60)");
+                println!("  --max-retries <n>       Max poll attempts per batch (default: 60)");
                 println!("  --threads <n>           Threads (default: 4)");
                 println!("\nOutputs:");
                 println!("  remote_annotations.tsv  Merged results from all services");
@@ -2629,6 +2635,12 @@ fn handle_remote(proteins_fa: &str, args: &[String]) -> Result<()> {
             "--poll-interval" if i + 1 < args.len() => {
                 if let Ok(n) = args[i + 1].parse::<u64>() {
                     config.poll_interval = n;
+                }
+                i += 2;
+            }
+            "--max-retries" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.max_retries = n;
                 }
                 i += 2;
             }

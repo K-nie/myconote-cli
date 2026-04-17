@@ -37,6 +37,11 @@ pub struct PhylogenyConfig {
     pub prefix: Option<String>,
     /// Extra IQ-TREE arguments passed verbatim
     pub extra_args: Vec<String>,
+    /// Force overwrite of an existing run with the same prefix. When false
+    /// and a previous `.treefile` exists for this prefix, build_tree returns
+    /// early rather than overwriting — the prior version always passed
+    /// `--redo` and could silently destroy a long-running result.
+    pub force: bool,
 }
 
 impl Default for PhylogenyConfig {
@@ -48,6 +53,7 @@ impl Default for PhylogenyConfig {
             threads: 4,
             prefix: None,
             extra_args: Vec::new(),
+            force: false,
         }
     }
 }
@@ -57,28 +63,16 @@ impl Default for PhylogenyConfig {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn iqtree_available() -> bool {
-    // IQ-TREE 2 ships as "iqtree2"; IQ-TREE 1 as "iqtree"
-    for bin in &["iqtree2", "iqtree"] {
-        if Command::new("which")
-            .arg(bin)
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
-        {
-            return true;
-        }
-    }
-    false
+    // IQ-TREE 2 ships as "iqtree2"; IQ-TREE 1 as "iqtree". Use which::which
+    // for consistent PATH resolution across macOS/Linux/BSD — the prior
+    // Command::new("which") path breaks on systems where /bin/which isn't
+    // installed or when IPC is sandboxed.
+    which::which("iqtree2").is_ok() || which::which("iqtree").is_ok()
 }
 
 /// Return the IQ-TREE binary name that is present on PATH, preferring v2.
 fn iqtree_bin() -> &'static str {
-    if Command::new("which")
-        .arg("iqtree2")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-    {
+    if which::which("iqtree2").is_ok() {
         "iqtree2"
     } else {
         "iqtree"
@@ -126,6 +120,18 @@ pub fn build_tree<P: AsRef<Path>>(alignment: P, config: &PhylogenyConfig) -> Res
 
     let prefix_path = outdir.join(&prefix);
 
+    // Guard against silently overwriting a completed run. IQ-TREE can easily
+    // take hours on a multi-gene partition; re-running with a stale command
+    // used to wipe the .treefile without warning.
+    let existing_tree = prefix_path.with_extension("treefile");
+    if existing_tree.exists() && !config.force {
+        println!(
+            "  ✓  {} already exists — skipping IQ-TREE (pass --force to overwrite).",
+            existing_tree.display()
+        );
+        return Ok(existing_tree);
+    }
+
     println!("  Running IQ-TREE ({bin}) on: {}", alignment.display());
     println!(
         "  Model: {}  Bootstrap: {}  Threads: {}",
@@ -140,8 +146,10 @@ pub fn build_tree<P: AsRef<Path>>(alignment: P, config: &PhylogenyConfig) -> Res
         .arg("--prefix")
         .arg(&prefix_path)
         .arg("-T")
-        .arg(config.threads.to_string())
-        .arg("--redo"); // overwrite any previous run with same prefix
+        .arg(config.threads.to_string());
+    if config.force {
+        cmd.arg("--redo");
+    }
 
     // Partition file
     if let Some(part) = &config.partition {

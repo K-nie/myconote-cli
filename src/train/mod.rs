@@ -273,6 +273,17 @@ fn align_transcripts_to_genome(
     Ok(())
 }
 
+/// Extract COMPLETE gene models — i.e. models with both a start codon AND a
+/// stop codon — from a PASA GFF3 and write them to `output`. Returns the
+/// number of complete models actually written (NOT the total gene count in
+/// the input, which is what the prior version returned — see the audit note
+/// on `train/mod.rs:276-348`).
+///
+/// Augustus self-training benefits from complete models; partial ones bias
+/// the transition probabilities for termini. The prior implementation
+/// buffered every `gene` feature unconditionally and counted them all,
+/// meaning `min_models` warnings were never triggered by incomplete input
+/// and the model quality was silently reduced.
 fn extract_training_models(
     pasa_gff3: &Path,
     _genome_fasta: &Path,
@@ -291,23 +302,47 @@ fn extract_training_models(
     let reader = BufReader::new(file);
     let mut out = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
 
-    let mut gene_count = 0usize;
-    let mut in_complete_gene = false;
+    let mut complete_count = 0usize;
+    let mut total_seen = 0usize;
+    let mut in_gene = false;
+    let mut has_start = false;
+    let mut has_stop = false;
     let mut buffer: Vec<String> = Vec::new();
+
+    // Flushes `buffer` to `out` iff the buffered gene has both termini.
+    // Returns whether the flush actually wrote anything (so the caller can
+    // increment the complete count).
+    let flush = |out: &mut std::fs::File,
+                 buffer: &mut Vec<String>,
+                 has_start: &mut bool,
+                 has_stop: &mut bool|
+     -> Result<bool> {
+        if buffer.is_empty() {
+            *has_start = false;
+            *has_stop = false;
+            return Ok(false);
+        }
+        let keep = *has_start && *has_stop;
+        if keep {
+            for bl in buffer.iter() {
+                writeln!(out, "{}", bl).map_err(MycoNoteError::Io)?;
+            }
+        }
+        buffer.clear();
+        *has_start = false;
+        *has_stop = false;
+        Ok(keep)
+    };
 
     for line_res in reader.lines() {
         let line = line_res.map_err(MycoNoteError::Io)?;
         let trimmed = line.trim();
 
         if trimmed.starts_with('#') || trimmed.is_empty() {
-            if !buffer.is_empty() {
-                // Write buffered complete gene
-                for bl in &buffer {
-                    writeln!(out, "{}", bl).map_err(MycoNoteError::Io)?;
-                }
-                buffer.clear();
-                in_complete_gene = false;
+            if flush(&mut out, &mut buffer, &mut has_start, &mut has_stop)? {
+                complete_count += 1;
             }
+            in_gene = false;
             continue;
         }
 
@@ -318,34 +353,54 @@ fn extract_training_models(
 
         match fields[2] {
             "gene" => {
-                buffer.clear();
-                in_complete_gene = true;
-                buffer.push(line.clone());
-                gene_count += 1;
-            }
-            "mRNA" | "transcript" if in_complete_gene => {
-                // Only keep models with both start and stop codon (complete CDS)
-                buffer.push(line.clone());
-            }
-            "start_codon" | "stop_codon" => {
+                // New gene boundary → flush the previous one if complete.
+                if flush(&mut out, &mut buffer, &mut has_start, &mut has_stop)? {
+                    complete_count += 1;
+                }
+                in_gene = true;
+                total_seen += 1;
                 buffer.push(line.clone());
             }
-            _ if in_complete_gene => {
+            "mRNA" | "transcript" if in_gene => {
+                buffer.push(line.clone());
+            }
+            "start_codon" if in_gene => {
+                has_start = true;
+                buffer.push(line.clone());
+            }
+            "stop_codon" if in_gene => {
+                has_stop = true;
+                buffer.push(line.clone());
+            }
+            _ if in_gene => {
                 buffer.push(line.clone());
             }
             _ => {}
         }
     }
 
-    // Flush remaining
-    if !buffer.is_empty() {
-        for bl in &buffer {
-            writeln!(out, "{}", bl).map_err(MycoNoteError::Io)?;
-        }
+    // Final flush for any gene at EOF.
+    if flush(&mut out, &mut buffer, &mut has_start, &mut has_stop)? {
+        complete_count += 1;
     }
 
-    let _ = min_models; // used by caller for warning only
-    Ok(gene_count)
+    if total_seen > 0 {
+        let dropped = total_seen.saturating_sub(complete_count);
+        if dropped > 0 {
+            eprintln!(
+                "  ℹ  {} / {} PASA models dropped as incomplete (missing start_codon or stop_codon)",
+                dropped, total_seen
+            );
+        }
+    }
+    if complete_count < min_models {
+        eprintln!(
+            "  ⚠  Only {} complete training models (< min_models = {}); Augustus accuracy may suffer",
+            complete_count, min_models
+        );
+    }
+
+    Ok(complete_count)
 }
 
 fn write_train_summary(

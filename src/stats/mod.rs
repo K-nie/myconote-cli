@@ -81,6 +81,10 @@ impl GenomeStatistics {
         let mut transcript_to_cds: HashMap<String, Vec<(u64, u64)>> = HashMap::new();
         let mut transcript_to_exons: HashMap<String, Vec<(u64, u64)>> = HashMap::new();
         let mut transcript_lengths: HashMap<String, u64> = HashMap::new();
+        // Per-gene chromosome (seqid). Needed by the primary_only path so it
+        // can credit each collapsed isoform to its actual chromosome instead
+        // of the arbitrary first chromosome in the HashMap iteration order.
+        let mut gene_to_seqid: HashMap<String, String> = HashMap::new();
 
         let mut record_count = 0;
 
@@ -109,6 +113,7 @@ impl GenomeStatistics {
 
                             if let Some(id) = record.id() {
                                 gene_to_transcripts.insert(id.clone(), Vec::new());
+                                gene_to_seqid.insert(id.clone(), record.seqid.clone());
                             }
                         }
                         "mRNA" | "transcript" => {
@@ -185,7 +190,7 @@ impl GenomeStatistics {
             let mut primary_chromosome_stats: HashMap<String, ChromosomeStats> = HashMap::new();
 
             // For each gene, find the longest transcript
-            for (_gene_id, transcripts) in &gene_to_transcripts {
+            for (gene_id, transcripts) in &gene_to_transcripts {
                 if transcripts.is_empty() {
                     continue;
                 }
@@ -213,10 +218,15 @@ impl GenomeStatistics {
                     primary_stats.total_exons += exon_list.len();
                 }
 
-                // Find chromosome for this gene (simplified)
-                for (chr, _) in &stats.chromosome_stats {
+                // Credit this gene to its actual chromosome (seqid captured
+                // during the first pass) — the prior implementation did
+                // `for (chr, _) in &stats.chromosome_stats { ...; break; }`
+                // which silently credited every gene to the first chromosome
+                // in HashMap iteration order, producing nonsense per-chrom
+                // stats on any multi-chromosome input.
+                if let Some(seqid) = gene_to_seqid.get(gene_id) {
                     let chr_stat = primary_chromosome_stats
-                        .entry(chr.clone())
+                        .entry(seqid.clone())
                         .or_insert(ChromosomeStats::default());
                     chr_stat.gene_count += 1;
                     chr_stat.transcript_count += 1;
@@ -226,7 +236,6 @@ impl GenomeStatistics {
                     if let Some(exon_list) = transcript_to_exons.get(primary) {
                         chr_stat.exon_count += exon_list.len();
                     }
-                    break;
                 }
             }
 

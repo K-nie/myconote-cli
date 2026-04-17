@@ -306,6 +306,15 @@ pub fn run_masking(config: &MaskConfig) -> Result<MaskStats> {
         config.output.clone()
     };
 
+    // Create parent directory if missing — users commonly pass nested
+    // output paths like `my_out/masked.fa` without mkdir-ing first, and the
+    // failure mode is a cryptic IO error at the very end after the
+    // expensive repeat-detection work has already run.
+    if let Some(parent) = out_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(MycoNoteError::Io)?;
+        }
+    }
     let mut out = std::fs::File::create(&out_path).map_err(MycoNoteError::Io)?;
     write_fasta(&mut out, &masked_seqs).map_err(MycoNoteError::Io)?;
 

@@ -140,6 +140,14 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
     }
 
     // ── Write renamed FASTA ───────────────────────────────────────────────
+    // Create parent directory implicitly — users routinely pass paths like
+    // `my_out_dir/sorted.fa` without running `mkdir -p my_out_dir` first,
+    // and the resulting "IO error: No such file or directory" is cryptic.
+    if let Some(parent) = config.output.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(MycoNoteError::Io)?;
+        }
+    }
     let mut out = std::fs::File::create(&config.output).map_err(MycoNoteError::Io)?;
     for rec in &records {
         let new_id = &rename_map[&rec.original_id];
@@ -164,6 +172,11 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
 
     // ── Optionally write rename table ─────────────────────────────────────
     if let Some(ref table_path) = config.rename_table {
+        if let Some(parent) = table_path.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent).map_err(MycoNoteError::Io)?;
+            }
+        }
         let mut tbl = std::fs::File::create(table_path).map_err(MycoNoteError::Io)?;
         writeln!(tbl, "original_id\tnew_id\tlength").map_err(MycoNoteError::Io)?;
         for rec in &records {
@@ -210,6 +223,11 @@ pub fn liftover_gff3(
     rename_map: &HashMap<String, String>,
 ) -> Result<usize> {
     let inp = std::fs::File::open(gff_input).map_err(MycoNoteError::Io)?;
+    if let Some(parent) = gff_output.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(MycoNoteError::Io)?;
+        }
+    }
     let mut out = std::fs::File::create(gff_output).map_err(MycoNoteError::Io)?;
     let reader = BufReader::new(inp);
     let mut updated = 0usize;

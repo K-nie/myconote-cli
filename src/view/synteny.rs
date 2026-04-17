@@ -333,7 +333,9 @@ fn genes_from_gff(gff_path: &Path) -> Result<GenesByContig> {
         if rec.feature_type != "gene" {
             continue;
         }
-        let Some(id) = rec.id().cloned() else { continue };
+        let Some(id) = rec.id().cloned() else {
+            continue;
+        };
         genes.entry(rec.seqid).or_default().push(GeneInterval {
             start: rec.start,
             end: rec.end,
@@ -991,7 +993,10 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
     let genes2 = genes_from_gff(&config.gff2)?;
     let total_genes: usize = genes1.values().map(|v| v.len()).sum::<usize>()
         + genes2.values().map(|v| v.len()).sum::<usize>();
-    println!("   {} genes extracted for overlay + block labels", total_genes);
+    println!(
+        "   {} genes extracted for overlay + block labels",
+        total_genes
+    );
 
     // 4. Render HTML
     println!("🎨 Rendering synteny diagram…");
@@ -1019,7 +1024,16 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
 mod tests {
     use super::*;
 
-    fn blk(qn: &str, qs: u64, qe: u64, tn: &str, ts: u64, te: u64, st: char, rm: u64) -> SyntenyBlock {
+    fn blk(
+        qn: &str,
+        qs: u64,
+        qe: u64,
+        tn: &str,
+        ts: u64,
+        te: u64,
+        st: char,
+        rm: u64,
+    ) -> SyntenyBlock {
         let block_len = qe - qs;
         SyntenyBlock {
             query_name: qn.to_string(),

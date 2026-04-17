@@ -531,7 +531,10 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                             // Prefer an explicit EggNog product description when
                             // the gene has no Swiss-Prot hit (keeps well-curated
                             // mmseqs labels untouched).
-                            if g.product.is_none() && !hit.description.is_empty() && hit.description != "-" {
+                            if g.product.is_none()
+                                && !hit.description.is_empty()
+                                && hit.description != "-"
+                            {
                                 g.product = Some(hit.description.clone());
                             }
                             for go in &hit.go_terms {
@@ -662,8 +665,11 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                         let secretome_set: std::collections::HashSet<String> = sp_hits
                             .iter()
                             .filter(|(id, sp)| {
-                                if !sp.has_signal { return false; }
-                                let tm_count = tm_map.as_ref()
+                                if !sp.has_signal {
+                                    return false;
+                                }
+                                let tm_count = tm_map
+                                    .as_ref()
                                     .and_then(|m| m.get(*id))
                                     .map(|t| t.tm_count)
                                     .unwrap_or(0);
@@ -678,7 +684,10 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                             tm_map.as_ref(),
                             &sec_tsv,
                         );
-                        let secreted = sp_hits.values().filter(|s| s.prediction.starts_with("SP")).count();
+                        let secreted = sp_hits
+                            .values()
+                            .filter(|s| s.prediction.starts_with("SP"))
+                            .count();
                         progress::finish_spinner(
                             &pb2,
                             format!(
@@ -691,7 +700,9 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                     Err(e) => progress::warn_spinner(&pb2, format!("SignalP parse failed: {}", e)),
                 }
             }
-            Err(e) => progress::warn_spinner(&pb2, format!("signal-peptide tool unavailable: {}", e)),
+            Err(e) => {
+                progress::warn_spinner(&pb2, format!("signal-peptide tool unavailable: {}", e))
+            }
         }
     }
 
@@ -707,10 +718,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
         let as_dir = match as_dir {
             Some(d) if d.exists() => Some(d),
             Some(d) => {
-                progress::warn_spinner(
-                    &pb2,
-                    format!("antiSMASH dir not found: {}", d.display()),
-                );
+                progress::warn_spinner(&pb2, format!("antiSMASH dir not found: {}", d.display()));
                 None
             }
             None if antismash::antismash_available() => {

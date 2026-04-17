@@ -120,8 +120,8 @@ pub fn build_tree<P: AsRef<Path>>(alignment: P, config: &PhylogenyConfig) -> Res
     // The previous unconditional join() turned "out/run1" into
     // "<alignment_dir>/out/run1" which then failed at IQ-TREE's log-file
     // open because the nested "out/" subdir didn't exist.
-    let prefix_has_path = prefix.contains(std::path::MAIN_SEPARATOR)
-        || PathBuf::from(&prefix).is_absolute();
+    let prefix_has_path =
+        prefix.contains(std::path::MAIN_SEPARATOR) || PathBuf::from(&prefix).is_absolute();
     let prefix_path = if prefix_has_path {
         PathBuf::from(&prefix)
     } else {

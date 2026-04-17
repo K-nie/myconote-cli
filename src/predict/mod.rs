@@ -275,7 +275,10 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
                         prediction_inputs.push((glimmer_gff, "GlimmerHMM", weights.glimmerhmm));
                     }
                     Err(e) => {
-                        progress::warn_spinner(&pb, format!("GlimmerHMM failed (non-fatal): {}", e));
+                        progress::warn_spinner(
+                            &pb,
+                            format!("GlimmerHMM failed (non-fatal): {}", e),
+                        );
                     }
                 }
             }

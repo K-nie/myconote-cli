@@ -77,7 +77,11 @@ pub fn run(masked_fasta: &Path, output_gff: &Path, config: &SnapConfig) -> Resul
                         share.join("HMM").display(),
                         std::fs::read_dir(share.join("HMM"))
                             .ok()
-                            .map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).collect::<Vec<_>>().join(", "))
+                            .map(|rd| rd
+                                .filter_map(|e| e.ok())
+                                .map(|e| e.file_name().to_string_lossy().into_owned())
+                                .collect::<Vec<_>>()
+                                .join(", "))
                             .unwrap_or_default()
                     )));
                 } else {

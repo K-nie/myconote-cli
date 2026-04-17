@@ -112,7 +112,10 @@ fn run_single(
     args.extend(config.extra_args.clone());
     args.push(masked_fasta.to_string_lossy().into_owned());
 
-    let status = Command::new(aug).args(&args).status().map_err(MycoNoteError::Io)?;
+    let status = Command::new(aug)
+        .args(&args)
+        .status()
+        .map_err(MycoNoteError::Io)?;
 
     if !status.success() {
         return Err(MycoNoteError::InvalidFormat(format!(
@@ -202,7 +205,10 @@ fn run_parallel(
                         "contig {}: exit {:?}\n{}",
                         idx,
                         out.status.code(),
-                        String::from_utf8_lossy(&out.stderr).chars().take(400).collect::<String>()
+                        String::from_utf8_lossy(&out.stderr)
+                            .chars()
+                            .take(400)
+                            .collect::<String>()
                     )),
                     Err(e) => Some(format!("contig {}: spawn failed — {}", idx, e)),
                 }
@@ -211,7 +217,11 @@ fn run_parallel(
     });
 
     if !failures.is_empty() {
-        eprintln!("  ⚠  {} of {} contigs failed:", failures.len(), contig_paths.len());
+        eprintln!(
+            "  ⚠  {} of {} contigs failed:",
+            failures.len(),
+            contig_paths.len()
+        );
         for msg in failures.iter().take(3) {
             eprintln!("     {}", msg);
         }

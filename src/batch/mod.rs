@@ -489,9 +489,7 @@ fn run_local_mode(config: &BatchConfig, genomes: &[GenomeEntry]) -> Result<()> {
             config.output_dir.display(),
             config.output_dir.display()
         );
-        println!(
-            "  \x1b[33mmyconote-cli phylogeny <aligned_proteins.fa>\x1b[0m\n"
-        );
+        println!("  \x1b[33mmyconote-cli phylogeny <aligned_proteins.fa>\x1b[0m\n");
     }
 
     Ok(())

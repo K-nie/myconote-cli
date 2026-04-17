@@ -8,20 +8,25 @@
 //! needed to turn `compare`'s single-copy ortholog FASTA directory into a
 //! species-tree-ready alignment.
 
+use crate::compare::orthofinder::Orthogroup;
 use crate::utils::error::{MycoNoteError, Result};
 use rayon::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Run MAFFT on a single orthogroup FASTA. Returns a map of
-/// taxon_name → aligned-sequence-string. `taxon_names` is the canonical
-/// ordering we'll enforce at concat time so empty gaps fill correctly
-/// when an orthogroup happens to lack a taxon.
+/// taxon_name → aligned-sequence-string.
+///
+/// `taxon_assignments` supplies the authoritative per-sequence taxon from
+/// the ortholog table — we take each aligned record in FASTA order and
+/// zip with `taxon_assignments`. This handles the pathological case where
+/// two genomes share identical gene IDs (self-compare edge case), which
+/// header-parsing heuristics can't distinguish.
 pub fn align_orthogroup(
     input_fa: &Path,
-    taxon_names: &[String],
+    taxon_assignments: &[String],
 ) -> Result<BTreeMap<String, String>> {
     let mafft = which::which("mafft").map_err(|_| {
         MycoNoteError::ExternalTool(
@@ -45,58 +50,87 @@ pub fn align_orthogroup(
 
     parse_aligned_fasta(
         &String::from_utf8_lossy(&output.stdout),
-        taxon_names,
+        taxon_assignments,
         input_fa,
     )
 }
 
-/// Parse MAFFT output into a taxon → aligned-sequence map. We match each
-/// header against the known taxon names (OrthoFinder prefixes sequences
-/// with the input-file stem, which is also our taxon name). Fallback: use
-/// the first token of the header.
+/// Parse MAFFT output into a taxon → aligned-sequence map. The caller
+/// supplies `taxon_assignments` — one taxon name per sequence in the INPUT
+/// FASTA, in the same order OrthoFinder wrote them. Because MAFFT (and the
+/// `--auto` pipeline) doesn't reorder records, we can zip positionally.
+///
+/// Why not match by header prefix? OrthoFinder's `Single_Copy_
+/// Orthologue_Sequences/*.fa` files strip the species prefix and write the
+/// bare gene ID, so header-matching against taxon names fails in the
+/// general case — and fails pathologically (false-positive matches) when
+/// two species have overlapping gene IDs (self-compare or shared-locus-
+/// tag clades). Positional mapping is robust to both.
 fn parse_aligned_fasta(
     aligned: &str,
-    taxon_names: &[String],
+    taxon_assignments: &[String],
     source: &Path,
 ) -> Result<BTreeMap<String, String>> {
-    let mut by_taxon: BTreeMap<String, String> = BTreeMap::new();
-    let mut current_taxon: Option<String> = None;
-    let mut current_seq = String::new();
+    let mut seqs: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut in_record = false;
 
     for line in aligned.lines() {
-        if let Some(header) = line.strip_prefix('>') {
-            if let Some(t) = current_taxon.take() {
-                by_taxon.insert(t, std::mem::take(&mut current_seq));
-            } else {
-                current_seq.clear();
+        if line.starts_with('>') {
+            if in_record {
+                seqs.push(std::mem::take(&mut current));
             }
-            let matched = taxon_names
-                .iter()
-                .find(|t| header.starts_with(t.as_str()))
-                .cloned()
-                .unwrap_or_else(|| {
-                    header
-                        .split(|c: char| c.is_whitespace() || c == '|' || c == '_')
-                        .next()
-                        .unwrap_or("unknown")
-                        .to_string()
-                });
-            current_taxon = Some(matched);
-        } else {
-            current_seq.push_str(line.trim());
+            in_record = true;
+        } else if in_record {
+            current.push_str(line.trim());
         }
     }
-    if let Some(t) = current_taxon.take() {
-        by_taxon.insert(t, current_seq);
+    if in_record {
+        seqs.push(current);
     }
 
-    if by_taxon.is_empty() {
+    if seqs.is_empty() {
         return Err(MycoNoteError::InvalidFormat(format!(
             "MAFFT produced no aligned sequences for {}",
             source.display()
         )));
     }
+
+    if seqs.len() != taxon_assignments.len() {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "MAFFT produced {} sequences but taxon table expects {} for {}",
+            seqs.len(),
+            taxon_assignments.len(),
+            source.display()
+        )));
+    }
+
+    let mut by_taxon: BTreeMap<String, String> = BTreeMap::new();
+    for (taxon, seq) in taxon_assignments.iter().zip(seqs.into_iter()) {
+        // When a single-copy orthogroup happens to collapse two identical
+        // gene IDs into one (artificial self-compare), we still want both
+        // entries preserved — the later overwrites, accepting the second
+        // sequence as the canonical one. This matches OrthoFinder's own
+        // tie-breaking.
+        by_taxon.insert(taxon.clone(), seq);
+    }
     Ok(by_taxon)
+}
+
+/// Build the per-orthogroup taxon ordering. For each orthogroup, we emit a
+/// list the same length as the orthogroup's FASTA — OrthoFinder writes
+/// single-copy FASTAs in taxon order, so we expand every genome's
+/// gene-list entry into its taxon name.
+fn taxon_assignments_for_orthogroup(og: &Orthogroup, taxon_names: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for taxon in taxon_names {
+        if let Some(genes) = og.members.get(taxon) {
+            for _ in genes {
+                out.push(taxon.clone());
+            }
+        }
+    }
+    out
 }
 
 #[derive(Debug, Clone)]
@@ -119,13 +153,34 @@ pub struct SpeciesTreeAlignment {
 /// concatenate them into a single supermatrix. Writes `supermatrix.fa`
 /// and a NEXUS-format `partitions.nex`. Parallelism: one MAFFT process
 /// per orthogroup via rayon.
+///
+/// `orthogroups` supplies the authoritative per-orthogroup gene-to-taxon
+/// mapping from the parsed OrthoFinder output — we use this (not header
+/// parsing) to assign each aligned sequence to its taxon, which is the
+/// only robust way to handle clades where two species have overlapping
+/// gene IDs.
 pub fn build_species_tree_alignment(
     sco_dir: &Path,
     taxon_names: &[String],
+    orthogroups: &[Orthogroup],
     out_dir: &Path,
     threads: usize,
 ) -> Result<SpeciesTreeAlignment> {
     std::fs::create_dir_all(out_dir).map_err(MycoNoteError::Io)?;
+
+    // Build a map OG_id → taxon_assignments. Only single-copy orthogroups
+    // make it into `sco_dir`, so we filter to those to avoid alignment on
+    // paralog-containing clusters.
+    let og_lookup: HashMap<String, Vec<String>> = orthogroups
+        .iter()
+        .filter(|og| og.is_single_copy(taxon_names.len()))
+        .map(|og| {
+            (
+                og.id.clone(),
+                taxon_assignments_for_orthogroup(og, taxon_names),
+            )
+        })
+        .collect();
 
     let entries: Vec<PathBuf> = std::fs::read_dir(sco_dir)
         .map_err(MycoNoteError::Io)?
@@ -166,7 +221,14 @@ pub fn build_species_tree_alignment(
                     .and_then(|s| s.to_str())
                     .unwrap_or("OG")
                     .to_string();
-                match align_orthogroup(p, taxon_names) {
+                let Some(assignments) = og_lookup.get(&og) else {
+                    eprintln!(
+                        "  ⚠  skipping {} — no single-copy taxon map (orthogroup not in table?)",
+                        p.display()
+                    );
+                    return None;
+                };
+                match align_orthogroup(p, assignments) {
                     Ok(map) => Some((og, map)),
                     Err(e) => {
                         eprintln!("  ⚠  skipping {} — {}", p.display(), e);
@@ -237,12 +299,8 @@ pub fn build_species_tree_alignment(
     writeln!(p, "#nexus").map_err(MycoNoteError::Io)?;
     writeln!(p, "begin sets;").map_err(MycoNoteError::Io)?;
     for part in &partitions {
-        writeln!(
-            p,
-            "  charset {} = {}-{};",
-            part.name, part.start, part.end
-        )
-        .map_err(MycoNoteError::Io)?;
+        writeln!(p, "  charset {} = {}-{};", part.name, part.start, part.end)
+            .map_err(MycoNoteError::Io)?;
     }
     writeln!(p, "end;").map_err(MycoNoteError::Io)?;
 
@@ -266,10 +324,14 @@ pub fn build_species_tree_alignment(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compare::orthofinder::Orthogroup;
 
     #[test]
-    fn parse_aligned_fasta_matches_known_taxa() {
-        let body = ">ct_a|gene1\nMKKLTLL--V\n>ct_b|gene2\nMKKLTLL--V\n";
+    fn positional_taxon_mapping_works_for_identical_gene_ids() {
+        // Pathological self-compare case: same gene ID appears in two
+        // different taxa. Header-parsing heuristics can't distinguish them;
+        // positional zip with taxon_assignments does.
+        let body = ">g001031\nMKKLTLL--V\n>g001031\nMKKLTII--V\n";
         let map = parse_aligned_fasta(
             body,
             &["ct_a".into(), "ct_b".into()],
@@ -278,7 +340,7 @@ mod tests {
         .unwrap();
         assert_eq!(map.len(), 2);
         assert_eq!(map.get("ct_a").unwrap(), "MKKLTLL--V");
-        assert_eq!(map.get("ct_b").unwrap(), "MKKLTLL--V");
+        assert_eq!(map.get("ct_b").unwrap(), "MKKLTII--V");
     }
 
     #[test]
@@ -288,7 +350,7 @@ mod tests {
 
     #[test]
     fn parse_handles_multiline_sequences() {
-        let body = ">ct_a|gene1\nMKKL\nTLL--V\n>ct_b|gene2\nMKKL\nTLL--V\n";
+        let body = ">ct_a_g1\nMKKL\nTLL--V\n>ct_b_g2\nMKKL\nTLL--V\n";
         let map = parse_aligned_fasta(
             body,
             &["ct_a".into(), "ct_b".into()],
@@ -296,5 +358,35 @@ mod tests {
         )
         .unwrap();
         assert_eq!(map.get("ct_a").unwrap().len(), 10);
+        assert_eq!(map.get("ct_b").unwrap().len(), 10);
+    }
+
+    #[test]
+    fn mismatched_seq_count_errors() {
+        // 2 sequences but we claim 3 taxa → structural mismatch, must
+        // error loudly rather than silently truncate.
+        let body = ">a\nMKKL\n>b\nMKKI\n";
+        let err = parse_aligned_fasta(
+            body,
+            &["a".into(), "b".into(), "c".into()],
+            Path::new("/tmp/og.fa"),
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn taxon_assignments_handles_missing_taxon() {
+        // Orthogroup missing one of the 3 expected taxa — assignments
+        // reflect only present taxa so MAFFT output will be 2 sequences.
+        let mut og = Orthogroup {
+            id: "OG0001".into(),
+            members: std::collections::HashMap::new(),
+        };
+        og.members.insert("ct_a".into(), vec!["g1".into()]);
+        og.members.insert("ct_c".into(), vec!["g5".into()]);
+        // ct_b absent
+        let assignments =
+            taxon_assignments_for_orthogroup(&og, &["ct_a".into(), "ct_b".into(), "ct_c".into()]);
+        assert_eq!(assignments, vec!["ct_a".to_string(), "ct_c".to_string()]);
     }
 }

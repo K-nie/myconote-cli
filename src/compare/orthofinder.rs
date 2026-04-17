@@ -35,8 +35,7 @@ impl Orthogroup {
     /// True iff every genome contributes exactly one gene (the set used for
     /// species-tree inference).
     pub fn is_single_copy(&self, expected_genomes: usize) -> bool {
-        self.members.len() == expected_genomes
-            && self.members.values().all(|v| v.len() == 1)
+        self.members.len() == expected_genomes && self.members.values().all(|v| v.len() == 1)
     }
 }
 
@@ -128,9 +127,13 @@ pub fn run_orthofinder(
     for entry in std::fs::read_dir(&of_parent).map_err(MycoNoteError::Io)? {
         let entry = entry.map_err(MycoNoteError::Io)?;
         let path = entry.path();
-        if !path.is_dir() { continue; }
+        if !path.is_dir() {
+            continue;
+        }
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if !name.starts_with("Results_") { continue; }
+        if !name.starts_with("Results_") {
+            continue;
+        }
         let mtime = entry
             .metadata()
             .and_then(|m| m.modified())
@@ -140,14 +143,12 @@ pub fn run_orthofinder(
             _ => newest = Some((path, mtime)),
         }
     }
-    newest
-        .map(|(p, _)| p)
-        .ok_or_else(|| {
-            MycoNoteError::ExternalTool(format!(
-                "OrthoFinder output directory not found under {}",
-                of_parent.display()
-            ))
-        })
+    newest.map(|(p, _)| p).ok_or_else(|| {
+        MycoNoteError::ExternalTool(format!(
+            "OrthoFinder output directory not found under {}",
+            of_parent.display()
+        ))
+    })
 }
 
 /// Parse `Orthogroups/Orthogroups.tsv`. Header row lists genome names; each
@@ -160,9 +161,11 @@ pub fn parse_orthogroups_tsv(tsv: &Path) -> Result<Vec<Orthogroup>> {
 
     let header = match lines.next() {
         Some(Ok(h)) => h,
-        _ => return Err(MycoNoteError::InvalidFormat(
-            "Empty Orthogroups.tsv".to_string(),
-        )),
+        _ => {
+            return Err(MycoNoteError::InvalidFormat(
+                "Empty Orthogroups.tsv".to_string(),
+            ))
+        }
     };
     let cols: Vec<String> = header.split('\t').map(|s| s.to_string()).collect();
     if cols.len() < 2 {
@@ -175,16 +178,22 @@ pub fn parse_orthogroups_tsv(tsv: &Path) -> Result<Vec<Orthogroup>> {
     let mut orthogroups = Vec::new();
     for line in lines {
         let line = line.map_err(MycoNoteError::Io)?;
-        if line.trim().is_empty() { continue; }
+        if line.trim().is_empty() {
+            continue;
+        }
         let fields: Vec<&str> = line.split('\t').collect();
-        if fields.is_empty() { continue; }
+        if fields.is_empty() {
+            continue;
+        }
 
         let mut og = Orthogroup {
             id: fields[0].to_string(),
             members: HashMap::new(),
         };
         for (i, col) in fields.iter().enumerate().skip(1) {
-            if i - 1 >= genome_names.len() { break; }
+            if i - 1 >= genome_names.len() {
+                break;
+            }
             let genome = &genome_names[i - 1];
             let genes: Vec<String> = col
                 .split(',')
@@ -209,8 +218,7 @@ pub fn summarise_pangenome(
 ) -> PangenomeSummary {
     let mut s = PangenomeSummary::default();
     s.total_clusters = orthogroups.len();
-    let soft_core_n =
-        ((total_genomes as f64) * soft_core_frac).ceil() as usize;
+    let soft_core_n = ((total_genomes as f64) * soft_core_frac).ceil() as usize;
     let cloud_n = ((total_genomes as f64) * cloud_frac).ceil() as usize;
 
     for og in orthogroups {
@@ -241,7 +249,11 @@ mod tests {
     fn write_tmp(label: &str, body: &str) -> PathBuf {
         use std::io::Write as _;
         let mut p = std::env::temp_dir();
-        p.push(format!("myconote_of_test_{}_{}.tsv", std::process::id(), label));
+        p.push(format!(
+            "myconote_of_test_{}_{}.tsv",
+            std::process::id(),
+            label
+        ));
         let mut f = std::fs::File::create(&p).unwrap();
         f.write_all(body.as_bytes()).unwrap();
         p
@@ -306,7 +318,7 @@ OG0000003\t\tgB_3\tgC_3
         // Soft-core needs ceil(10 * 0.95) = 10 genomes, so 9/10 falls to shell.
         assert_eq!(s.soft_core, 0);
         assert_eq!(s.shell, 2); // 9-genome and 5-genome orthogroups
-        // Cloud bound = ceil(10 * 0.15) = 2. 2/10 and 1/10 are cloud.
+                                // Cloud bound = ceil(10 * 0.15) = 2. 2/10 and 1/10 are cloud.
         assert_eq!(s.cloud, 2);
         assert_eq!(s.singletons, 1);
     }

@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 
 pub mod alignment;
 pub mod phylogeny;
-pub mod synteny;
 
 #[derive(Debug, Clone)]
 pub struct CompareConfig {
@@ -133,9 +132,24 @@ pub fn compare_genomes<P: AsRef<Path>>(genome_paths: &[P], config: &CompareConfi
         _ => println!("Unknown alignment method: {}", config.method),
     }
 
-    // Generate synteny plot if requested
+    // Synteny plots live in the dedicated `synteny` subcommand, which runs
+    // minimap2 asm-to-asm and emits a D3 ribbon viewer. `compare` is an
+    // N-genome protein-level comparison and can't produce a faithful 2-genome
+    // ribbon from its inputs — point users there rather than rendering fake
+    // boxes.
     if config.generate_synteny {
-        synteny::generate_synteny_plot(&genomes, config)?;
+        if genomes.len() >= 2 {
+            println!(
+                "\nℹ  Synteny ribbons moved out of `compare`. Run:\n     \
+                 myconote-cli synteny {} {} --fasta1 <a.fa> --fasta2 <b.fa>",
+                genomes[0].path.display(),
+                genomes[1].path.display()
+            );
+        } else {
+            println!(
+                "\nℹ  `--synteny` needs at least 2 genomes; see `myconote-cli synteny --help`."
+            );
+        }
     }
 
     // Generate phylogenetic tree if requested

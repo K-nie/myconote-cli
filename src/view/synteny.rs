@@ -40,6 +40,12 @@ pub struct SyntenyConfig {
     /// chaining. Default 100_000 — tuned for fungal genomes where asm5
     /// typically fragments single colinear regions into 5–50 sub-hits.
     pub chain_gap: u64,
+    /// Thread count passed to minimap2 (`-t`). Default 4.
+    pub threads: u32,
+    /// Keep the intermediate PAF instead of deleting the temp directory
+    /// after rendering. Useful for debugging alignment issues or loading the
+    /// raw hits into an external dotplot tool.
+    pub keep_paf: bool,
 }
 
 impl Default for SyntenyConfig {
@@ -56,6 +62,8 @@ impl Default for SyntenyConfig {
             names: HashMap::new(),
             taxon_id: None,
             chain_gap: 100_000,
+            threads: 4,
+            keep_paf: false,
         }
     }
 }
@@ -252,7 +260,7 @@ fn chain_blocks(mut blocks: Vec<SyntenyBlock>, max_gap: u64) -> Vec<SyntenyBlock
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Run minimap2 in asm-to-asm mode and return path to the PAF output file.
-fn run_minimap2(fasta1: &Path, fasta2: &Path, out_dir: &Path) -> Result<PathBuf> {
+fn run_minimap2(fasta1: &Path, fasta2: &Path, out_dir: &Path, threads: u32) -> Result<PathBuf> {
     // Check minimap2 is available
     let mm2 = which::which("minimap2").map_err(|_| {
         MycoNoteError::UnsupportedFormat(
@@ -263,15 +271,16 @@ fn run_minimap2(fasta1: &Path, fasta2: &Path, out_dir: &Path) -> Result<PathBuf>
     })?;
 
     let paf_path = out_dir.join("synteny_alignment.paf");
+    let threads = threads.max(1);
 
-    println!("  Running minimap2 asm-to-asm alignment…");
+    println!("  Running minimap2 asm-to-asm alignment (-t {})…", threads);
     let status = Command::new(&mm2)
         .args([
             "-cx",
             "asm5", // asm-to-asm preset (≥5% divergence)
             "--cs", // include cs tag for identity calculation
             "-t",
-            "4", // 4 threads
+            &threads.to_string(),
             fasta1.to_str().unwrap_or(""),
             fasta2.to_str().unwrap_or(""),
         ])
@@ -731,11 +740,25 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
     println!("   Genome A: {} sequences", sizes1.len());
     println!("   Genome B: {} sequences", sizes2.len());
 
-    // 2. Run alignment if FASTA files are provided
-    let blocks = if let (Some(fa1), Some(fa2)) = (&config.fasta1, &config.fasta2) {
-        let tmp_dir = std::env::temp_dir().join("myconote_synteny");
-        std::fs::create_dir_all(&tmp_dir).map_err(MycoNoteError::Io)?;
-        let paf_path = run_minimap2(fa1, fa2, &tmp_dir)?;
+    // 2. Run alignment if FASTA files are provided. Use a per-run temp
+    //    directory (nanosecond-suffixed) so concurrent invocations don't
+    //    clobber each other's PAF output, and clean it up unless the user
+    //    asked to keep it for debugging.
+    let tmp_dir = if config.fasta1.is_some() && config.fasta2.is_some() {
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        Some(std::env::temp_dir().join(format!("myconote_synteny_{}", suffix)))
+    } else {
+        None
+    };
+
+    let blocks = if let (Some(fa1), Some(fa2), Some(tmp)) =
+        (&config.fasta1, &config.fasta2, &tmp_dir)
+    {
+        std::fs::create_dir_all(tmp).map_err(MycoNoteError::Io)?;
+        let paf_path = run_minimap2(fa1, fa2, tmp, config.threads)?;
         let raw = parse_paf(&paf_path, config.min_block_len)?;
         println!(
             "   {} raw PAF hits ≥ {} bp",
@@ -775,6 +798,15 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
 
     println!("✓ Synteny viewer: {}", config.output.display());
     println!("  Open in any modern browser — no server required.");
+
+    // 5. Clean up the temp PAF unless the user asked to keep it.
+    if let Some(tmp) = &tmp_dir {
+        if config.keep_paf {
+            println!("  PAF retained at: {}", tmp.display());
+        } else if let Err(e) = std::fs::remove_dir_all(tmp) {
+            eprintln!("  ⚠  Could not remove temp dir {}: {}", tmp.display(), e);
+        }
+    }
 
     Ok(())
 }

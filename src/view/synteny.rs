@@ -35,6 +35,11 @@ pub struct SyntenyConfig {
     pub names: HashMap<String, String>,
     /// NCBI taxon ID for online name resolution (optional)
     pub taxon_id: Option<u32>,
+    /// Maximum gap (bp, on both query and target sides) between adjacent PAF
+    /// hits to merge into a single chained synteny block. Set to 0 to disable
+    /// chaining. Default 100_000 — tuned for fungal genomes where asm5
+    /// typically fragments single colinear regions into 5–50 sub-hits.
+    pub chain_gap: u64,
 }
 
 impl Default for SyntenyConfig {
@@ -50,6 +55,7 @@ impl Default for SyntenyConfig {
             min_block_len: 1_000,
             names: HashMap::new(),
             taxon_id: None,
+            chain_gap: 100_000,
         }
     }
 }
@@ -58,7 +64,7 @@ impl Default for SyntenyConfig {
 // PAF block representation
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// One syntenic block parsed from a PAF line.
+/// One syntenic block parsed from a PAF line (possibly post-chaining).
 #[derive(Debug, Clone)]
 pub struct SyntenyBlock {
     pub query_name: String,
@@ -70,8 +76,11 @@ pub struct SyntenyBlock {
     pub target_end: u64,
     pub target_len: u64,
     pub strand: char,  // '+' or '-'
-    pub identity: f64, // 0.0–1.0
+    pub identity: f64, // 0.0–1.0, weighted by block_len when chained
     pub block_len: u64,
+    /// Column 10 of PAF — number of matching residues. Preserved so chaining
+    /// can recompute identity as a length-weighted mean.
+    pub residue_matches: u64,
 }
 
 /// Chromosome size map keyed by seqid.
@@ -138,10 +147,104 @@ fn parse_paf(paf_path: &Path, min_len: u64) -> Result<Vec<SyntenyBlock>> {
             strand: strand_char,
             identity,
             block_len,
+            residue_matches,
         });
     }
 
     Ok(blocks)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Block chaining
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Merge adjacent colinear PAF hits into consolidated synteny blocks.
+///
+/// minimap2 `asm5` fragments a single colinear region into many short hits
+/// when small indels or repeats break alignment. This pass groups blocks by
+/// `(query_contig, target_contig, strand)`, sorts by query_start, then walks
+/// the sorted list merging neighbours when both sides stay within `max_gap`
+/// and coordinates remain monotonic (strictly increasing on query; on target
+/// increasing for '+' strand, decreasing for '-' strand).
+///
+/// Merged identity is a length-weighted mean via summed `residue_matches /
+/// block_len`. Setting `max_gap == 0` disables chaining and returns the input
+/// unchanged.
+fn chain_blocks(mut blocks: Vec<SyntenyBlock>, max_gap: u64) -> Vec<SyntenyBlock> {
+    if max_gap == 0 || blocks.len() < 2 {
+        return blocks;
+    }
+
+    // Group key: (query_contig, target_contig, strand).
+    blocks.sort_by(|a, b| {
+        a.query_name
+            .cmp(&b.query_name)
+            .then_with(|| a.target_name.cmp(&b.target_name))
+            .then_with(|| a.strand.cmp(&b.strand))
+            .then_with(|| a.query_start.cmp(&b.query_start))
+    });
+
+    let mut out: Vec<SyntenyBlock> = Vec::with_capacity(blocks.len());
+    for b in blocks {
+        let merged = out.last_mut().and_then(|cur| {
+            if cur.query_name != b.query_name
+                || cur.target_name != b.target_name
+                || cur.strand != b.strand
+            {
+                return None;
+            }
+
+            // Query gap — blocks are sorted by query_start, so b.qs >= cur.qs.
+            // Use saturating_sub so overlapping blocks (b.qs < cur.qe) map to
+            // a zero gap rather than underflowing.
+            let q_gap = b.query_start.saturating_sub(cur.query_end);
+            if q_gap > max_gap {
+                return None;
+            }
+
+            // Target-side monotonicity and gap depend on strand.
+            let t_gap = match cur.strand {
+                '+' => {
+                    if b.target_start < cur.target_start {
+                        return None; // order inversion — not colinear
+                    }
+                    b.target_start.saturating_sub(cur.target_end)
+                }
+                '-' => {
+                    // Reverse-strand chains: target coords run backwards as
+                    // query advances, so cur.target_start must sit AFTER
+                    // b.target_end.
+                    if b.target_end > cur.target_start {
+                        return None;
+                    }
+                    cur.target_start.saturating_sub(b.target_end)
+                }
+                _ => return None,
+            };
+            if t_gap > max_gap {
+                return None;
+            }
+
+            // Extend bounding box on both axes.
+            cur.query_start = cur.query_start.min(b.query_start);
+            cur.query_end = cur.query_end.max(b.query_end);
+            cur.target_start = cur.target_start.min(b.target_start);
+            cur.target_end = cur.target_end.max(b.target_end);
+            cur.residue_matches += b.residue_matches;
+            cur.block_len += b.block_len;
+            cur.identity = if cur.block_len > 0 {
+                cur.residue_matches as f64 / cur.block_len as f64
+            } else {
+                0.0
+            };
+            Some(())
+        });
+
+        if merged.is_none() {
+            out.push(b);
+        }
+    }
+    out
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -596,13 +699,21 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
         let tmp_dir = std::env::temp_dir().join("myconote_synteny");
         std::fs::create_dir_all(&tmp_dir).map_err(MycoNoteError::Io)?;
         let paf_path = run_minimap2(fa1, fa2, &tmp_dir)?;
-        let blocks = parse_paf(&paf_path, config.min_block_len)?;
+        let raw = parse_paf(&paf_path, config.min_block_len)?;
         println!(
-            "   {} syntenic blocks ≥ {} bp",
-            blocks.len(),
+            "   {} raw PAF hits ≥ {} bp",
+            raw.len(),
             config.min_block_len
         );
-        blocks
+        let chained = chain_blocks(raw, config.chain_gap);
+        if config.chain_gap > 0 {
+            println!(
+                "   {} chained blocks (gap ≤ {} bp)",
+                chained.len(),
+                config.chain_gap
+            );
+        }
+        chained
     } else {
         eprintln!("  ℹ  No FASTA files provided — rendering chromosome layout only (no ribbons).");
         eprintln!("     Add --fasta1 <genome_a.fa> --fasta2 <genome_b.fa> to enable alignment.");
@@ -633,4 +744,139 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
     println!("  Open in any modern browser — no server required.");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn blk(qn: &str, qs: u64, qe: u64, tn: &str, ts: u64, te: u64, st: char, rm: u64) -> SyntenyBlock {
+        let block_len = qe - qs;
+        SyntenyBlock {
+            query_name: qn.to_string(),
+            query_start: qs,
+            query_end: qe,
+            query_len: 1_000_000,
+            target_name: tn.to_string(),
+            target_start: ts,
+            target_end: te,
+            target_len: 1_000_000,
+            strand: st,
+            identity: rm as f64 / block_len as f64,
+            block_len,
+            residue_matches: rm,
+        }
+    }
+
+    #[test]
+    fn chain_merges_two_close_plus_strand_hits() {
+        let blocks = vec![
+            blk("chr1", 100, 1_100, "ctgA", 500, 1_500, '+', 950),
+            blk("chr1", 1_200, 2_200, "ctgA", 1_600, 2_600, '+', 980),
+        ];
+        let chained = chain_blocks(blocks, 10_000);
+        assert_eq!(chained.len(), 1);
+        let m = &chained[0];
+        assert_eq!(m.query_start, 100);
+        assert_eq!(m.query_end, 2_200);
+        assert_eq!(m.target_start, 500);
+        assert_eq!(m.target_end, 2_600);
+        assert_eq!(m.residue_matches, 1_930);
+        assert_eq!(m.block_len, 2_000);
+        assert!((m.identity - 0.965).abs() < 1e-9);
+    }
+
+    #[test]
+    fn chain_merges_two_close_minus_strand_hits() {
+        // Reverse-strand chain: as query_start increases, target runs backwards.
+        let blocks = vec![
+            blk("chr1", 100, 1_100, "ctgA", 8_000, 9_000, '-', 900),
+            blk("chr1", 1_200, 2_200, "ctgA", 6_500, 7_500, '-', 900),
+        ];
+        let chained = chain_blocks(blocks, 10_000);
+        assert_eq!(chained.len(), 1);
+        let m = &chained[0];
+        assert_eq!(m.strand, '-');
+        assert_eq!(m.query_start, 100);
+        assert_eq!(m.query_end, 2_200);
+        assert_eq!(m.target_start, 6_500);
+        assert_eq!(m.target_end, 9_000);
+    }
+
+    #[test]
+    fn chain_does_not_merge_across_large_gap() {
+        let blocks = vec![
+            blk("chr1", 100, 1_100, "ctgA", 500, 1_500, '+', 950),
+            blk("chr1", 500_000, 501_000, "ctgA", 500_400, 501_400, '+', 950),
+        ];
+        let chained = chain_blocks(blocks, 10_000);
+        assert_eq!(chained.len(), 2);
+    }
+
+    #[test]
+    fn chain_does_not_merge_across_contigs_or_strands() {
+        let blocks = vec![
+            blk("chr1", 100, 1_100, "ctgA", 500, 1_500, '+', 950),
+            blk("chr1", 1_200, 2_200, "ctgB", 1_600, 2_600, '+', 980),
+            blk("chr1", 2_300, 3_300, "ctgA", 2_700, 3_700, '-', 970),
+        ];
+        let chained = chain_blocks(blocks, 10_000);
+        assert_eq!(chained.len(), 3);
+    }
+
+    #[test]
+    fn chain_rejects_non_monotonic_target_on_plus() {
+        // Same query direction but target coords go backwards — not colinear.
+        let blocks = vec![
+            blk("chr1", 100, 1_100, "ctgA", 5_000, 6_000, '+', 950),
+            blk("chr1", 1_200, 2_200, "ctgA", 1_000, 2_000, '+', 950),
+        ];
+        let chained = chain_blocks(blocks, 10_000);
+        assert_eq!(chained.len(), 2);
+    }
+
+    #[test]
+    fn chain_gap_zero_is_passthrough() {
+        let blocks = vec![
+            blk("chr1", 100, 1_100, "ctgA", 500, 1_500, '+', 950),
+            blk("chr1", 1_200, 2_200, "ctgA", 1_600, 2_600, '+', 980),
+        ];
+        let chained = chain_blocks(blocks.clone(), 0);
+        assert_eq!(chained.len(), 2);
+    }
+
+    #[test]
+    fn parse_paf_reads_basic_record() {
+        use std::io::Write;
+        let mut tmp = std::env::temp_dir();
+        tmp.push("myconote_synteny_parse_test.paf");
+        let mut f = std::fs::File::create(&tmp).unwrap();
+        // Two tab-separated PAF records + a short malformed line that must be skipped.
+        writeln!(
+            f,
+            "qseq\t10000\t100\t1100\t+\ttseq\t20000\t500\t1500\t950\t1000\t60"
+        )
+        .unwrap();
+        writeln!(
+            f,
+            "qseq\t10000\t2000\t2500\t-\ttseq\t20000\t3000\t3500\t480\t500\t60"
+        )
+        .unwrap();
+        writeln!(f, "too\tshort").unwrap();
+        drop(f);
+
+        let blocks = parse_paf(&tmp, 100).unwrap();
+        assert_eq!(blocks.len(), 2);
+        assert_eq!(blocks[0].query_name, "qseq");
+        assert_eq!(blocks[0].strand, '+');
+        assert_eq!(blocks[0].residue_matches, 950);
+        assert!((blocks[0].identity - 0.95).abs() < 1e-9);
+        assert_eq!(blocks[1].strand, '-');
+
+        // min_len filter drops anything smaller than threshold.
+        let filtered = parse_paf(&tmp, 750).unwrap();
+        assert_eq!(filtered.len(), 1);
+
+        let _ = std::fs::remove_file(&tmp);
+    }
 }

@@ -95,6 +95,8 @@ Chromosomes are sorted by decreasing length on each side, gapped by 4 px.
 | **Colour by** selector | `Strand` (blue=+, red=−), `Identity` (YlOrRd gradient), `Chromosome` (Tableau palette keyed by genome-A contig) |
 | **Show gene names** checkbox | On-ribbon labels for large blocks (≥ 40 px wide) |
 | **Gene overlay** checkbox | Tick marks on the chromosome bars for every annotated gene — named genes highlighted in the accent colour |
+| **⬇ SVG** button | Download the current view as a standalone SVG (CSS custom properties resolved to hex at export time so the file renders correctly in any viewer) |
+| **⬇ PNG** button | Rasterise the current view to PNG at 2× the on-screen resolution |
 
 ### Ribbon tooltip
 

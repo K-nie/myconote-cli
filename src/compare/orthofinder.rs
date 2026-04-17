@@ -87,8 +87,17 @@ pub fn run_orthofinder(
     } else {
         "diamond"
     });
+    // Tree inference method. OrthoFinder's default is `-M msa` which
+    // requires FAMSA/MAFFT + FastTree. FAMSA v2.4.1 segfaults on macOS
+    // arm64 from the bioconda channel, so default to `dendroblast` (which
+    // uses DIAMOND distances directly — no MSA step). `dendroblast` is
+    // slightly less accurate but substantially faster and avoids the
+    // platform-specific crash. Pass `--msa` to opt back into the MSA path
+    // when FAMSA/MAFFT are known-working.
     if msa {
         cmd.arg("-M").arg("msa");
+    } else {
+        cmd.arg("-M").arg("dendroblast");
     }
     // We only want the standard orthogroup outputs; skipping per-species gene
     // trees (`-og` flag is implicit when we don't pass `-y`) would speed

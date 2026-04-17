@@ -248,15 +248,42 @@ pub fn validate_for_ncbi(gff: &Path, fasta: &Path) -> Result<ValidationResult> {
 }
 
 /// Convert GFF3 + FASTA to NCBI feature table (.tbl) format.
+///
+/// Handles NCBI's multi-segment feature syntax correctly: a CDS (or tRNA)
+/// that spans multiple exons is emitted as a single feature block with one
+/// interval line per segment, not as N separate features. See
+/// https://www.ncbi.nlm.nih.gov/genbank/feature_table/ — "To indicate that a
+/// feature is on the complementary strand, the location should be indicated
+/// by putting the larger coordinate in column 1, and the smaller one in
+/// column 2". For multi-segment features on the minus strand, segments are
+/// also emitted in descending order (5'→3' reading order).
 pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig) -> Result<usize> {
+    use std::collections::HashMap;
+
     let records: Vec<GFFRecord> = GFFReader::from_path(gff)?.filter_map(|r| r.ok()).collect();
+
+    // Group CDS / exon-like segments by Parent (= mRNA ID). This is how a
+    // multi-exon eukaryotic gene's coding segments get joined into one
+    // feature in the .tbl output.
+    let mut cds_by_parent: HashMap<String, Vec<&GFFRecord>> = HashMap::new();
+    for rec in &records {
+        if rec.feature_type == "CDS" {
+            if let Some(parent) = rec.attributes.get("Parent") {
+                // A GFF3 Parent can be a comma-separated list when a CDS is
+                // shared between isoforms; use the first parent so each
+                // joined feature block still corresponds to a single mRNA.
+                let first_parent = parent.split(',').next().unwrap_or(parent).to_string();
+                cds_by_parent.entry(first_parent).or_default().push(rec);
+            }
+        }
+    }
 
     let mut f = std::fs::File::create(output_tbl).map_err(MycoNoteError::Io)?;
     let mut current_seqid = String::new();
     let mut feature_count = 0usize;
+    let mut emitted_cds_parents: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     for rec in &records {
-        // Write sequence header when seqid changes
         if rec.seqid != current_seqid {
             if !current_seqid.is_empty() {
                 writeln!(f).map_err(MycoNoteError::Io)?;
@@ -267,11 +294,7 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
 
         match rec.feature_type.as_str() {
             "gene" => {
-                let (s, e) = if rec.strand == '-' {
-                    (rec.end, rec.start)
-                } else {
-                    (rec.start, rec.end)
-                };
+                let (s, e) = coords_for_strand(rec);
                 writeln!(f, "{}\t{}\tgene", s, e).map_err(MycoNoteError::Io)?;
 
                 if let Some(locus_tag) = rec.attributes.get("locus_tag") {
@@ -282,34 +305,26 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
                 }
                 feature_count += 1;
             }
-            "CDS" => {
-                let (s, e) = if rec.strand == '-' {
-                    (rec.end, rec.start)
-                } else {
-                    (rec.start, rec.end)
+            "mRNA" => {
+                // Emit a CDS block once per mRNA using all its CDS segments.
+                // We key on the mRNA's ID (which is what the child CDS rows
+                // list as their Parent). Segments are ordered 5'→3'.
+                let mrna_id = match rec.attributes.get("ID") {
+                    Some(id) => id.clone(),
+                    None => continue,
                 };
-                writeln!(f, "{}\t{}\tCDS", s, e).map_err(MycoNoteError::Io)?;
-
-                let product = rec
-                    .attributes
-                    .get("product")
-                    .cloned()
-                    .unwrap_or_else(|| "hypothetical protein".to_string());
-                writeln!(f, "\t\t\tproduct\t{}", product).map_err(MycoNoteError::Io)?;
-
-                if let Some(ref codon) = rec.phase {
-                    writeln!(f, "\t\t\tcodon_start\t{}", codon + 1).map_err(MycoNoteError::Io)?;
+                if !emitted_cds_parents.insert(mrna_id.clone()) {
+                    continue;
                 }
-                writeln!(f, "\t\t\ttransl_table\t{}", config.genetic_code)
-                    .map_err(MycoNoteError::Io)?;
+                let Some(cdss) = cds_by_parent.get(&mrna_id) else { continue };
+                if cdss.is_empty() {
+                    continue;
+                }
+                emit_joined_feature(&mut f, cdss, "CDS", rec, config)?;
                 feature_count += 1;
             }
             "tRNA" => {
-                let (s, e) = if rec.strand == '-' {
-                    (rec.end, rec.start)
-                } else {
-                    (rec.start, rec.end)
-                };
+                let (s, e) = coords_for_strand(rec);
                 writeln!(f, "{}\t{}\ttRNA", s, e).map_err(MycoNoteError::Io)?;
 
                 let product = rec
@@ -321,22 +336,103 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
                 feature_count += 1;
             }
             "rRNA" => {
-                let (s, e) = if rec.strand == '-' {
-                    (rec.end, rec.start)
-                } else {
-                    (rec.start, rec.end)
-                };
+                let (s, e) = coords_for_strand(rec);
                 writeln!(f, "{}\t{}\trRNA", s, e).map_err(MycoNoteError::Io)?;
 
                 let product = rec.attributes.get("product").cloned().unwrap_or_default();
                 writeln!(f, "\t\t\tproduct\t{}", product).map_err(MycoNoteError::Io)?;
                 feature_count += 1;
             }
-            _ => {}
+            _ => {
+                // Fall-through: GFF3s produced by some pipelines omit the
+                // mRNA feature row, so we'd never hit the `"mRNA"` arm above
+                // and CDS segments would be silently skipped. If we see a
+                // bare CDS whose Parent we haven't emitted yet, emit the
+                // joined block now using this record as the metadata source.
+                if rec.feature_type == "CDS" {
+                    let parent = match rec.attributes.get("Parent") {
+                        Some(p) => p.split(',').next().unwrap_or(p).to_string(),
+                        None => continue,
+                    };
+                    if !emitted_cds_parents.insert(parent.clone()) {
+                        continue;
+                    }
+                    if let Some(cdss) = cds_by_parent.get(&parent) {
+                        emit_joined_feature(&mut f, cdss, "CDS", rec, config)?;
+                        feature_count += 1;
+                    }
+                }
+            }
         }
     }
 
     Ok(feature_count)
+}
+
+/// Return (first, second) column for an NCBI .tbl interval line, flipping
+/// the order on the minus strand per NCBI spec.
+fn coords_for_strand(rec: &GFFRecord) -> (u64, u64) {
+    if rec.strand == '-' {
+        (rec.end, rec.start)
+    } else {
+        (rec.start, rec.end)
+    }
+}
+
+/// Emit a multi-segment feature block (CDS or exon-set) using NCBI's
+/// implicit `join()`: header line has `start\tend\tFEATURE`, subsequent
+/// interval lines are just `start\tend`, and qualifiers come after the last
+/// interval. `meta_source` supplies the `product`, `codon_start`, etc. —
+/// typically the mRNA row or (fallback) the first CDS row.
+fn emit_joined_feature<W: Write>(
+    f: &mut W,
+    segments: &[&GFFRecord],
+    feature_key: &str,
+    meta_source: &GFFRecord,
+    config: &SubmitConfig,
+) -> Result<()> {
+    if segments.is_empty() {
+        return Ok(());
+    }
+    let strand = segments[0].strand;
+
+    // Order segments in 5'→3' reading direction: ascending on '+', descending
+    // on '-'. Coordinates within each interval are also flipped on '-'.
+    let mut sorted: Vec<&GFFRecord> = segments.to_vec();
+    if strand == '-' {
+        sorted.sort_by(|a, b| b.start.cmp(&a.start));
+    } else {
+        sorted.sort_by_key(|r| r.start);
+    }
+
+    for (i, seg) in sorted.iter().enumerate() {
+        let (s, e) = coords_for_strand(seg);
+        if i == 0 {
+            writeln!(f, "{}\t{}\t{}", s, e, feature_key).map_err(MycoNoteError::Io)?;
+        } else {
+            writeln!(f, "{}\t{}", s, e).map_err(MycoNoteError::Io)?;
+        }
+    }
+
+    // Qualifiers — emit once per feature, after all interval lines.
+    let product = meta_source
+        .attributes
+        .get("product")
+        .cloned()
+        .or_else(|| sorted.first().and_then(|r| r.attributes.get("product").cloned()))
+        .unwrap_or_else(|| "hypothetical protein".to_string());
+    writeln!(f, "\t\t\tproduct\t{}", product).map_err(MycoNoteError::Io)?;
+
+    // codon_start defaults to 1 but can be overridden by the first segment's
+    // GFF3 phase (a phase of 0 → codon_start=1, 1 → 2, 2 → 3).
+    if let Some(first) = sorted.first() {
+        if let Some(phase) = first.phase {
+            writeln!(f, "\t\t\tcodon_start\t{}", phase + 1).map_err(MycoNoteError::Io)?;
+        }
+    }
+
+    writeln!(f, "\t\t\ttransl_table\t{}", config.genetic_code).map_err(MycoNoteError::Io)?;
+    Ok(())
 }
 
 /// Write NCBI submission template (.sbt) for table2asn.
@@ -488,4 +584,131 @@ fn write_source_modifiers(path: &Path, config: &SubmitConfig) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write as _;
+
+    fn write_gff(label: &str, body: &str) -> std::path::PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!("myconote_submit_test_{}_{}.gff3", std::process::id(), label));
+        let mut f = std::fs::File::create(&p).unwrap();
+        writeln!(f, "##gff-version 3").unwrap();
+        f.write_all(body.as_bytes()).unwrap();
+        p
+    }
+
+    fn tbl_path(label: &str) -> std::path::PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!("myconote_submit_test_{}_{}.tbl", std::process::id(), label));
+        p
+    }
+
+    fn default_cfg() -> SubmitConfig {
+        SubmitConfig {
+            genetic_code: 1,
+            ..SubmitConfig::default()
+        }
+    }
+
+    #[test]
+    fn multi_exon_plus_strand_is_joined_into_one_cds_block() {
+        // One mRNA with three CDS exons. The old bug emitted three separate
+        // CDS blocks each with their own qualifiers; correct output has one
+        // header line + two bare interval lines + one product/codon block.
+        let gff = "\
+NW_1\tmaker\tgene\t100\t900\t.\t+\t.\tID=g1;Name=G1;locus_tag=MYCO_0001\n\
+NW_1\tmaker\tmRNA\t100\t900\t.\t+\t.\tID=g1.mRNA;Parent=g1;product=ABC transporter\n\
+NW_1\tmaker\tCDS\t100\t200\t.\t+\t0\tID=cds1a;Parent=g1.mRNA\n\
+NW_1\tmaker\tCDS\t300\t500\t.\t+\t0\tID=cds1b;Parent=g1.mRNA\n\
+NW_1\tmaker\tCDS\t700\t900\t.\t+\t0\tID=cds1c;Parent=g1.mRNA\n";
+        let gff_path = write_gff("plus", gff);
+        let tbl = tbl_path("plus");
+        let n = write_feature_table(&gff_path, &tbl, &default_cfg()).unwrap();
+        let out = std::fs::read_to_string(&tbl).unwrap();
+
+        // Exactly one gene block + one CDS block.
+        assert_eq!(n, 2, "expected 2 features (gene + joined CDS), got {}: {}", n, out);
+
+        // Header line is the first CDS interval.
+        assert!(out.contains("100\t200\tCDS"), "missing CDS header line:\n{}", out);
+        // Subsequent intervals appear as bare start\tend lines — no CDS keyword.
+        assert!(out.contains("\n300\t500\n"), "second segment not emitted as bare interval:\n{}", out);
+        assert!(out.contains("\n700\t900\n"), "third segment not emitted as bare interval:\n{}", out);
+        // Product qualifier appears exactly once (after last interval).
+        assert_eq!(out.matches("\t\t\tproduct\tABC transporter").count(), 1,
+                   "product qualifier should appear exactly once:\n{}", out);
+        // transl_table also appears exactly once.
+        assert_eq!(out.matches("\t\t\ttransl_table\t1").count(), 1, "transl_table must be emitted once:\n{}", out);
+
+        let _ = std::fs::remove_file(&gff_path);
+        let _ = std::fs::remove_file(&tbl);
+    }
+
+    #[test]
+    fn multi_exon_minus_strand_joins_in_reverse_reading_order() {
+        // On the minus strand, segments are emitted 5'→3' (descending by
+        // coordinate) and each interval has its larger coord in column 1.
+        let gff = "\
+NW_1\tmaker\tgene\t100\t900\t.\t-\t.\tID=g2;locus_tag=MYCO_0002\n\
+NW_1\tmaker\tmRNA\t100\t900\t.\t-\t.\tID=g2.mRNA;Parent=g2;product=reverse gene\n\
+NW_1\tmaker\tCDS\t100\t200\t.\t-\t0\tID=cds2a;Parent=g2.mRNA\n\
+NW_1\tmaker\tCDS\t700\t900\t.\t-\t0\tID=cds2b;Parent=g2.mRNA\n";
+        let gff_path = write_gff("minus", gff);
+        let tbl = tbl_path("minus");
+        write_feature_table(&gff_path, &tbl, &default_cfg()).unwrap();
+        let out = std::fs::read_to_string(&tbl).unwrap();
+
+        // Gene line uses flipped coords on '-'.
+        assert!(out.contains("900\t100\tgene"), "gene line should be 'end start' on - strand:\n{}", out);
+        // CDS header should be the downstream (in genomic terms, higher-coord) segment first.
+        assert!(out.contains("900\t700\tCDS"), "first (5'-most on - strand) CDS segment should lead:\n{}", out);
+        assert!(out.contains("\n200\t100\n"), "second CDS segment (lower genomic coords) should follow as flipped interval:\n{}", out);
+
+        let _ = std::fs::remove_file(&gff_path);
+        let _ = std::fs::remove_file(&tbl);
+    }
+
+    #[test]
+    fn single_exon_cds_still_emits_one_block() {
+        let gff = "\
+NW_1\tmaker\tgene\t10\t100\t.\t+\t.\tID=g3;locus_tag=MYCO_0003\n\
+NW_1\tmaker\tmRNA\t10\t100\t.\t+\t.\tID=g3.mRNA;Parent=g3;product=single-exon thing\n\
+NW_1\tmaker\tCDS\t10\t100\t.\t+\t0\tID=cds3;Parent=g3.mRNA\n";
+        let gff_path = write_gff("single", gff);
+        let tbl = tbl_path("single");
+        let n = write_feature_table(&gff_path, &tbl, &default_cfg()).unwrap();
+        let out = std::fs::read_to_string(&tbl).unwrap();
+
+        assert_eq!(n, 2);
+        assert!(out.contains("10\t100\tCDS"));
+        assert_eq!(out.matches("\tCDS").count(), 1, "single-exon CDS should emit exactly one header:\n{}", out);
+
+        let _ = std::fs::remove_file(&gff_path);
+        let _ = std::fs::remove_file(&tbl);
+    }
+
+    #[test]
+    fn cds_without_mrna_row_is_still_joined_via_parent_fallback() {
+        // Some tools write a gene + CDSes but no mRNA row. The fallback path
+        // in the `_ =>` arm should still group CDSes by Parent.
+        let gff = "\
+NW_1\tmaker\tgene\t100\t500\t.\t+\t.\tID=g4;locus_tag=MYCO_0004\n\
+NW_1\tmaker\tCDS\t100\t200\t.\t+\t0\tID=cds4a;Parent=g4;product=no-mRNA gene\n\
+NW_1\tmaker\tCDS\t300\t500\t.\t+\t0\tID=cds4b;Parent=g4\n";
+        let gff_path = write_gff("nomrna", gff);
+        let tbl = tbl_path("nomrna");
+        write_feature_table(&gff_path, &tbl, &default_cfg()).unwrap();
+        let out = std::fs::read_to_string(&tbl).unwrap();
+
+        assert!(out.contains("100\t200\tCDS"));
+        assert!(out.contains("\n300\t500\n"));
+        // Exactly one CDS header.
+        assert_eq!(out.matches("\tCDS").count(), 1, "Parent-fallback must still emit one joined CDS:\n{}", out);
+
+        let _ = std::fs::remove_file(&gff_path);
+        let _ = std::fs::remove_file(&tbl);
+    }
 }

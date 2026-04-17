@@ -113,12 +113,32 @@ pub fn build_tree<P: AsRef<Path>>(alignment: P, config: &PhylogenyConfig) -> Res
             .unwrap_or_else(|| "iqtree_out".to_string()),
     };
 
-    let outdir = alignment
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .to_path_buf();
+    // Prefix handling: if the user passes a path-like prefix ("out/run1" or
+    // absolute path), treat it as a full path (IQ-TREE accepts any prefix).
+    // Otherwise — bare name like "my_tree" — join with the alignment's
+    // parent dir so outputs land next to the input.
+    // The previous unconditional join() turned "out/run1" into
+    // "<alignment_dir>/out/run1" which then failed at IQ-TREE's log-file
+    // open because the nested "out/" subdir didn't exist.
+    let prefix_has_path = prefix.contains(std::path::MAIN_SEPARATOR)
+        || PathBuf::from(&prefix).is_absolute();
+    let prefix_path = if prefix_has_path {
+        PathBuf::from(&prefix)
+    } else {
+        alignment
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(&prefix)
+    };
 
-    let prefix_path = outdir.join(&prefix);
+    // Make sure the prefix's parent directory actually exists so IQ-TREE
+    // can open its log file. Otherwise a user-supplied "out/run1" with no
+    // pre-existing "out/" silently fails deep inside iqtree.
+    if let Some(parent) = prefix_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(MycoNoteError::Io)?;
+        }
+    }
 
     // Guard against silently overwriting a completed run. IQ-TREE can easily
     // take hours on a multi-gene partition; re-running with a stale command
@@ -188,8 +208,12 @@ pub fn build_tree<P: AsRef<Path>>(alignment: P, config: &PhylogenyConfig) -> Res
     if treefile.exists() {
         println!("  ✓  Tree written to: {}", treefile.display());
     } else {
-        // IQ-TREE sometimes appends .treefile differently
-        let alt = outdir.join(format!("{}.treefile", prefix));
+        // IQ-TREE sometimes appends `.treefile` without dropping an extension
+        // from the prefix — check the literal `<prefix>.treefile` form too.
+        let alt = prefix_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(format!("{}.treefile", prefix));
         if alt.exists() {
             return Ok(alt);
         }

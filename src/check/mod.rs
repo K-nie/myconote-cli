@@ -118,12 +118,6 @@ const TOOLS: &[Tool] = &[
         version_arg: "-h",
         install_cmd: "conda install -c bioconda hmmer",
     },
-    Tool {
-        name: "hmmbuild",
-        used_by: "annotate",
-        version_arg: "-h",
-        install_cmd: "conda install -c bioconda hmmer",
-    },
     // ── Functional annotation ─────────────────────────────────────────────────
     Tool {
         name: "emapper.py",
@@ -163,16 +157,28 @@ const TOOLS: &[Tool] = &[
     },
     // ── Secondary tools ───────────────────────────────────────────────────────
     Tool {
-        name: "blastp",
-        used_by: "blast",
-        version_arg: "-version",
-        install_cmd: "conda install -c bioconda blast",
+        name: "miniprot",
+        used_by: "predict",
+        version_arg: "--version",
+        install_cmd: "conda install -c bioconda miniprot",
     },
     Tool {
-        name: "makeblastdb",
-        used_by: "blast",
+        name: "tRNAscan-SE",
+        used_by: "annotate",
+        version_arg: "-h",
+        install_cmd: "conda install -c bioconda trnascan-se",
+    },
+    Tool {
+        name: "table2asn",
+        used_by: "submit",
         version_arg: "-version",
-        install_cmd: "conda install -c bioconda blast",
+        install_cmd: "NCBI binary — download from https://ftp.ncbi.nlm.nih.gov/asn1-converters/by_program/table2asn/",
+    },
+    Tool {
+        name: "orthofinder",
+        used_by: "compare",
+        version_arg: "-h",
+        install_cmd: "conda install -c bioconda orthofinder",
     },
     Tool {
         name: "mafft",
@@ -185,12 +191,6 @@ const TOOLS: &[Tool] = &[
         used_by: "align",
         version_arg: "-version",
         install_cmd: "conda install -c bioconda muscle",
-    },
-    Tool {
-        name: "FastTree",
-        used_by: "phylogeny",
-        version_arg: "",
-        install_cmd: "conda install -c bioconda fasttree",
     },
     Tool {
         name: "iqtree",

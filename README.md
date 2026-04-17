@@ -1,6 +1,6 @@
 # Myconote_CLI
 
-**Blazing-fast genome annotation pipeline** — as genome sequencing becomes cheaper and long-read assemblies become routine, the bottleneck in genomics has shifted from sequencing to annotation. Existing pipelines are slow, narrowly scoped, and produce outputs that require extensive manual cleanup before submission. myconote-cli addresses this gap: a high-performance Rust CLI that takes a eukaryotic genome assembly from raw contigs to NCBI-ready submission, integrating 15 annotation sources across 5 kingdoms with built-in validation and reproducibility tracking.
+**Blazing-fast genome annotation pipeline** — as genome sequencing becomes cheaper and long-read assemblies become routine, the bottleneck in genomics has shifted from sequencing to annotation. Existing pipelines are slow, narrowly scoped, and produce outputs that require extensive manual cleanup before submission. myconote-cli addresses this gap: a high-performance Rust CLI that takes a eukaryotic genome assembly from raw contigs to NCBI-ready submission, integrating 11 annotation sources across 5 kingdoms with built-in validation and reproducibility tracking.
 
 > Developed by **Benjamin Narh-Madey** · Hittinger Lab, Laboratory of Genetics · UW-Madison
 > narhmadey@wisc.edu
@@ -49,7 +49,7 @@ singularity run myconote-cli.sif predict genome.fa --kingdom fungi
 bash install.sh
 ```
 
-Installs Miniconda (if needed), creates a conda environment, builds the binary, installs all 30+ external tools, and downloads annotation databases.
+Installs Miniconda (if needed), creates a conda environment, builds the binary, installs all ~30 external tools, and downloads annotation databases.
 
 ### Option D: Manual build
 
@@ -66,7 +66,7 @@ myconote-cli setup            # downloads annotation databases
 
 ```bash
 myconote-cli --version      # shows banner + version
-myconote-cli check          # reports status of all 30+ external tools
+myconote-cli check          # reports status of all ~30 external tools
 myconote-cli setup --check  # shows annotation database download status
 ```
 
@@ -120,13 +120,12 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `stats` | Gene counts, lengths, GC content, N50, isoform stats (JSON / CSV / human-readable) |
 | `plot` | Genome maps (linear PNG, circular PNG) |
 | `phylogeny` | Maximum-likelihood tree with IQ-TREE 2 (ModelFinder + UFBoot) |
-| `compare` | Multi-genome comparison (MMseqs2 / BLAST / MUMmer + phylogeny + synteny) |
+| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large plants) |
 | `view` | Interactive genome browser (JBrowse2 or UCSC custom track) |
-| `synteny` | Ribbon diagram comparing two genomes (minimap2-based) |
+| `synteny` | Ribbon + dot-plot viewer comparing two genomes (minimap2 asm5 + block chaining) |
 | `convert` | Format conversion: GFF3 <-> GTF / BED / GenBank / protein FASTA; FASTA <-> FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |
 | `fix` | Repair errors in GenBank (.gbk) files |
-| `blast` | NCBI BLAST searches via remote API |
 | `align` | Sequence alignment (BLAST, MMseqs2, MUMmer, minimap2) |
 
 ---
@@ -143,7 +142,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 
 | Command | Description |
 |---------|-------------|
-| `install` | Install missing tools via conda/mamba (30+ bioinformatics tools) |
+| `install` | Install missing tools via conda/mamba (~30 bioinformatics tools; `signalp6`, `table2asn`, and `gmes_petap.pl` require manual licence steps) |
 | `check` | Check which external tools are installed and their versions |
 | `setup` | Download and index annotation databases (Swiss-Prot, Pfam, EggNOG, BUSCO, dbCAN, MEROPS, Ollama, paper corpus) |
 | `remote` | Submit proteins to remote servers (Phobius, InterProScan, DeepLoc) |
@@ -362,7 +361,7 @@ tail -f batch_out/condor_logs/job_0.out
 
 Generates `condor.sub`, `run_genome.sh` (per-job wrapper), and `condor_genomes.txt` (argument list). Each genome runs as a separate job. Works with shared filesystems.
 
-**Auto-compare:** When 2+ genomes succeed, suggests a `compare` command to run comparative analysis.
+**Next steps hint:** When 2+ genomes succeed, prints a concrete `synteny` and `phylogeny` command recipe for downstream comparative analysis.
 
 ---
 

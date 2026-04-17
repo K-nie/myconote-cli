@@ -78,8 +78,13 @@ impl Default for RemoteConfig {
             run_deeploc: false,
             email: String::new(),
             batch_size: 100,
-            poll_interval: 30,
-            max_retries: 10,
+            // Default wait envelope: 60 s × 60 = 1 hour per batch. The prior
+            // defaults (30 s × 10 = 5 min) were too aggressive — EBI's queue
+            // routinely needs 10–30 min for large batches, so retries were
+            // silently exhausted and results discarded. Override with
+            // --poll-interval / --max-retries when hitting EBI under load.
+            poll_interval: 60,
+            max_retries: 60,
         }
     }
 }

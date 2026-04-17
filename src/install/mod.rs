@@ -75,16 +75,6 @@ const TOOLS: &[Tool] = &[
         manual_note: "Licence required — http://topaz.gatech.edu/GeneMark/",
         version_arg: "--version",
     },
-    // ── Evidence / consensus ─────────────────────────────────────────────────
-    Tool {
-        name: "EVMutil.pl",
-        used_by: "predict",
-        conda_pkg: Some("evidencemodeler"),
-        conda_chan: "bioconda",
-        pip_pkg: None,
-        manual_note: "https://evidencemodeler.github.io/",
-        version_arg: "",
-    },
     // ── Repeat masking ───────────────────────────────────────────────────────
     Tool {
         name: "RepeatMasker",
@@ -307,15 +297,6 @@ const TOOLS: &[Tool] = &[
     },
     // ── Phylogenetics ────────────────────────────────────────────────────────
     Tool {
-        name: "FastTree",
-        used_by: "phylogeny",
-        conda_pkg: Some("fasttree"),
-        conda_chan: "bioconda",
-        pip_pkg: None,
-        manual_note: "http://www.microbesonline.org/fasttree/",
-        version_arg: "",
-    },
-    Tool {
         name: "iqtree",
         used_by: "phylogeny",
         conda_pkg: Some("iqtree"),
@@ -323,6 +304,16 @@ const TOOLS: &[Tool] = &[
         pip_pkg: None,
         manual_note: "http://www.iqtree.org/",
         version_arg: "--version",
+    },
+    // ── Comparative genomics ─────────────────────────────────────────────────
+    Tool {
+        name: "orthofinder",
+        used_by: "compare",
+        conda_pkg: Some("orthofinder"),
+        conda_chan: "bioconda",
+        pip_pkg: None,
+        manual_note: "https://github.com/davidemms/OrthoFinder",
+        version_arg: "-h",
     },
 ];
 

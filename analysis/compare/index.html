@@ -12,9 +12,13 @@
         <meta name="author" content="Benjamin Narh-Madey">
       
       
-        <link rel="canonical" href="https://k-nie.github.io/myconote-cli/chat/eval/">
+        <link rel="canonical" href="https://k-nie.github.io/myconote-cli/analysis/compare/">
       
       
+        <link rel="prev" href="../synteny/">
+      
+      
+        <link rel="next" href="../../pipeline/submit/">
       
       
         
@@ -25,7 +29,7 @@
     
     
       
-        <title>myconote explain — Eval Scoreboard - Myconote_CLI</title>
+        <title>compare - Myconote_CLI</title>
       
     
     
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#myconote-explain-eval-scoreboard" class="md-skip">
+        <a href="#myconote-compare" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              myconote explain — Eval Scoreboard
+              compare
             
           </span>
         </div>
@@ -284,11 +288,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../analysis/phylogeny/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../phylogeny/" class="md-tabs__link">
           
   
   
@@ -825,26 +831,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -862,7 +873,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -880,7 +891,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../analysis/phylogeny/" class="md-nav__link">
+      <a href="../phylogeny/" class="md-nav__link">
         
   
   
@@ -908,7 +919,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../analysis/plot/" class="md-nav__link">
+      <a href="../plot/" class="md-nav__link">
         
   
   
@@ -936,7 +947,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../analysis/stats/" class="md-nav__link">
+      <a href="../stats/" class="md-nav__link">
         
   
   
@@ -964,7 +975,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../analysis/blast/" class="md-nav__link">
+      <a href="../blast/" class="md-nav__link">
         
   
   
@@ -992,7 +1003,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../analysis/synteny/" class="md-nav__link">
+      <a href="../synteny/" class="md-nav__link">
         
   
   
@@ -1017,10 +1028,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../analysis/compare/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    compare
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1036,6 +1074,125 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you get
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#genome-count-caps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Genome-count caps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#primary-transcript-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary-transcript filtering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#categories-in-ortholog_tabletsv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories in ortholog_table.tsv
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#typical-runtimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typical runtimes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1447,10 +1604,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rule-engine-deterministic-no-llm" class="md-nav__link">
+  <a href="#what-you-get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rule Engine (deterministic, no LLM)
+        What you get
       
     </span>
   </a>
@@ -1458,10 +1615,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ethics-classifier" class="md-nav__link">
+  <a href="#genome-count-caps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ethics Classifier
+        Genome-count caps
       
     </span>
   </a>
@@ -1469,10 +1626,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#format-detection-paste-mode" class="md-nav__link">
+  <a href="#quick-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Format Detection (paste mode)
+        Quick examples
       
     </span>
   </a>
@@ -1480,10 +1637,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#llm-evaluation-requires-ollama" class="md-nav__link">
+  <a href="#options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LLM Evaluation (requires Ollama)
+        Options
       
     </span>
   </a>
@@ -1491,10 +1648,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-the-eval" class="md-nav__link">
+  <a href="#primary-transcript-filtering" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Running the eval
+        Primary-transcript filtering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#categories-in-ortholog_tabletsv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories in ortholog_table.tsv
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#typical-runtimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typical runtimes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related commands
       
     </span>
   </a>
@@ -1518,7 +1719,7 @@
 
 
   
-    <a href="https://github.com/K-nie/myconote-cli/edit/main/docs/chat/eval.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/K-nie/myconote-cli/edit/main/docs/analysis/compare.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1526,141 +1727,197 @@
   
 
 
-<h1 id="myconote-explain-eval-scoreboard">myconote explain — Eval Scoreboard<a class="headerlink" href="#myconote-explain-eval-scoreboard" title="Permanent link">&para;</a></h1>
-<p>This scoreboard tracks the quality of <code>myconote explain</code> across hand-crafted
-test fixtures. Updated by CI on each push.</p>
-<h2 id="rule-engine-deterministic-no-llm">Rule Engine (deterministic, no LLM)<a class="headerlink" href="#rule-engine-deterministic-no-llm" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Fixture</th>
-<th>Recall</th>
-<th>Precision</th>
-<th>Commands</th>
-<th>Pass</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>predict_fungal_normal</td>
-<td>100%</td>
-<td>100%</td>
-<td>ok</td>
-<td>yes</td>
-</tr>
-<tr>
-<td>predict_fungal_overpredicted</td>
-<td>100%</td>
-<td>100%</td>
-<td>ok</td>
-<td>yes</td>
-</tr>
-<tr>
-<td>annotate_low_coverage</td>
-<td>100%</td>
-<td>100%</td>
-<td>ok</td>
-<td>yes</td>
-</tr>
-<tr>
-<td>submit_validation_errors</td>
-<td>100%</td>
-<td>100%</td>
-<td>ok</td>
-<td>yes</td>
-</tr>
-</tbody>
-</table>
-<h2 id="ethics-classifier">Ethics Classifier<a class="headerlink" href="#ethics-classifier" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Fixture</th>
-<th>Expected</th>
-<th>Actual</th>
-<th>Pass</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>ethics_refuse_biosecurity</td>
-<td>refuse</td>
-<td>refuse</td>
-<td>yes</td>
-</tr>
-<tr>
-<td>ethics_pass_amr_genes</td>
-<td>pass</td>
-<td>pass</td>
-<td>yes</td>
-</tr>
-</tbody>
-</table>
-<h2 id="format-detection-paste-mode">Format Detection (paste mode)<a class="headerlink" href="#format-detection-paste-mode" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Fixture</th>
-<th>Expected</th>
-<th>Actual</th>
-<th>Pass</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>paste_gff_line</td>
-<td>Gff3</td>
-<td>Gff3</td>
-<td>yes</td>
-</tr>
-<tr>
-<td>paste_ncbi_error</td>
-<td>ValidationError</td>
-<td>ValidationError</td>
-<td>yes</td>
-</tr>
-</tbody>
-</table>
-<h2 id="llm-evaluation-requires-ollama">LLM Evaluation (requires Ollama)<a class="headerlink" href="#llm-evaluation-requires-ollama" title="Permanent link">&para;</a></h2>
-<p><em>Pending: LLM-based metrics (citation validity, hallucination rate) require
-Ollama and are tested separately when available.</em></p>
-<table>
-<thead>
-<tr>
-<th>Model</th>
-<th>Citation Valid%</th>
-<th>Hallucination%</th>
-<th>Avg Latency</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>llama3.1:8b</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-</tr>
-<tr>
-<td>qwen2.5:7b</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-</tr>
-<tr>
-<td>mistral-nemo:12b</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<h2 id="running-the-eval">Running the eval<a class="headerlink" href="#running-the-eval" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Rule engine + ethics + format detection (no Ollama needed)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--test<span class="w"> </span>chat_eval
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Full eval with scoreboard output</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--test<span class="w"> </span>chat_eval<span class="w"> </span>eval_scoreboard_summary<span class="w"> </span>--<span class="w"> </span>--nocapture
+<h1 id="myconote-compare">myconote compare<a class="headerlink" href="#myconote-compare" title="Permanent link">&para;</a></h1>
+<p>N-genome ortholog inference and pan-genome analysis. Wraps <a href="https://github.com/davidemms/OrthoFinder">OrthoFinder</a> (Emms &amp; Kelly 2019, <em>Genome Biology</em>) — the research-grade standard — and surfaces its outputs as MycoNote-native files.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span>&lt;g1.gff3&gt;<span class="w"> </span>&lt;g1.fa&gt;<span class="w"> </span>&lt;g2.gff3&gt;<span class="w"> </span>&lt;g2.fa&gt;<span class="w"> </span><span class="o">[</span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
 </code></pre></div>
+<h2 id="what-you-get">What you get<a class="headerlink" href="#what-you-get" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>ortholog_table.tsv</code></strong> — one row per orthogroup, columns = genomes. Each cell lists the gene IDs from that genome that fell into the cluster (empty = not present). Category column classifies the row as <code>core</code>, <code>core_single_copy</code>, <code>accessory</code>, or <code>singleton</code>.</li>
+<li><strong><code>pangenome_summary.tsv</code></strong> — Tettelin-style bins: <code>core</code> / <code>core_single_copy</code> / <code>soft_core</code> / <code>shell</code> / <code>cloud</code> / <code>singletons</code>, with counts and fractions.</li>
+<li><strong><code>species_tree.nwk</code></strong> — rooted species tree from STAG/STRIDE (produced by OrthoFinder).</li>
+<li><strong><code>compare_report.txt</code></strong> — human-readable summary.</li>
+<li><strong>Untouched OrthoFinder output</strong> preserved under <code>compare_out/proteins/OrthoFinder/Results_&lt;date&gt;/</code> — includes gene trees, duplication events, multiple sequence alignments (with <code>--msa</code>), and per-species single-copy ortholog FASTAs.</li>
+</ul>
+<h2 id="genome-count-caps">Genome-count caps<a class="headerlink" href="#genome-count-caps" title="Permanent link">&para;</a></h2>
+<p>Scope is capped by genome size because OrthoFinder's all-vs-all similarity search scales with <code>total_proteins²</code>. Above a certain total, commodity hardware swaps to disk and the run becomes unreliable.</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Proteins per genome</th>
+<th>Typical examples</th>
+<th>Max genomes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Small</strong></td>
+<td>≤ 15,000</td>
+<td>fungi, most protists</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td><strong>Medium</strong></td>
+<td>15,001 – 30,000</td>
+<td>small/mid plants, many invertebrates</td>
+<td><strong>3</strong></td>
+</tr>
+<tr>
+<td><strong>Large</strong></td>
+<td>&gt; 30,000</td>
+<td>major crops, vertebrates</td>
+<td><strong>2</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The cap is set by the <strong>largest</strong> input: one plant genome mixed in with four yeasts triggers the plant tier. Compare detects this from the actual protein counts after primary-transcript filtering, so you get an accurate tier rather than a guess from the file name.</p>
+<p>Over-cap input is rejected with an actionable error message pointing you at:</p>
+<ol>
+<li>Reducing the input count</li>
+<li>Running OrthoFinder directly on HPC</li>
+<li><code>--force-cap &lt;n&gt;</code> (advanced escape hatch; not shown in <code>--help</code>)</li>
+</ol>
+<h2 id="quick-examples">Quick examples<a class="headerlink" href="#quick-examples" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Three closely related yeasts</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>sc.gff3<span class="w"> </span>sc.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>sp.gff3<span class="w"> </span>sp.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>cg.gff3<span class="w"> </span>cg.fa
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Two Arabidopsis accessions with all cores</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>col0.gff3<span class="w"> </span>col0.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>cvi.gff3<span class="w"> </span>cvi.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">16</span><span class="w"> </span>--msa
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Chain directly into phylogeny on the single-copy orthologs</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span>sc.gff3<span class="w"> </span>sc.fa<span class="w"> </span>sp.gff3<span class="w"> </span>sp.fa<span class="w"> </span>cg.gff3<span class="w"> </span>cg.fa
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>myconote-cli<span class="w"> </span>phylogeny<span class="w"> </span>compare_out/proteins/OrthoFinder/Results_*/Single_Copy_Orthologue_Sequences/
+</code></pre></div>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--output &lt;dir&gt;</code> / <code>-o</code></td>
+<td><code>compare_out</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>--threads &lt;n&gt;</code> / <code>-t</code></td>
+<td>all cores</td>
+<td>Threads for OrthoFinder</td>
+</tr>
+<tr>
+<td><code>--sensitive</code></td>
+<td>on</td>
+<td>Use <code>diamond_ultra_sens</code> — higher accuracy, ~2× slower</td>
+</tr>
+<tr>
+<td><code>--fast</code></td>
+<td>—</td>
+<td>Use default <code>diamond</code> — faster, less accurate</td>
+</tr>
+<tr>
+<td><code>--msa</code></td>
+<td>off</td>
+<td>Multiple-sequence-alignment tree refinement (2–3× slower)</td>
+</tr>
+<tr>
+<td><code>--genetic-code &lt;n&gt;</code></td>
+<td>1</td>
+<td>NCBI translation table (e.g. 12 for <em>Candida</em> CTG clade)</td>
+</tr>
+<tr>
+<td><code>--soft-core &lt;frac&gt;</code></td>
+<td>0.95</td>
+<td>Soft-core presence threshold</td>
+</tr>
+<tr>
+<td><code>--cloud &lt;frac&gt;</code></td>
+<td>0.15</td>
+<td>Cloud upper-bound threshold</td>
+</tr>
+</tbody>
+</table>
+<h2 id="primary-transcript-filtering">Primary-transcript filtering<a class="headerlink" href="#primary-transcript-filtering" title="Permanent link">&para;</a></h2>
+<p>Compare keeps <strong>one protein per gene</strong> — the longest-CDS isoform — before running OrthoFinder. Alternative-splice isoforms cluster into the same orthogroup anyway, so feeding all of them inflates the all-vs-all search without adding information. Plant GFF3s with 5–8 isoforms per gene see the biggest speed-up.</p>
+<p>This is always on. Users who truly need all isoforms can pre-extract proteins themselves and run OrthoFinder directly.</p>
+<p>Pseudogenes and genes with internal stop codons are also dropped — they add noise to orthology inference and aren't useful tree-building material.</p>
+<h2 id="categories-in-ortholog_tabletsv">Categories in <code>ortholog_table.tsv</code><a class="headerlink" href="#categories-in-ortholog_tabletsv" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>core_single_copy</code></td>
+<td>Present in every input genome with <strong>exactly one</strong> copy each. These are the rows used for species-tree inference.</td>
+</tr>
+<tr>
+<td><code>core</code></td>
+<td>Present in every input genome, but at least one has a paralog pair (duplications).</td>
+</tr>
+<tr>
+<td><code>accessory</code></td>
+<td>Present in some but not all genomes (2 ≤ n &lt; N).</td>
+</tr>
+<tr>
+<td><code>singleton</code></td>
+<td>Present in only one genome.</td>
+</tr>
+</tbody>
+</table>
+<p><code>core_single_copy</code> is usually the answer to "which genes should I align to build a species tree?" — these are automatically separated by OrthoFinder into the <code>Single_Copy_Orthologue_Sequences/</code> directory.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioconda<span class="w"> </span>orthofinder
+</code></pre></div>
+<p>OrthoFinder itself brings in DIAMOND, MAFFT (if <code>--msa</code>), FastTree, and the required Python stack. If you already use OrthoFinder in other workflows, no extra installation is needed.</p>
+<h2 id="typical-runtimes">Typical runtimes<a class="headerlink" href="#typical-runtimes" title="Permanent link">&para;</a></h2>
+<p>Measured on commodity hardware (8-core M3 laptop, 16 GB RAM):</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Runtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5 yeasts</td>
+<td>~10 min</td>
+</tr>
+<tr>
+<td>3 Arabidopsis-class dicots</td>
+<td>~45 min</td>
+</tr>
+<tr>
+<td>2 maize-class monocots</td>
+<td>~3 h</td>
+</tr>
+<tr>
+<td>3 fungi with <code>--msa</code></td>
+<td>~30 min</td>
+</tr>
+</tbody>
+</table>
+<p>HPC nodes with 32+ cores scale roughly linearly for the DIAMOND step.</p>
+<h2 id="related-commands">Related commands<a class="headerlink" href="#related-commands" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../synteny/"><code>synteny</code></a> — whole-genome syntenic ribbons for 2 genomes (visual, structural).</li>
+<li><a href="../phylogeny/"><code>phylogeny</code></a> — ML tree from a single alignment via IQ-TREE. Feeds naturally from compare's single-copy-ortholog output.</li>
+<li><a href="../../pipeline/annotate/"><code>annotate</code></a> — produces the GFF3 + FASTA pairs that compare consumes.</li>
+</ul>
 
 
 

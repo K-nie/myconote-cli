@@ -77,6 +77,17 @@ pub struct SyntenyBlock {
 /// Chromosome size map keyed by seqid.
 type ChromSizes = HashMap<String, u64>;
 
+/// A named gene interval used to label ribbons: (start, end, gene_id).
+#[derive(Debug, Clone)]
+struct GeneInterval {
+    start: u64,
+    end: u64,
+    id: String,
+}
+
+/// Per-contig gene intervals, keyed by seqid.
+type GenesByContig = HashMap<String, Vec<GeneInterval>>;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PAF parsing
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,6 +205,40 @@ fn chrom_sizes_from_gff(gff_path: &Path) -> Result<ChromSizes> {
     Ok(sizes)
 }
 
+/// Extract gene intervals from a GFF3, keeping only genes whose ID is present
+/// in `name_keys` (so the emitted JSON stays small and every serialised gene
+/// has a display name). Intervals are sorted by start per contig for the JS
+/// binary-search-style overlap lookup.
+fn named_genes_from_gff(gff_path: &Path, name_keys: &HashMap<String, String>) -> Result<GenesByContig> {
+    use crate::parser::gff::GFFReader;
+    let mut genes: GenesByContig = HashMap::new();
+    if name_keys.is_empty() {
+        return Ok(genes);
+    }
+    for result in GFFReader::from_path(gff_path)? {
+        let rec = match result {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        if rec.feature_type != "gene" {
+            continue;
+        }
+        let Some(id) = rec.id().cloned() else { continue };
+        if !name_keys.contains_key(&id) {
+            continue;
+        }
+        genes.entry(rec.seqid).or_default().push(GeneInterval {
+            start: rec.start,
+            end: rec.end,
+            id,
+        });
+    }
+    for v in genes.values_mut() {
+        v.sort_by_key(|g| g.start);
+    }
+    Ok(genes)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // HTML renderer
 // ─────────────────────────────────────────────────────────────────────────────
@@ -240,10 +285,32 @@ fn names_to_js(names: &HashMap<String, String>) -> String {
     format!("const geneNames = {{{}}};", inner)
 }
 
+/// Serialise per-contig gene intervals to JS:
+/// `{contig: [[start, end, "id"], ...], ...}` — sorted by start.
+fn genes_to_js(genes: &GenesByContig, suffix: &str) -> String {
+    let mut entries: Vec<(&String, &Vec<GeneInterval>)> = genes.iter().collect();
+    entries.sort_by(|a, b| a.0.cmp(b.0));
+    let body: String = entries
+        .iter()
+        .map(|(contig, ivs)| {
+            let arr: String = ivs
+                .iter()
+                .map(|g| format!("[{},{},\"{}\"]", g.start, g.end, g.id))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("\"{}\":[{}]", contig, arr)
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("const genes_{} = {{{}}};", suffix, body)
+}
+
 fn render_synteny_html(
     blocks: &[SyntenyBlock],
     sizes1: &ChromSizes,
     sizes2: &ChromSizes,
+    genes1: &GenesByContig,
+    genes2: &GenesByContig,
     config: &SyntenyConfig,
 ) -> String {
     let label1 = &config.label1;
@@ -253,6 +320,8 @@ fn render_synteny_html(
     let js_sizes2 = chrom_sizes_to_js(sizes2, "B");
     let js_blocks = blocks_to_js(blocks);
     let js_names = names_to_js(&config.names);
+    let js_genes1 = genes_to_js(genes1, "A");
+    let js_genes2 = genes_to_js(genes2, "B");
 
     let block_count = blocks.len();
     let title = format!("MycoNote — Synteny: {} vs {}", label1, label2);
@@ -305,6 +374,26 @@ fn render_synteny_html(
 {js_sizes2}
 {js_blocks}
 {js_names}
+{js_genes1}
+{js_genes2}
+
+// ── Gene overlap lookup ─────────────────────────────────────────────────────
+// For a block on `contig` spanning [qs, qe], return the display name of the
+// gene with the largest overlap, or null if none overlap. genes_X contigs are
+// pre-sorted by start, so we bail out as soon as a gene's start passes qe.
+function labelForBlock(genesMap, contig, qs, qe) {{
+  const ivs = genesMap[contig];
+  if (!ivs) return null;
+  let bestId = null;
+  let bestOv = 0;
+  for (const [gs, ge, gid] of ivs) {{
+    if (gs > qe) break;
+    if (ge < qs) continue;
+    const ov = Math.min(ge, qe) - Math.max(gs, qs);
+    if (ov > bestOv) {{ bestOv = ov; bestId = gid; }}
+  }}
+  return bestId ? (geneNames[bestId] || bestId) : null;
+}}
 
 // ── Colour helpers ──────────────────────────────────────────────────────────
 const CHROM_COLOURS = d3.schemeTableau10.concat(d3.schemePastel1);
@@ -429,11 +518,16 @@ function draw() {{
       .attr('stroke', colour).attr('stroke-width', 0.4).attr('stroke-opacity', 0.7)
       .style('cursor','pointer')
       .on('mousemove', (event) => {{
-        const name = geneNames[b.qn] || b.qn;
+        const nameA = labelForBlock(genes_A, b.qn, b.qs, b.qe);
+        const nameB = labelForBlock(genes_B, b.tn, b.ts, b.te);
+        const header = nameA || nameB || `${{b.qn}} ↔ ${{b.tn}}`;
+        const geneLine = (nameA || nameB)
+          ? `<span style="color:#a0aec0">Gene:</span> ${{nameA || '—'}} ↔ ${{nameB || '—'}}<br/>`
+          : '';
         tip.style.opacity = 1;
         tip.style.left = (event.clientX + 12) + 'px';
         tip.style.top  = (event.clientY - 10) + 'px';
-        tip.innerHTML  = `<b>${{name}}</b><br/>${{b.qn}}:${{b.qs.toLocaleString()}}–${{b.qe.toLocaleString()}}<br/>
+        tip.innerHTML  = `<b>${{header}}</b><br/>${{geneLine}}${{b.qn}}:${{b.qs.toLocaleString()}}–${{b.qe.toLocaleString()}}<br/>
           ↔ ${{b.tn}}:${{b.ts.toLocaleString()}}–${{b.te.toLocaleString()}}<br/>
           Strand: ${{b.st === '+' ? '➕ forward' : '➖ reverse'}}<br/>
           Identity: ${{(b.id*100).toFixed(1)}}%<br/>
@@ -441,10 +535,10 @@ function draw() {{
       }})
       .on('mouseleave', () => {{ tip.style.opacity = 0; }});
 
-    // Gene name label on large blocks
+    // Gene name label on large blocks — uses the top genome's overlapping gene.
     if (showNames && (x2 - x1) > 40) {{
       const mid = (x1 + x2) / 2;
-      const labelText = geneNames[b.qn] || '';
+      const labelText = labelForBlock(genes_A, b.qn, b.qs, b.qe);
       if (labelText) {{
         g.append('text')
           .attr('x', mid).attr('y', yA + TRACK_H - 3)
@@ -480,6 +574,8 @@ else {{ setTimeout(() => {{ if (typeof d3 !== 'undefined') draw(); }}, 500); }}
         js_sizes2 = js_sizes2,
         js_blocks = js_blocks,
         js_names = js_names,
+        js_genes1 = js_genes1,
+        js_genes2 = js_genes2,
     )
 }
 
@@ -513,9 +609,22 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
         Vec::new()
     };
 
-    // 3. Render HTML
+    // 3. Extract named gene intervals so block labels can resolve gene IDs
+    //    via genomic overlap (PAF blocks key on contig, not on gene ID).
+    let genes1 = named_genes_from_gff(&config.gff1, &config.names)?;
+    let genes2 = named_genes_from_gff(&config.gff2, &config.names)?;
+    let labelable: usize = genes1.values().map(|v| v.len()).sum::<usize>()
+        + genes2.values().map(|v| v.len()).sum::<usize>();
+    if !config.names.is_empty() {
+        println!(
+            "   {} named genes available for ribbon labels",
+            labelable
+        );
+    }
+
+    // 4. Render HTML
     println!("🎨 Rendering synteny diagram…");
-    let html = render_synteny_html(&blocks, &sizes1, &sizes2, config);
+    let html = render_synteny_html(&blocks, &sizes1, &sizes2, &genes1, &genes2, config);
 
     let mut out = std::fs::File::create(&config.output).map_err(MycoNoteError::Io)?;
     out.write_all(html.as_bytes()).map_err(MycoNoteError::Io)?;

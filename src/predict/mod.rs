@@ -254,7 +254,89 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         }
     }
 
-    // ── 2b. Protein evidence (miniprot / exonerate) ─────────────────────────
+    // ── 2a. GlimmerHMM (optional third ab-initio predictor) ─────────────────
+    // The audit found that `use_glimmerhmm` was parsed from the CLI and set
+    // on PredictConfig but never read here — the flag was a silent no-op.
+    // Now dispatched like SNAP: non-fatal on failure, merges into EVM as
+    // its own weighted source.
+    if config.use_glimmerhmm {
+        let glimmer_gff = config.out_dir.join("glimmerhmm.gff3");
+        let pb = progress::spinner("Running GlimmerHMM…");
+        match config.glimmer_dir.as_ref() {
+            Some(train_dir) if train_dir.exists() => {
+                match glimmer::run_glimmerhmm(
+                    &config.masked_fasta,
+                    train_dir,
+                    &glimmer_gff,
+                    config.threads,
+                ) {
+                    Ok(n) => {
+                        progress::finish_spinner(&pb, format!("GlimmerHMM: {} genes", n));
+                        prediction_inputs.push((glimmer_gff, "GlimmerHMM", weights.glimmerhmm));
+                    }
+                    Err(e) => {
+                        progress::warn_spinner(&pb, format!("GlimmerHMM failed (non-fatal): {}", e));
+                    }
+                }
+            }
+            Some(train_dir) => {
+                progress::warn_spinner(
+                    &pb,
+                    format!("GlimmerHMM training dir not found: {}", train_dir.display()),
+                );
+            }
+            None => {
+                progress::warn_spinner(
+                    &pb,
+                    "GlimmerHMM requested but no training dir. Pass --glimmer-dir <trained_dir> \
+                     (glimmerhmm ships example trainings under /usr/share/glimmerhmm/trained_dir)",
+                );
+            }
+        }
+    }
+
+    // ── 2b. GeneMark-ES / ET (optional self-training predictor) ─────────────
+    // Same silent-no-op bug: `use_genemark` and `genemark_hints` were set but
+    // never dispatched. GeneMark-ES is self-training; GeneMark-ET adds RNA-seq
+    // splice hints when `--genemark-hints <intron_hints.gff>` is supplied.
+    if config.use_genemark {
+        let gm_dir = config.out_dir.join("genemark");
+        let is_fungus = matches!(config.kingdom, Kingdom::Fungi);
+        let pb = progress::spinner("Running GeneMark-ES/ET…");
+        let run_result = if let Some(hints) = config.genemark_hints.as_ref() {
+            if hints.exists() {
+                genemark::run_genemark_et(
+                    &config.masked_fasta,
+                    hints,
+                    &gm_dir,
+                    is_fungus,
+                    config.threads,
+                )
+            } else {
+                progress::warn_spinner(
+                    &pb,
+                    format!(
+                        "GeneMark hints file not found: {} (falling back to --ES)",
+                        hints.display()
+                    ),
+                );
+                genemark::run_genemark_es(&config.masked_fasta, &gm_dir, is_fungus, config.threads)
+            }
+        } else {
+            genemark::run_genemark_es(&config.masked_fasta, &gm_dir, is_fungus, config.threads)
+        };
+        match run_result {
+            Ok(gm_gff) => {
+                progress::finish_spinner(&pb, format!("GeneMark complete → {}", gm_gff.display()));
+                prediction_inputs.push((gm_gff, "GeneMark", weights.genemark));
+            }
+            Err(e) => {
+                progress::warn_spinner(&pb, format!("GeneMark failed (non-fatal): {}", e));
+            }
+        }
+    }
+
+    // ── 2c. Protein evidence (miniprot / exonerate) ─────────────────────────
     if let Some(ref prot_fa) = config.protein_fasta {
         if prot_fa.exists() {
             let prot_cfg = protein_evidence::ProteinEvidenceConfig {

@@ -293,7 +293,8 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
     let mut f = std::fs::File::create(output_tbl).map_err(MycoNoteError::Io)?;
     let mut current_seqid = String::new();
     let mut feature_count = 0usize;
-    let mut emitted_cds_parents: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut emitted_cds_parents: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
 
     for rec in &records {
         if rec.seqid != current_seqid {
@@ -339,7 +340,9 @@ pub fn write_feature_table(gff: &Path, output_tbl: &Path, config: &SubmitConfig)
                 if !emitted_cds_parents.insert(mrna_id.clone()) {
                     continue;
                 }
-                let Some(cdss) = cds_by_parent.get(&mrna_id) else { continue };
+                let Some(cdss) = cds_by_parent.get(&mrna_id) else {
+                    continue;
+                };
                 if cdss.is_empty() {
                     continue;
                 }
@@ -480,7 +483,11 @@ fn emit_joined_feature<W: Write>(
         .attributes
         .get("product")
         .cloned()
-        .or_else(|| sorted.first().and_then(|r| r.attributes.get("product").cloned()))
+        .or_else(|| {
+            sorted
+                .first()
+                .and_then(|r| r.attributes.get("product").cloned())
+        })
         .or_else(|| attr_from_parent_chain(by_id, meta_source, "product"))
         .or_else(|| {
             sorted
@@ -660,7 +667,11 @@ mod tests {
 
     fn write_gff(label: &str, body: &str) -> std::path::PathBuf {
         let mut p = std::env::temp_dir();
-        p.push(format!("myconote_submit_test_{}_{}.gff3", std::process::id(), label));
+        p.push(format!(
+            "myconote_submit_test_{}_{}.gff3",
+            std::process::id(),
+            label
+        ));
         let mut f = std::fs::File::create(&p).unwrap();
         writeln!(f, "##gff-version 3").unwrap();
         f.write_all(body.as_bytes()).unwrap();
@@ -669,7 +680,11 @@ mod tests {
 
     fn tbl_path(label: &str) -> std::path::PathBuf {
         let mut p = std::env::temp_dir();
-        p.push(format!("myconote_submit_test_{}_{}.tbl", std::process::id(), label));
+        p.push(format!(
+            "myconote_submit_test_{}_{}.tbl",
+            std::process::id(),
+            label
+        ));
         p
     }
 
@@ -697,18 +712,43 @@ NW_1\tmaker\tCDS\t700\t900\t.\t+\t0\tID=cds1c;Parent=g1.mRNA\n";
         let out = std::fs::read_to_string(&tbl).unwrap();
 
         // Exactly one gene block + one CDS block.
-        assert_eq!(n, 2, "expected 2 features (gene + joined CDS), got {}: {}", n, out);
+        assert_eq!(
+            n, 2,
+            "expected 2 features (gene + joined CDS), got {}: {}",
+            n, out
+        );
 
         // Header line is the first CDS interval.
-        assert!(out.contains("100\t200\tCDS"), "missing CDS header line:\n{}", out);
+        assert!(
+            out.contains("100\t200\tCDS"),
+            "missing CDS header line:\n{}",
+            out
+        );
         // Subsequent intervals appear as bare start\tend lines — no CDS keyword.
-        assert!(out.contains("\n300\t500\n"), "second segment not emitted as bare interval:\n{}", out);
-        assert!(out.contains("\n700\t900\n"), "third segment not emitted as bare interval:\n{}", out);
+        assert!(
+            out.contains("\n300\t500\n"),
+            "second segment not emitted as bare interval:\n{}",
+            out
+        );
+        assert!(
+            out.contains("\n700\t900\n"),
+            "third segment not emitted as bare interval:\n{}",
+            out
+        );
         // Product qualifier appears exactly once (after last interval).
-        assert_eq!(out.matches("\t\t\tproduct\tABC transporter").count(), 1,
-                   "product qualifier should appear exactly once:\n{}", out);
+        assert_eq!(
+            out.matches("\t\t\tproduct\tABC transporter").count(),
+            1,
+            "product qualifier should appear exactly once:\n{}",
+            out
+        );
         // transl_table also appears exactly once.
-        assert_eq!(out.matches("\t\t\ttransl_table\t1").count(), 1, "transl_table must be emitted once:\n{}", out);
+        assert_eq!(
+            out.matches("\t\t\ttransl_table\t1").count(),
+            1,
+            "transl_table must be emitted once:\n{}",
+            out
+        );
 
         let _ = std::fs::remove_file(&gff_path);
         let _ = std::fs::remove_file(&tbl);
@@ -729,10 +769,22 @@ NW_1\tmaker\tCDS\t700\t900\t.\t-\t0\tID=cds2b;Parent=g2.mRNA\n";
         let out = std::fs::read_to_string(&tbl).unwrap();
 
         // Gene line uses flipped coords on '-'.
-        assert!(out.contains("900\t100\tgene"), "gene line should be 'end start' on - strand:\n{}", out);
+        assert!(
+            out.contains("900\t100\tgene"),
+            "gene line should be 'end start' on - strand:\n{}",
+            out
+        );
         // CDS header should be the downstream (in genomic terms, higher-coord) segment first.
-        assert!(out.contains("900\t700\tCDS"), "first (5'-most on - strand) CDS segment should lead:\n{}", out);
-        assert!(out.contains("\n200\t100\n"), "second CDS segment (lower genomic coords) should follow as flipped interval:\n{}", out);
+        assert!(
+            out.contains("900\t700\tCDS"),
+            "first (5'-most on - strand) CDS segment should lead:\n{}",
+            out
+        );
+        assert!(
+            out.contains("\n200\t100\n"),
+            "second CDS segment (lower genomic coords) should follow as flipped interval:\n{}",
+            out
+        );
 
         let _ = std::fs::remove_file(&gff_path);
         let _ = std::fs::remove_file(&tbl);
@@ -751,7 +803,12 @@ NW_1\tmaker\tCDS\t10\t100\t.\t+\t0\tID=cds3;Parent=g3.mRNA\n";
 
         assert_eq!(n, 2);
         assert!(out.contains("10\t100\tCDS"));
-        assert_eq!(out.matches("\tCDS").count(), 1, "single-exon CDS should emit exactly one header:\n{}", out);
+        assert_eq!(
+            out.matches("\tCDS").count(),
+            1,
+            "single-exon CDS should emit exactly one header:\n{}",
+            out
+        );
 
         let _ = std::fs::remove_file(&gff_path);
         let _ = std::fs::remove_file(&tbl);
@@ -773,7 +830,12 @@ NW_1\tmaker\tCDS\t300\t500\t.\t+\t0\tID=cds4b;Parent=g4\n";
         assert!(out.contains("100\t200\tCDS"));
         assert!(out.contains("\n300\t500\n"));
         // Exactly one CDS header.
-        assert_eq!(out.matches("\tCDS").count(), 1, "Parent-fallback must still emit one joined CDS:\n{}", out);
+        assert_eq!(
+            out.matches("\tCDS").count(),
+            1,
+            "Parent-fallback must still emit one joined CDS:\n{}",
+            out
+        );
 
         let _ = std::fs::remove_file(&gff_path);
         let _ = std::fs::remove_file(&tbl);

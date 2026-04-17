@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# Local pre-push hook — matches the `cargo fmt --check` step in CI so we
+# don't burn GitHub Actions minutes on trivial formatting failures. Install
+# with:
+#
+#   git config core.hooksPath .githooks
+#
+# Skip with `git push --no-verify` when you genuinely need to bypass.
+
+set -e
+
+if ! command -v cargo >/dev/null 2>&1; then
+    # No Rust toolchain — nothing to check. Don't block the push.
+    exit 0
+fi
+
+echo "pre-push: checking rustfmt..."
+if ! cargo fmt --check >/dev/null 2>&1; then
+    echo "✗ rustfmt check failed — run 'cargo fmt' to auto-fix, then retry push."
+    echo "  (Skip with 'git push --no-verify' if you must.)"
+    exit 1
+fi
+
+echo "pre-push: ✓ rustfmt clean"
+exit 0

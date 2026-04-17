@@ -116,14 +116,9 @@ fn num_threads_default() -> usize {
 
 /// Classify all input genomes, find the most demanding tier, and enforce
 /// its cap. Returns the effective tier for logging.
-pub fn classify_and_enforce_cap(
-    gene_counts: &[usize],
-    force_cap: Option<usize>,
-) -> Result<Tier> {
+pub fn classify_and_enforce_cap(gene_counts: &[usize], force_cap: Option<usize>) -> Result<Tier> {
     if gene_counts.is_empty() {
-        return Err(MycoNoteError::InvalidFormat(
-            "No input genomes".to_string(),
-        ));
+        return Err(MycoNoteError::InvalidFormat("No input genomes".to_string()));
     }
     let max_count = *gene_counts.iter().max().unwrap();
     let tier = Tier::from_protein_count(max_count);
@@ -132,7 +127,10 @@ pub fn classify_and_enforce_cap(
 
     if n > cap {
         let hint = if force_cap.is_some() {
-            format!("You passed --force-cap {}; at least {} genomes provided.", cap, n)
+            format!(
+                "You passed --force-cap {}; at least {} genomes provided.",
+                cap, n
+            )
         } else {
             format!(
                 "Tier {} caps at {} genomes; {} provided (max protein count: {}).",
@@ -282,22 +280,18 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
 
     // ── 3. Invoke OrthoFinder ─────────────────────────────────────────────
     println!();
-    println!("  Step 2: running OrthoFinder (sensitive={}, msa={})…",
-        config.sensitive, config.msa);
-    let results_dir = orthofinder::run_orthofinder(
-        &proteins_dir,
-        config.threads,
-        config.sensitive,
-        config.msa,
-    )?;
+    println!(
+        "  Step 2: running OrthoFinder (sensitive={}, msa={})…",
+        config.sensitive, config.msa
+    );
+    let results_dir =
+        orthofinder::run_orthofinder(&proteins_dir, config.threads, config.sensitive, config.msa)?;
     println!("    OrthoFinder results: {}", results_dir.display());
 
     // ── 4. Parse orthogroups + pan-genome summary ────────────────────────
     println!();
     println!("  Step 3: parsing orthogroups + computing pan-genome shape…");
-    let ogs_path = results_dir
-        .join("Orthogroups")
-        .join("Orthogroups.tsv");
+    let ogs_path = results_dir.join("Orthogroups").join("Orthogroups.tsv");
     if !ogs_path.exists() {
         return Err(MycoNoteError::InvalidFormat(format!(
             "OrthoFinder didn't produce Orthogroups.tsv at {}",
@@ -356,6 +350,7 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
         match crate::align::build_species_tree_alignment(
             &sco_dir,
             &taxon_names,
+            &orthogroups,
             &align_out,
             config.threads,
         ) {
@@ -381,12 +376,24 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
 
     println!();
     println!("✓  Comparison complete.");
-    println!("    Ortholog table:      {}/ortholog_table.tsv", config.output_dir.display());
-    println!("    Pan-genome summary:  {}/pangenome_summary.tsv", config.output_dir.display());
+    println!(
+        "    Ortholog table:      {}/ortholog_table.tsv",
+        config.output_dir.display()
+    );
+    println!(
+        "    Pan-genome summary:  {}/pangenome_summary.tsv",
+        config.output_dir.display()
+    );
     if species_tree_src.exists() {
-        println!("    Species tree:        {}/species_tree.nwk", config.output_dir.display());
+        println!(
+            "    Species tree:        {}/species_tree.nwk",
+            config.output_dir.display()
+        );
     }
-    println!("    Report:              {}/compare_report.txt", config.output_dir.display());
+    println!(
+        "    Report:              {}/compare_report.txt",
+        config.output_dir.display()
+    );
     if let Some(sta) = &species_tree_alignment {
         println!();
         println!(
@@ -404,7 +411,10 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
         );
     } else if sco_count > 0 {
         println!();
-        println!("  {} single-copy orthogroups available (unaligned).", sco_count);
+        println!(
+            "  {} single-copy orthogroups available (unaligned).",
+            sco_count
+        );
         println!(
             "    → Re-run with --species-tree to produce a supermatrix ready for `myconote-cli phylogeny`."
         );
@@ -493,10 +503,8 @@ fn write_pangenome_summary(
     .map_err(MycoNoteError::Io)?;
     writeln!(f, "soft_core\t{}\t{:.3}", s.soft_core, frac(s.soft_core))
         .map_err(MycoNoteError::Io)?;
-    writeln!(f, "shell\t{}\t{:.3}", s.shell, frac(s.shell))
-        .map_err(MycoNoteError::Io)?;
-    writeln!(f, "cloud\t{}\t{:.3}", s.cloud, frac(s.cloud))
-        .map_err(MycoNoteError::Io)?;
+    writeln!(f, "shell\t{}\t{:.3}", s.shell, frac(s.shell)).map_err(MycoNoteError::Io)?;
+    writeln!(f, "cloud\t{}\t{:.3}", s.cloud, frac(s.cloud)).map_err(MycoNoteError::Io)?;
     writeln!(f, "singletons\t{}\t{:.3}", s.singletons, frac(s.singletons))
         .map_err(MycoNoteError::Io)?;
     writeln!(f, "# n_genomes = {}", n_genomes).map_err(MycoNoteError::Io)?;
@@ -525,15 +533,21 @@ fn write_report(
     writeln!(f, "Pan-genome shape (Tettelin bins):").map_err(MycoNoteError::Io)?;
     writeln!(f, "  Total orthogroups   : {}", summary.total_clusters).map_err(MycoNoteError::Io)?;
     writeln!(f, "  Core (all genomes)  : {}", summary.core).map_err(MycoNoteError::Io)?;
-    writeln!(f, "    - single-copy     : {}", summary.single_copy_core).map_err(MycoNoteError::Io)?;
+    writeln!(f, "    - single-copy     : {}", summary.single_copy_core)
+        .map_err(MycoNoteError::Io)?;
     writeln!(f, "  Soft-core (≥95 %)   : {}", summary.soft_core).map_err(MycoNoteError::Io)?;
     writeln!(f, "  Shell               : {}", summary.shell).map_err(MycoNoteError::Io)?;
     writeln!(f, "  Cloud               : {}", summary.cloud).map_err(MycoNoteError::Io)?;
     writeln!(f, "    - singletons      : {}", summary.singletons).map_err(MycoNoteError::Io)?;
     writeln!(f).map_err(MycoNoteError::Io)?;
-    writeln!(f, "Single-copy orthogroups for species tree: {}", sco_count).map_err(MycoNoteError::Io)?;
+    writeln!(f, "Single-copy orthogroups for species tree: {}", sco_count)
+        .map_err(MycoNoteError::Io)?;
     writeln!(f).map_err(MycoNoteError::Io)?;
-    writeln!(f, "Generated by: OrthoFinder (Emms & Kelly 2019, Genome Biology)").map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "Generated by: OrthoFinder (Emms & Kelly 2019, Genome Biology)"
+    )
+    .map_err(MycoNoteError::Io)?;
     Ok(())
 }
 
@@ -565,10 +579,21 @@ mod tests {
         // run when buried in a majority of small ones.
         let counts = vec![5_000, 6_000, 7_000, 8_000, 40_000];
         let result = classify_and_enforce_cap(&counts, None);
-        assert!(result.is_err(), "5 inputs where largest is Large should be rejected");
+        assert!(
+            result.is_err(),
+            "5 inputs where largest is Large should be rejected"
+        );
         let err_msg = format!("{}", result.unwrap_err());
-        assert!(err_msg.contains("Large"), "error must mention the binding tier:\n{}", err_msg);
-        assert!(err_msg.contains("2 genomes"), "error must state the cap:\n{}", err_msg);
+        assert!(
+            err_msg.contains("Large"),
+            "error must mention the binding tier:\n{}",
+            err_msg
+        );
+        assert!(
+            err_msg.contains("2 genomes"),
+            "error must state the cap:\n{}",
+            err_msg
+        );
     }
 
     #[test]
@@ -601,7 +626,10 @@ mod tests {
     fn force_cap_bypasses_tier_limit() {
         let counts = vec![50_000; 8];
         let result = classify_and_enforce_cap(&counts, Some(10));
-        assert!(result.is_ok(), "--force-cap 10 should accept 8 large genomes");
+        assert!(
+            result.is_ok(),
+            "--force-cap 10 should accept 8 large genomes"
+        );
         assert_eq!(result.unwrap(), Tier::Large);
     }
 
@@ -610,7 +638,10 @@ mod tests {
         // --force-cap only raises the cap — it doesn't eliminate it.
         let counts = vec![50_000; 8];
         let result = classify_and_enforce_cap(&counts, Some(5));
-        assert!(result.is_err(), "--force-cap 5 should still reject 8 inputs");
+        assert!(
+            result.is_err(),
+            "--force-cap 5 should still reject 8 inputs"
+        );
     }
 
     #[test]

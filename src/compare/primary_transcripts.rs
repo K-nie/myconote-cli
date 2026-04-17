@@ -28,9 +28,7 @@ pub fn extract_primary_proteins(
     genetic_code_table: u8,
 ) -> Result<usize> {
     let fasta_index = read_fasta_index(fasta)?;
-    let records: Vec<GFFRecord> = GFFReader::from_path(gff)?
-        .filter_map(|r| r.ok())
-        .collect();
+    let records: Vec<GFFRecord> = GFFReader::from_path(gff)?.filter_map(|r| r.ok()).collect();
 
     // 1. Build mRNA_id → gene_id (via Parent on mRNA row).
     let mut mrna_to_gene: HashMap<String, String> = HashMap::new();
@@ -85,14 +83,20 @@ pub fn extract_primary_proteins(
     let mut written = 0usize;
 
     for (gene_id, (mrna_id, _len)) in &gene_to_best_mrna {
-        let Some(cdss) = mrna_cds.get(mrna_id) else { continue };
-        if cdss.is_empty() { continue; }
+        let Some(cdss) = mrna_cds.get(mrna_id) else {
+            continue;
+        };
+        if cdss.is_empty() {
+            continue;
+        }
 
         let mut sorted = cdss.clone();
         sorted.sort_by_key(|r| r.start);
         let strand = sorted[0].strand;
 
-        let Some(seq_rec) = fasta_index.get(&sorted[0].seqid) else { continue };
+        let Some(seq_rec) = fasta_index.get(&sorted[0].seqid) else {
+            continue;
+        };
 
         let mut cds_seq = String::new();
         for cds in &sorted {
@@ -181,7 +185,11 @@ chr1\ttest\tCDS\t1\t60\t.\t+\t0\tParent=g1.t2\n\
         assert_eq!(n, 1, "expected exactly one primary-transcript protein");
 
         let body = std::fs::read_to_string(&out).unwrap();
-        assert!(body.starts_with(">g1\n"), "header should be gene_id:\n{}", body);
+        assert!(
+            body.starts_with(">g1\n"),
+            "header should be gene_id:\n{}",
+            body
+        );
         // 60 nt / 3 = 20 aa. The actual protein depends on reading frame
         // but must be longer than the short (30-nt) variant's 10 aa.
         let seq: String = body.lines().skip(1).collect();

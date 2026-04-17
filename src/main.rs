@@ -9,7 +9,6 @@ pub mod blast;
 pub mod chat;
 pub mod check;
 pub mod cli;
-pub mod compare;
 pub mod convert;
 pub mod fix;
 pub mod install;
@@ -102,7 +101,6 @@ fn print_main_help() {
     println!("  stats    Calculate statistics from annotation files");
     println!("  plot     Generate genome maps (linear PNG / circular PNG)");
     println!("  phylogeny Build a maximum-likelihood tree with IQ-TREE (from an alignment)");
-    println!("  compare  Compare multiple genomes");
     println!("  view     Visualise annotations in JBrowse2 / UCSC browser");
     println!("  synteny  Compare two genomes — ribbon diagram (requires minimap2)");
     println!("  convert  Convert between genome annotation and sequence formats");
@@ -128,17 +126,11 @@ fn print_main_help() {
     println!("  --title <text>                Plot title");
     println!("  --width <pixels>              Plot width (default: 1200)");
     println!("  --height <pixels>             Plot height (default: 800)");
-    println!("\nOptions for compare:");
-    println!("  --output <dir>                Output directory (default: compare_results)");
-    println!("  --method <blast|mmseqs|mummer> Alignment method (default: mmseqs)");
-    println!("  --tree                        Generate phylogenetic tree");
-    println!("  --synteny                     Generate synteny plot");
-    println!("  --threads <num>               Number of threads (default: 4)");
     println!("\nTaxonomic groups: fungi, ascomycota, basidiomycota, plants, animals, mammals");
     println!("\nExamples:");
     println!("  myconote-cli stats genome.gff3");
     println!("  myconote-cli plot genes.gff3 --output map.png --type circular");
-    println!("  myconote-cli compare genome1.gff3 genome2.gff3 --synteny --tree");
+    println!("  myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa");
     println!("\nRun 'myconote-cli <command> --help' for detailed help on any command.");
 }
 
@@ -420,23 +412,20 @@ fn main() -> Result<()> {
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
-            if args.len() < 3 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli compare <genome1.gff3> <genome2.gff3> [...] [options]");
-                println!("\nCompares two or more annotated genomes using protein homology.");
-                println!("\nOptions:");
-                println!("  --output <dir>                   Output directory (default: compare_results)");
-                println!("  --method <blast|mmseqs|mummer>  Alignment method (default: mmseqs)");
-                println!("  --tree                           Generate a phylogenetic tree");
-                println!("  --synteny                        Generate a synteny ribbon plot");
-                println!("  --threads <n>                    Threads (default: 4)");
-                println!("\nExamples:");
-                println!("  myconote-cli compare sp1.gff3 sp2.gff3");
-                println!("  myconote-cli compare sp1.gff3 sp2.gff3 sp3.gff3 --tree --synteny");
-                println!("  myconote-cli compare a.gff3 b.gff3 --method blast --threads 8");
-                return Ok(());
-            }
-            let paths = &args[2..];
-            handle_compare(paths)?;
+            // The previous `compare` implementation fabricated hits via internal
+            // simulate_*_hits() functions and wrote a fake star-topology Newick
+            // — never invoked BLAST, MMseqs2, MUMmer, or any tree inference.
+            // Removed in favour of the two real commands below; users can chain
+            // them for equivalent (and honest) multi-genome output.
+            eprintln!("`compare` has been removed: the old implementation produced fabricated");
+            eprintln!("results (no BLAST/MMseqs/MUMmer was ever executed).");
+            eprintln!();
+            eprintln!("Use the real commands instead:");
+            eprintln!("  myconote-cli synteny  <a.gff3> <b.gff3> --fasta1 <a.fa> --fasta2 <b.fa>");
+            eprintln!("      → 2-genome ribbon / dot-plot via minimap2 + D3 viewer");
+            eprintln!("  myconote-cli phylogeny <alignment.fa> --output tree.nwk");
+            eprintln!("      → maximum-likelihood tree via IQ-TREE");
+            return Ok(());
         }
         "view" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -784,7 +773,6 @@ fn main() -> Result<()> {
                 println!("  --mask-engine <engine>  Masking engine (default: repeatmodeler)");
                 println!("  --genetic-code <n>      Default translation table (default: 1)");
                 println!("  --locus-prefix <str>    Default locus prefix (default: GENE)");
-                println!("  --no-compare            Skip auto-compare after completion");
                 println!("  --resume <dir>          Resume a previous batch run");
                 println!("\nHTCondor options:");
                 println!("  --condor                Generate HTCondor submit files (don't run locally)");
@@ -831,7 +819,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | plot | phylogeny | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -992,62 +980,6 @@ fn handle_plot(path: &str, args: &[String]) -> Result<()> {
         "circular" => plot::generate_circular_plot(path, &config)?,
         _ => println!("Unknown plot type: {}", plot_type),
     }
-
-    Ok(())
-}
-
-fn handle_compare(paths: &[String]) -> Result<()> {
-    use crate::compare::CompareConfig;
-
-    let mut config = CompareConfig::default();
-    let args = &paths[1..]; // First path is the first genome, rest are args
-
-    // Parse options from the arguments
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--output" if i + 1 < args.len() => {
-                config.output_dir = PathBuf::from(&args[i + 1]);
-                i += 2;
-            }
-            "--method" if i + 1 < args.len() => {
-                config.method = args[i + 1].clone();
-                i += 2;
-            }
-            "--tree" => {
-                config.generate_tree = true;
-                i += 1;
-            }
-            "--synteny" => {
-                config.generate_synteny = true;
-                i += 1;
-            }
-            "--threads" if i + 1 < args.len() => {
-                if let Ok(t) = args[i + 1].parse() {
-                    config.threads = t;
-                }
-                i += 2;
-            }
-            _ => i += 1,
-        }
-    }
-
-    // Collect genome paths (all arguments before the first option)
-    let mut genome_paths = Vec::new();
-    for path in paths {
-        if path.starts_with("--") {
-            break;
-        }
-        genome_paths.push(path);
-    }
-
-    if genome_paths.len() < 2 {
-        println!("Error: Need at least 2 genome files to compare");
-        return Ok(());
-    }
-
-    println!("\n🔬 Comparing {} genomes", genome_paths.len());
-    compare::compare_genomes(&genome_paths, &config)?;
 
     Ok(())
 }
@@ -2760,10 +2692,6 @@ fn handle_batch(args: &[String]) -> Result<()> {
             "--locus-prefix" if i + 1 < args.len() => {
                 config.locus_prefix = args[i + 1].clone();
                 i += 2;
-            }
-            "--no-compare" => {
-                config.auto_compare = false;
-                i += 1;
             }
             "--condor" => {
                 config.condor = true;

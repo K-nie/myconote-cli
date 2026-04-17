@@ -67,8 +67,6 @@ pub struct BatchConfig {
     pub min_length: usize,
     /// Masking engine.
     pub mask_engine: String,
-    /// Run compare after all genomes complete.
-    pub auto_compare: bool,
     /// Genetic code default.
     pub genetic_code: u8,
     /// Locus prefix default.
@@ -93,7 +91,6 @@ impl Default for BatchConfig {
             condor_extra: None,
             min_length: 500,
             mask_engine: "repeatmodeler".to_string(),
-            auto_compare: true,
             genetic_code: 1,
             locus_prefix: "GENE".to_string(),
         }
@@ -482,13 +479,18 @@ fn run_local_mode(config: &BatchConfig, genomes: &[GenomeEntry]) -> Result<()> {
     // Final summary
     dash.print_summary(&batch_state);
 
-    // Auto-compare if 2+ genomes succeeded
+    // Point users at real downstream commands (the old auto-compare hint
+    // pointed at the fake `compare` subcommand that has been removed).
     let (done, _, _) = batch_state.summary();
-    if config.auto_compare && done >= 2 {
-        println!("  \x1b[2mTip: run comparison with:\x1b[0m");
+    if done >= 2 {
+        println!("  \x1b[2mNext steps:\x1b[0m");
         println!(
-            "  \x1b[33mmyconote-cli compare {}/**/annotate_out/*.gff3\x1b[0m\n",
+            "  \x1b[33mmyconote-cli synteny {}/<A>/annotate_out/annotated.gff3 {}/<B>/annotate_out/annotated.gff3 \\\n    --fasta1 <A.fa> --fasta2 <B.fa>\x1b[0m",
+            config.output_dir.display(),
             config.output_dir.display()
+        );
+        println!(
+            "  \x1b[33mmyconote-cli phylogeny <aligned_proteins.fa>\x1b[0m\n"
         );
     }
 
@@ -777,7 +779,6 @@ mod tests {
         assert_eq!(cfg.threads, 4);
         assert_eq!(cfg.max_parallel, 2);
         assert!(!cfg.condor);
-        assert!(cfg.auto_compare);
     }
 
     #[test]

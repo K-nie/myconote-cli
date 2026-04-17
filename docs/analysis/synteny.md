@@ -158,6 +158,5 @@ Pass `--chain-gap 0` to disable chaining and inspect the raw PAF hits.
 
 ## Related commands
 
-- [`compare`](../pipeline/overview.md) — N-genome protein-level comparison (BLAST / MMseqs2 / MUMmer). `compare --synteny` now delegates here since a faithful 2-genome ribbon needs whole-genome FASTAs.
-- [`phylogeny`](phylogeny.md) — tree-based comparison across many genomes.
+- [`phylogeny`](phylogeny.md) — tree-based comparison across many genomes (IQ-TREE).
 - [`plot`](plot.md) — single-genome feature plots.

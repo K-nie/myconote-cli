@@ -91,12 +91,18 @@ Chromosomes are sorted by decreasing length on each side, gapped by 4 px.
 
 | Control | Effect |
 |---|---|
-| **Min identity** slider | Hide ribbons below this identity threshold (default 70 %) |
+| **View** selector | `Ribbon` (default — chromosome bars connected by Bézier ribbons) or `Dot plot` (classic 2-D grid where each block is a line segment; positive slope = forward strand, negative slope = reverse/inversion) |
+| **Min identity** slider | Hide blocks below this identity threshold (default 70 %) |
 | **Colour by** selector | `Strand` (blue=+, red=−), `Identity` (YlOrRd gradient), `Chromosome` (Tableau palette keyed by genome-A contig) |
-| **Show gene names** checkbox | On-ribbon labels for large blocks (≥ 40 px wide) |
-| **Gene overlay** checkbox | Tick marks on the chromosome bars for every annotated gene — named genes highlighted in the accent colour |
+| **Show gene names** checkbox | On-ribbon labels for large blocks (≥ 40 px wide). Ribbon mode only. |
+| **Gene overlay** checkbox | Tick marks on the chromosome bars for every annotated gene — named genes highlighted in the accent colour. Ribbon mode only. |
 | **⬇ SVG** button | Download the current view as a standalone SVG (CSS custom properties resolved to hex at export time so the file renders correctly in any viewer) |
 | **⬇ PNG** button | Rasterise the current view to PNG at 2× the on-screen resolution |
+
+### When to use which view
+
+- **Ribbon mode** is best for seeing *which chromosomes correspond* between two closely related genomes — chromosome pairs light up because most ribbons bundle between one pair of contigs. Good for quick "is chromosome X conserved" questions and for labelling individual syntenic blocks with gene names.
+- **Dot plot mode** is better for *large-scale rearrangements* — inversions show as anti-diagonal segments, translocations as off-diagonal stripes, and highly collinear regions collapse into a single diagonal per chromosome pair. Essentially MUMmer's `mummerplot` output, without the Gnuplot dependency.
 
 ### Ribbon tooltip
 

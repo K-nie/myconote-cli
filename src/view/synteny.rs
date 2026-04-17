@@ -466,6 +466,7 @@ fn render_synteny_html(
   <span class="subtitle">Synteny: <strong>{label1}</strong> vs <strong>{label2}</strong> — {block_count} blocks</span>
 </header>
 <div id="toolbar">
+  <label>View: <select id="viewMode"><option value="ribbon">Ribbon</option><option value="dotplot">Dot plot</option></select></label>
   <label>Min identity: <input type="range" id="minId" min="0" max="100" value="70" step="1"/><span id="minIdVal">70%</span></label>
   <label>Colour by: <select id="colourMode"><option value="strand">Strand</option><option value="identity">Identity</option><option value="chrom">Chromosome</option></select></label>
   <label>Show gene names: <input type="checkbox" id="showNames" checked/></label>
@@ -535,6 +536,7 @@ function draw() {{
   const colMode = document.getElementById('colourMode').value;
   const showNames = document.getElementById('showNames').checked;
   const showGenes = document.getElementById('showGenes').checked;
+  const viewMode = document.getElementById('viewMode').value;
   const filtered = synBlocks.filter(b => b.id >= minId);
   document.getElementById('stats').textContent =
     `Showing ${{filtered.length}} / ${{synBlocks.length}} blocks (≥ ${{Math.round(minId*100)}}% identity)`;
@@ -547,6 +549,131 @@ function draw() {{
   const totalB = chromsB.reduce((s,[,v])=>s+v, 0);
   const GAP_PX = 4;
 
+  const chromIdxA = Object.fromEntries(chromsA.map(([n],i) => [n, i]));
+  const chromIdxB = Object.fromEntries(chromsB.map(([n],i) => [n, i]));
+  const tip = document.getElementById('tip');
+
+  // Ribbon and dot-plot paths share the chromosome ordering and colour
+  // rules, but lay out on completely different coordinate systems, so each
+  // mode builds its own offsets/scales below.
+
+  if (viewMode === 'dotplot') {{
+    drawDotPlot();
+  }} else {{
+    drawRibbon();
+  }}
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Dot plot view
+  // ══════════════════════════════════════════════════════════════════════════
+  function drawDotPlot() {{
+    // Left gutter for the Y axis (genome B contig labels), bottom gutter for
+    // the X axis (genome A contig labels).
+    const AXIS_LEFT = 110;
+    const AXIS_BOTTOM = 60;
+    const plotW = Math.max(100, innerW - AXIS_LEFT);
+    const plotH = Math.max(100, Math.min(plotW, 640));  // cap for large screens
+
+    const scaleX = (plotW - GAP_PX * (chromsA.length - 1)) / totalA;
+    const scaleY = (plotH - GAP_PX * (chromsB.length - 1)) / totalB;
+
+    const offX = {{}}; let xCursor = 0;
+    for (const [name, len] of chromsA) {{ offX[name] = xCursor; xCursor += len * scaleX + GAP_PX; }}
+    const offY = {{}}; let yCursor = 0;
+    for (const [name, len] of chromsB) {{ offY[name] = yCursor; yCursor += len * scaleY + GAP_PX; }}
+
+    const totalH = MARGIN.top + plotH + AXIS_BOTTOM + MARGIN.bottom;
+    svg.attr('viewBox', `0 0 ${{W}} ${{totalH}}`);
+
+    const root = svg.append('g')
+      .attr('transform', `translate(${{MARGIN.left + AXIS_LEFT}},${{MARGIN.top}})`);
+
+    // Plot frame
+    root.append('rect')
+      .attr('x', 0).attr('y', 0).attr('width', plotW).attr('height', plotH)
+      .attr('fill', '#1a202c').attr('stroke', '#4a5568').attr('stroke-width', 0.5);
+
+    // Contig gridlines + ticks — vertical (genome A) and horizontal (genome B)
+    for (const [name, len] of chromsA) {{
+      const x = offX[name] + len * scaleX;
+      root.append('line')
+        .attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', plotH)
+        .attr('stroke', '#2d3748').attr('stroke-width', 0.5);
+      // Diagonal label under the axis.
+      root.append('text')
+        .attr('x', offX[name] + len * scaleX / 2)
+        .attr('y', plotH + 12)
+        .attr('text-anchor', 'end').attr('font-size', 8).attr('fill', '#a0aec0')
+        .attr('transform', `rotate(-45, ${{offX[name] + len * scaleX / 2}}, ${{plotH + 12}})`)
+        .text(name);
+    }}
+    for (const [name, len] of chromsB) {{
+      const y = offY[name] + len * scaleY;
+      root.append('line')
+        .attr('x1', 0).attr('x2', plotW).attr('y1', y).attr('y2', y)
+        .attr('stroke', '#2d3748').attr('stroke-width', 0.5);
+      root.append('text')
+        .attr('x', -6).attr('y', offY[name] + len * scaleY / 2 + 3)
+        .attr('text-anchor', 'end').attr('font-size', 8).attr('fill', '#a0aec0')
+        .text(name);
+    }}
+
+    // Axis titles
+    root.append('text')
+      .attr('x', plotW / 2).attr('y', plotH + AXIS_BOTTOM - 10)
+      .attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 'bold')
+      .attr('fill', 'var(--accent)').text('{label1}');
+    root.append('text')
+      .attr('x', -AXIS_LEFT + 10).attr('y', plotH / 2)
+      .attr('transform', `rotate(-90, ${{-AXIS_LEFT + 10}}, ${{plotH / 2}})`)
+      .attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 'bold')
+      .attr('fill', 'var(--accent)').text('{label2}');
+
+    // One line segment per block. '+' strand → positive slope (query and
+    // target both run forward); '-' strand → negative slope (target runs
+    // backwards as query advances, the classic anti-diagonal).
+    for (const b of filtered) {{
+      if (!(b.qn in offX) || !(b.tn in offY)) continue;
+      const x1 = offX[b.qn] + b.qs * scaleX;
+      const x2 = offX[b.qn] + b.qe * scaleX;
+      const y1 = offY[b.tn] + (b.st === '+' ? b.ts : b.te) * scaleY;
+      const y2 = offY[b.tn] + (b.st === '+' ? b.te : b.ts) * scaleY;
+
+      const colour = colMode === 'identity' ? identityColour(b.id)
+                   : colMode === 'chrom'    ? chromColour(b.qn, chromIdxA[b.qn])
+                   :                          strandColour(b.st);
+
+      // Stroke width scales gently with identity so high-quality hits pop.
+      const sw = 0.5 + 1.2 * b.id;
+
+      root.append('line')
+        .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
+        .attr('stroke', colour).attr('stroke-width', sw).attr('stroke-opacity', 0.9)
+        .style('cursor', 'pointer')
+        .on('mousemove', (event) => {{
+          const nameA = labelForBlock(genes_A, b.qn, b.qs, b.qe);
+          const nameB = labelForBlock(genes_B, b.tn, b.ts, b.te);
+          const header = nameA || nameB || `${{b.qn}} ↔ ${{b.tn}}`;
+          const geneLine = (nameA || nameB)
+            ? `<span style="color:#a0aec0">Gene:</span> ${{nameA || '—'}} ↔ ${{nameB || '—'}}<br/>`
+            : '';
+          tip.style.opacity = 1;
+          tip.style.left = (event.clientX + 12) + 'px';
+          tip.style.top  = (event.clientY - 10) + 'px';
+          tip.innerHTML  = `<b>${{header}}</b><br/>${{geneLine}}${{b.qn}}:${{b.qs.toLocaleString()}}–${{b.qe.toLocaleString()}}<br/>
+            ↔ ${{b.tn}}:${{b.ts.toLocaleString()}}–${{b.te.toLocaleString()}}<br/>
+            Strand: ${{b.st === '+' ? '➕ forward' : '➖ reverse'}}<br/>
+            Identity: ${{(b.id*100).toFixed(1)}}%<br/>
+            Length: ${{((b.qe-b.qs)/1000).toFixed(1)}} kb`;
+        }})
+        .on('mouseleave', () => {{ tip.style.opacity = 0; }});
+    }}
+  }}
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Ribbon view (original)
+  // ══════════════════════════════════════════════════════════════════════════
+  function drawRibbon() {{
   // Scale: pixel per base (use the larger genome to set scale)
   const scaleA = (innerW - GAP_PX * (chromsA.length - 1)) / totalA;
   const scaleB = (innerW - GAP_PX * (chromsB.length - 1)) / totalB;
@@ -563,9 +690,6 @@ function draw() {{
   }}
   const offA = buildOffsets(chromsA, scaleA);
   const offB = buildOffsets(chromsB, scaleB);
-
-  const chromIdxA = Object.fromEntries(chromsA.map(([n],i) => [n, i]));
-  const chromIdxB = Object.fromEntries(chromsB.map(([n],i) => [n, i]));
 
   // SVG total height
   const totalH = MARGIN.top + TRACK_H + RIBBON_AREA_H + TRACK_H + MARGIN.bottom + 30;
@@ -645,8 +769,6 @@ function draw() {{
   }}
 
   // ── Draw ribbons ────────────────────────────────────────────────────────
-  const tip = document.getElementById('tip');
-
   for (const b of filtered) {{
     if (!(b.qn in offA) || !(b.tn in offB)) continue;
 
@@ -702,13 +824,15 @@ function draw() {{
       }}
     }}
   }}
-}}
+  }}  // end drawRibbon
+}}  // end draw
 
 // ── Controls ────────────────────────────────────────────────────────────────
 document.getElementById('minId').addEventListener('input', function() {{
   document.getElementById('minIdVal').textContent = this.value + '%';
   draw();
 }});
+document.getElementById('viewMode').addEventListener('change', draw);
 document.getElementById('colourMode').addEventListener('change', draw);
 document.getElementById('showNames').addEventListener('change', draw);
 document.getElementById('showGenes').addEventListener('change', draw);

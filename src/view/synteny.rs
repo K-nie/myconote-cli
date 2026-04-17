@@ -450,6 +450,9 @@ fn render_synteny_html(
   #toolbar{{background:var(--panel);border-bottom:1px solid #2d3748;padding:8px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}}
   #toolbar label{{font-size:.8rem;color:var(--muted)}}
   #toolbar select,#toolbar input{{background:#2d3748;color:var(--text);border:1px solid #4a5568;border-radius:4px;padding:4px 8px;font-size:.8rem}}
+  #toolbar button{{background:#2d3748;color:var(--accent);border:1px solid #4a5568;border-radius:4px;padding:4px 10px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .1s,color .1s}}
+  #toolbar button:hover{{background:var(--accent);color:#0f1117}}
+  #toolbar .sep{{width:1px;height:18px;background:#4a5568}}
   #stats{{font-size:.75rem;color:var(--muted);margin-left:auto}}
   #canvas-wrap{{flex:1;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}}
   svg{{width:100%;max-width:1400px;height:auto}}
@@ -467,6 +470,9 @@ fn render_synteny_html(
   <label>Colour by: <select id="colourMode"><option value="strand">Strand</option><option value="identity">Identity</option><option value="chrom">Chromosome</option></select></label>
   <label>Show gene names: <input type="checkbox" id="showNames" checked/></label>
   <label>Gene overlay: <input type="checkbox" id="showGenes"/></label>
+  <span class="sep"></span>
+  <button id="exportSvg" title="Download the current view as SVG">⬇ SVG</button>
+  <button id="exportPng" title="Download the current view as PNG (2× resolution)">⬇ PNG</button>
   <div id="stats"></div>
 </div>
 <div id="canvas-wrap">
@@ -707,6 +713,80 @@ document.getElementById('colourMode').addEventListener('change', draw);
 document.getElementById('showNames').addEventListener('change', draw);
 document.getElementById('showGenes').addEventListener('change', draw);
 window.addEventListener('resize', draw);
+
+// ── Export helpers ──────────────────────────────────────────────────────────
+// The in-page SVG uses CSS custom properties (var(--accent), var(--ribbon-plus),
+// var(--ribbon-minus)) on fill/stroke presentation attributes. Those are
+// resolved by the page's stylesheet at render time but do NOT survive a raw
+// serialisation — a standalone .svg file has no :root and browsers won't
+// resolve `var()` inside presentation attributes. So before export we rewrite
+// every var() reference to the literal hex so the exported SVG/PNG is truly
+// self-contained.
+function serialiseSvg() {{
+  const src = document.getElementById('svg');
+  const clone = src.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  // Paint a background rect first so exported files aren't transparent.
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%');
+  bg.setAttribute('height', '100%');
+  bg.setAttribute('fill', '#0f1117');
+  clone.insertBefore(bg, clone.firstChild);
+
+  let xml = new XMLSerializer().serializeToString(clone);
+  const palette = {{
+    '--accent': '#00d4aa',
+    '--ribbon-plus': '#4299e1',
+    '--ribbon-minus': '#fc8181',
+    '--text': '#e2e8f0',
+    '--muted': '#718096',
+  }};
+  for (const [name, hex] of Object.entries(palette)) {{
+    xml = xml.split('var(' + name + ')').join(hex);
+  }}
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+}}
+
+function triggerDownload(blob, filename) {{
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.style.display = 'none';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}}
+
+document.getElementById('exportSvg').addEventListener('click', () => {{
+  const xml = serialiseSvg();
+  triggerDownload(new Blob([xml], {{type: 'image/svg+xml;charset=utf-8'}}), 'synteny.svg');
+}});
+
+document.getElementById('exportPng').addEventListener('click', () => {{
+  const xml = serialiseSvg();
+  const svgEl = document.getElementById('svg');
+  const rect = svgEl.getBoundingClientRect();
+  // 2× resolution for Retina-like sharpness; capped to avoid >16k canvas limit.
+  const scale = Math.min(2, 16000 / Math.max(rect.width, rect.height, 1));
+  const W = Math.round(rect.width  * scale);
+  const H = Math.round(rect.height * scale);
+  const img = new Image();
+  const svgUrl = URL.createObjectURL(new Blob([xml], {{type: 'image/svg+xml;charset=utf-8'}}));
+  img.onload = () => {{
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0f1117';
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(img, 0, 0, W, H);
+    URL.revokeObjectURL(svgUrl);
+    canvas.toBlob(b => {{ if (b) triggerDownload(b, 'synteny.png'); }}, 'image/png');
+  }};
+  img.onerror = () => {{
+    URL.revokeObjectURL(svgUrl);
+    alert('PNG export failed — try SVG export instead.');
+  }};
+  img.src = svgUrl;
+}});
 
 // Initial draw
 if (typeof d3 !== 'undefined') {{ draw(); }}

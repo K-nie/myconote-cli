@@ -196,9 +196,12 @@ fn is_gff(p: &Path) -> bool {
 }
 
 fn is_fasta(p: &Path) -> bool {
+    // Accept the full set of common FASTA extensions. `.fas` is widely used
+    // by SGD / FungiDB / candidagenome.org — the earlier omission caused
+    // E2E runs on real test data to fail at parse time.
     matches!(
         p.extension().and_then(|e| e.to_str()).map(str::to_lowercase),
-        Some(ref s) if s == "fa" || s == "fasta" || s == "fna" || s == "faa"
+        Some(ref s) if s == "fa" || s == "fasta" || s == "fna" || s == "faa" || s == "fas" || s == "ffn" || s == "frn"
     )
 }
 

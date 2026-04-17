@@ -39,17 +39,67 @@ pub fn run(masked_fasta: &Path, output_gff: &Path, config: &SnapConfig) -> Resul
 
     println!("  Running SNAP (HMM: {})…", config.hmm);
 
-    // SNAP writes ZFF format; we capture stdout then convert
-    let _snap_out = output_gff.with_extension("zff");
+    // Resolve the HMM argument to something SNAP can actually open. SNAP
+    // reads `$ZOE/HMM/<name>` (conda sets ZOE in activate scripts but we
+    // shell out bare, so ZOE is usually unset at runtime). Three paths
+    // — first that exists wins:
+    //   1. `config.hmm` is already an absolute path we can pass through
+    //   2. `$ZOE/HMM/<name>` if ZOE is set and the file exists
+    //   3. Auto-detect the conda share dir from the snap binary location
+    //      (`<conda_root>/share/snap/HMM/<name>`) — this is the bioconda
+    //      layout everyone actually has on disk
+    let (hmm_arg, zoe_dir): (String, Option<std::path::PathBuf>) = {
+        let hmm_path = std::path::Path::new(&config.hmm);
+        if hmm_path.is_absolute() && hmm_path.exists() {
+            (config.hmm.clone(), None)
+        } else if let Ok(zoe) = std::env::var("ZOE") {
+            let full = std::path::PathBuf::from(&zoe).join("HMM").join(&config.hmm);
+            if full.exists() {
+                (config.hmm.clone(), Some(std::path::PathBuf::from(zoe)))
+            } else {
+                (config.hmm.clone(), None)
+            }
+        } else {
+            // snap binary at `<env>/bin/snap` → HMM dir at `<env>/share/snap/HMM/`
+            let share_dir = snap
+                .parent()
+                .and_then(|p| p.parent())
+                .map(|p| p.join("share").join("snap"));
+            if let Some(share) = &share_dir {
+                let hmm_file = share.join("HMM").join(&config.hmm);
+                if hmm_file.exists() {
+                    (config.hmm.clone(), Some(share.clone()))
+                } else if share.join("HMM").exists() {
+                    // Share dir exists but no matching HMM — surface immediately
+                    return Err(MycoNoteError::InvalidFormat(format!(
+                        "SNAP HMM '{}' not found. Available HMMs in {}:\n  {}",
+                        config.hmm,
+                        share.join("HMM").display(),
+                        std::fs::read_dir(share.join("HMM"))
+                            .ok()
+                            .map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).collect::<Vec<_>>().join(", "))
+                            .unwrap_or_default()
+                    )));
+                } else {
+                    (config.hmm.clone(), None)
+                }
+            } else {
+                (config.hmm.clone(), None)
+            }
+        }
+    };
 
-    let output = Command::new(&snap)
-        .args([
-            &config.hmm,
-            masked_fasta.to_str().unwrap_or(""),
-            "-gff", // output GFF format directly
-        ])
-        .output()
-        .map_err(MycoNoteError::Io)?;
+    let mut cmd = Command::new(&snap);
+    cmd.args([
+        &hmm_arg,
+        masked_fasta.to_str().unwrap_or(""),
+        "-gff", // output GFF format directly
+    ]);
+    if let Some(zoe) = zoe_dir {
+        cmd.env("ZOE", zoe);
+    }
+
+    let output = cmd.output().map_err(MycoNoteError::Io)?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

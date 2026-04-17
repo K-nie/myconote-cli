@@ -428,6 +428,8 @@ fn main() -> Result<()> {
                 println!("  --sensitive            Use diamond_ultra_sens search (default: on)");
                 println!("  --fast                 Use default diamond search (faster, less accurate)");
                 println!("  --msa                  MSA-based tree refinement (2–3× slower)");
+                println!("  --species-tree         Also build a concatenated supermatrix alignment");
+                println!("                         for downstream `phylogeny` (MAFFT + NEXUS partitions)");
                 println!("  --genetic-code <n>     NCBI translation table (default: 1)");
                 println!("  --soft-core <frac>     Soft-core threshold fraction (default: 0.95)");
                 println!("  --cloud <frac>         Cloud upper bound fraction (default: 0.15)");
@@ -1042,6 +1044,10 @@ fn handle_compare(args: &[String]) -> Result<()> {
             }
             "--msa" => {
                 config.msa = true;
+                i += 1;
+            }
+            "--species-tree" => {
+                config.species_tree = true;
                 i += 1;
             }
             "--no-primary-only" => {

@@ -189,6 +189,20 @@ pub struct GeneAnnotation {
     pub ipr_accessions: Vec<String>,
     /// Additional databases from InterProScan (TIGRFAM, Gene3D, etc.)
     pub ipr_databases: Vec<String>,
+    /// EggNog COG single-letter category (e.g. "J" for translation)
+    pub cog_category: Option<String>,
+    /// EggNog orthologous group (e.g. "COG0012@1|root")
+    pub eggnog_og: Option<String>,
+    /// CAZyme family assignments (e.g. ["GH5", "CBM1"]); multiple per gene possible
+    pub cazyme_families: Vec<String>,
+    /// Signal-peptide prediction: "SP(Sec/SPI)", "NO_SP", etc. (SignalP label)
+    pub signal_peptide: Option<String>,
+    /// Count of predicted transmembrane helices (from TMHMM / DeepTMHMM)
+    pub tm_helices: Option<u32>,
+    /// antiSMASH biosynthetic gene cluster ID containing this gene, if any
+    pub bgc_cluster: Option<String>,
+    /// Type of the BGC cluster (e.g. "T1PKS", "NRPS", "terpene")
+    pub bgc_type: Option<String>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -244,7 +258,11 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
         + if config.run_mmseqs       { 1 } else { 0 }
         + if config.run_interproscan { 1 } else { 0 }
         + if config.run_pfam         { 1 } else { 0 }
-        + if config.run_busco        { 1 } else { 0 };
+        + if config.run_busco        { 1 } else { 0 }
+        + if config.run_eggnog       { 1 } else { 0 }
+        + if config.run_cazyme       { 1 } else { 0 }
+        + if config.run_secretome    { 1 } else { 0 }
+        + if config.run_antismash    { 1 } else { 0 };
     let mut step = 0usize;
 
     // ── Extract CDS protein sequences ─────────────────────────────────────────
@@ -453,6 +471,290 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
             }
             Ok(_) => progress::warn_spinner(&pb2, "MEROPS: no database found or no hits"),
             Err(e) => progress::warn_spinner(&pb2, format!("MEROPS failed (non-fatal): {}", e)),
+        }
+    }
+
+    // ── EggNog-mapper (COG/NOG orthology + KEGG + GO) ─────────────────────────
+    if config.run_eggnog {
+        step += 1;
+        progress::step(step, total_steps, "EggNog-mapper (COG/NOG + KEGG)…");
+        // Users can either point at an existing emapper.annotations file or
+        // let us run emapper.py end-to-end. The pre-computed path is useful
+        // on HPC where emapper takes hours and is typically run once per
+        // genome via a separate submit script.
+        let eggnog_dir = config.out_dir.join("eggnog");
+        let pb2 = progress::spinner("Reading / running EggNog-mapper…");
+        let annotations_path: Option<PathBuf> = if let Some(pre) = &config.eggnog_results {
+            if pre.exists() {
+                Some(pre.clone())
+            } else {
+                progress::warn_spinner(
+                    &pb2,
+                    format!("Pre-computed emapper file not found: {}", pre.display()),
+                );
+                None
+            }
+        } else if eggnog::emapper_available() {
+            match eggnog::run_emapper(
+                &proteins_fa,
+                &eggnog_dir,
+                config.eggnog_db.as_deref(),
+                config.threads,
+            ) {
+                Ok(p) => Some(p),
+                Err(e) => {
+                    progress::warn_spinner(&pb2, format!("emapper failed: {}", e));
+                    None
+                }
+            }
+        } else {
+            progress::warn_spinner(
+                &pb2,
+                "emapper.py not in PATH (install: conda install -c bioconda eggnog-mapper)",
+            );
+            None
+        };
+
+        if let Some(path) = annotations_path {
+            match eggnog::parse_emapper_results(&path) {
+                Ok(hits) => {
+                    let summary_tsv = config.out_dir.join("eggnog_hits.tsv");
+                    let _ = eggnog::write_eggnog_table(&hits, &summary_tsv);
+                    for (gene_id, hit) in &hits {
+                        if let Some(g) = results.genes.get_mut(gene_id) {
+                            if !hit.cog_cat.is_empty() && hit.cog_cat != "-" {
+                                g.cog_category = Some(hit.cog_cat.clone());
+                            }
+                            if !hit.best_og.is_empty() && hit.best_og != "-" {
+                                g.eggnog_og = Some(hit.best_og.clone());
+                            }
+                            // Prefer an explicit EggNog product description when
+                            // the gene has no Swiss-Prot hit (keeps well-curated
+                            // mmseqs labels untouched).
+                            if g.product.is_none() && !hit.description.is_empty() && hit.description != "-" {
+                                g.product = Some(hit.description.clone());
+                            }
+                            for go in &hit.go_terms {
+                                if !go.is_empty() && !g.go_terms.contains(go) {
+                                    g.go_terms.push(go.clone());
+                                }
+                            }
+                        }
+                    }
+                    progress::finish_spinner(
+                        &pb2,
+                        format!("EggNog: {} proteins with COG assignments", hits.len()),
+                    );
+                }
+                Err(e) => progress::warn_spinner(&pb2, format!("parse failed: {}", e)),
+            }
+        }
+    }
+
+    // ── CAZyme annotation (dbCAN preferred, DIAMOND fallback) ─────────────────
+    if config.run_cazyme {
+        step += 1;
+        progress::step(step, total_steps, "CAZyme families (dbCAN / DIAMOND)…");
+        let cazyme_dir = config.out_dir.join("cazyme");
+        let pb2 = progress::spinner("Running CAZyme annotation…");
+        let overview: Option<PathBuf> = if cazyme::dbcan_available() {
+            match cazyme::run_dbcan(
+                &proteins_fa,
+                &cazyme_dir,
+                Some(&config.db_dir),
+                config.threads,
+            ) {
+                Ok(p) => Some(p),
+                Err(e) => {
+                    progress::warn_spinner(&pb2, format!("run_dbcan failed: {}", e));
+                    None
+                }
+            }
+        } else if let Some(db) = &config.cazyme_db {
+            if db.exists() {
+                match cazyme::run_diamond_cazyme(
+                    &proteins_fa,
+                    db,
+                    &cazyme_dir,
+                    config.threads,
+                    config.evalue,
+                ) {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        progress::warn_spinner(&pb2, format!("diamond CAZyme failed: {}", e));
+                        None
+                    }
+                }
+            } else {
+                progress::warn_spinner(&pb2, format!("dbCAN db not found: {}", db.display()));
+                None
+            }
+        } else {
+            progress::warn_spinner(
+                &pb2,
+                "No dbCAN backend: install run_dbcan.py or pass --cazyme-db <dbCAN.dmnd>",
+            );
+            None
+        };
+
+        if let Some(path) = overview {
+            // parse_dbcan_overview works for dbCAN overview.txt; for the DIAMOND
+            // fallback we parse_diamond_cazyme into the same structure.
+            let hits_result = if path.file_name().and_then(|s| s.to_str()) == Some("overview.txt") {
+                cazyme::parse_dbcan_overview(&path)
+            } else {
+                cazyme::parse_diamond_cazyme(&path, 0.3)
+            };
+            match hits_result {
+                Ok(hits) => {
+                    let out_tsv = config.out_dir.join("cazyme_hits.tsv");
+                    let _ = cazyme::write_cazyme_table(&hits, &out_tsv);
+                    for (gene_id, families) in &hits {
+                        if let Some(g) = results.genes.get_mut(gene_id) {
+                            for fam in families {
+                                let name = &fam.family;
+                                if !g.cazyme_families.contains(name) {
+                                    g.cazyme_families.push(name.clone());
+                                }
+                            }
+                        }
+                    }
+                    let total: usize = hits.values().map(|v| v.len()).sum();
+                    progress::finish_spinner(
+                        &pb2,
+                        format!("{} CAZyme annotations across {} genes", total, hits.len()),
+                    );
+                }
+                Err(e) => progress::warn_spinner(&pb2, format!("CAZyme parse failed: {}", e)),
+            }
+        }
+    }
+
+    // ── Secretome (signal peptide + transmembrane) ────────────────────────────
+    if config.run_secretome {
+        step += 1;
+        progress::step(step, total_steps, "Secretome (SignalP / DeepSig + TMHMM)…");
+        let sec_dir = config.out_dir.join("secretome");
+        let pb2 = progress::spinner("Running signal-peptide prediction…");
+        match secretome::run_signalp(&proteins_fa, &sec_dir, &config.signalp_organism) {
+            Ok(sp_path) => {
+                match secretome::parse_signalp_output(&sp_path) {
+                    Ok(sp_hits) => {
+                        for (gene_id, sp) in &sp_hits {
+                            if let Some(g) = results.genes.get_mut(gene_id) {
+                                g.signal_peptide = Some(sp.prediction.clone());
+                            }
+                        }
+                        // Fire TMHMM next; failures here are non-fatal so the
+                        // signal-peptide data we just merged stays intact.
+                        let tmhmm_res = secretome::run_tmhmm(&proteins_fa, &sec_dir)
+                            .and_then(|tm_path| secretome::parse_tmhmm_output(&tm_path));
+                        let tm_map = tmhmm_res.ok();
+                        if let Some(tm_hits) = &tm_map {
+                            for (gene_id, tm) in tm_hits {
+                                if let Some(g) = results.genes.get_mut(gene_id) {
+                                    g.tm_helices = Some(tm.tm_count as u32);
+                                }
+                            }
+                        }
+                        // A gene is "secreted" = has a signal peptide AND no
+                        // downstream TM helix (so it actually exits the cell).
+                        let secretome_set: std::collections::HashSet<String> = sp_hits
+                            .iter()
+                            .filter(|(id, sp)| {
+                                if !sp.has_signal { return false; }
+                                let tm_count = tm_map.as_ref()
+                                    .and_then(|m| m.get(*id))
+                                    .map(|t| t.tm_count)
+                                    .unwrap_or(0);
+                                tm_count == 0
+                            })
+                            .map(|(id, _)| id.clone())
+                            .collect();
+                        let sec_tsv = config.out_dir.join("secretome_hits.tsv");
+                        let _ = secretome::write_secretome_table(
+                            &secretome_set,
+                            &sp_hits,
+                            tm_map.as_ref(),
+                            &sec_tsv,
+                        );
+                        let secreted = sp_hits.values().filter(|s| s.prediction.starts_with("SP")).count();
+                        progress::finish_spinner(
+                            &pb2,
+                            format!(
+                                "Signal peptides on {} / {} proteins",
+                                secreted,
+                                sp_hits.len()
+                            ),
+                        );
+                    }
+                    Err(e) => progress::warn_spinner(&pb2, format!("SignalP parse failed: {}", e)),
+                }
+            }
+            Err(e) => progress::warn_spinner(&pb2, format!("signal-peptide tool unavailable: {}", e)),
+        }
+    }
+
+    // ── antiSMASH biosynthetic gene clusters ──────────────────────────────────
+    if config.run_antismash {
+        step += 1;
+        progress::step(step, total_steps, "antiSMASH (biosynthetic gene clusters)…");
+        let pb2 = progress::spinner("Loading / running antiSMASH…");
+        // Users typically run antiSMASH separately (it's slow and stateful);
+        // --antismash-dir lets them point at a pre-computed output directory.
+        let as_dir: Option<PathBuf> = config.antismash_dir.clone();
+
+        let as_dir = match as_dir {
+            Some(d) if d.exists() => Some(d),
+            Some(d) => {
+                progress::warn_spinner(
+                    &pb2,
+                    format!("antiSMASH dir not found: {}", d.display()),
+                );
+                None
+            }
+            None if antismash::antismash_available() => {
+                // Auto-run: needs a GenBank input, which we don't build here
+                // (submit writes .gbk). For now, emit a helpful message —
+                // integrating the end-to-end auto-run requires feeding
+                // submit's .gbk output back to annotate, which is a pipeline
+                // re-order rather than a single-block fix.
+                progress::warn_spinner(
+                    &pb2,
+                    "antiSMASH auto-run requires a .gbk input — run `myconote submit` first \
+                     then re-run with --antismash-dir pointing at the antiSMASH output",
+                );
+                None
+            }
+            None => {
+                progress::warn_spinner(
+                    &pb2,
+                    "antiSMASH not installed. Install: conda install -c bioconda antismash",
+                );
+                None
+            }
+        };
+
+        if let Some(dir) = as_dir {
+            match antismash::parse_antismash_gff(&dir) {
+                Ok(clusters) => {
+                    let out_tsv = config.out_dir.join("antismash_clusters.tsv");
+                    let _ = antismash::write_bgc_table(&clusters, &out_tsv);
+                    for cluster in &clusters {
+                        for gene_id in &cluster.gene_ids {
+                            if let Some(g) = results.genes.get_mut(gene_id) {
+                                g.bgc_cluster = Some(cluster.cluster_id.clone());
+                                g.bgc_type = Some(cluster.bgc_type.clone());
+                            }
+                        }
+                    }
+                    progress::finish_spinner(
+                        &pb2,
+                        format!("{} biosynthetic gene cluster(s) parsed", clusters.len()),
+                    );
+                }
+                Err(e) => progress::warn_spinner(&pb2, format!("antiSMASH parse failed: {}", e)),
+            }
         }
     }
 
@@ -833,7 +1135,7 @@ fn write_annotated_gff(
 fn write_annotation_tsv(path: &Path, results: &AnnotationResults) -> Result<()> {
     let mut f = std::fs::File::create(path).map_err(MycoNoteError::Io)?;
     writeln!(f,
-        "locus_tag\tproduct\tuniprot_acc\tidentity\tevalue\tgo_terms\tpfam_domains\tipr_accessions\tipr_databases"
+        "locus_tag\tproduct\tuniprot_acc\tidentity\tevalue\tgo_terms\tpfam_domains\tipr_accessions\tipr_databases\tcog_category\teggnog_og\tcazyme_families\tsignal_peptide\ttm_helices\tbgc_cluster\tbgc_type"
     ).map_err(MycoNoteError::Io)?;
 
     let mut genes: Vec<_> = results.genes.values().collect();
@@ -842,7 +1144,7 @@ fn write_annotation_tsv(path: &Path, results: &AnnotationResults) -> Result<()> 
     for g in genes {
         writeln!(
             f,
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             g.locus_tag,
             g.product.as_deref().unwrap_or("hypothetical protein"),
             g.uniprot_acc.as_deref().unwrap_or(""),
@@ -852,6 +1154,13 @@ fn write_annotation_tsv(path: &Path, results: &AnnotationResults) -> Result<()> 
             g.pfam_domains.join("|"),
             g.ipr_accessions.join("|"),
             g.ipr_databases.join("|"),
+            g.cog_category.as_deref().unwrap_or(""),
+            g.eggnog_og.as_deref().unwrap_or(""),
+            g.cazyme_families.join("|"),
+            g.signal_peptide.as_deref().unwrap_or(""),
+            g.tm_helices.map(|n| n.to_string()).unwrap_or_default(),
+            g.bgc_cluster.as_deref().unwrap_or(""),
+            g.bgc_type.as_deref().unwrap_or(""),
         )
         .map_err(MycoNoteError::Io)?;
     }

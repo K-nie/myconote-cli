@@ -55,6 +55,7 @@ nav:
     - stats: analysis/stats.md
     - blast: analysis/blast.md
     - synteny: analysis/synteny.md
+    - compare: analysis/compare.md
   - Pipeline Commands:
     - submit: pipeline/submit.md
   - Databases: databases.md

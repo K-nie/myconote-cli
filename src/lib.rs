@@ -4,6 +4,7 @@ pub mod batch;
 pub mod chat;
 pub mod check;
 pub mod cli;
+pub mod compare;
 pub mod convert;
 pub mod fix;
 pub mod install;

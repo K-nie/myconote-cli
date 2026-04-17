@@ -1141,6 +1141,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#when-to-use-which-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use which view
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ribbon-tooltip" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1693,6 +1704,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#when-to-use-which-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use which view
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ribbon-tooltip" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1936,8 +1958,12 @@
 </thead>
 <tbody>
 <tr>
+<td><strong>View</strong> selector</td>
+<td><code>Ribbon</code> (default — chromosome bars connected by Bézier ribbons) or <code>Dot plot</code> (classic 2-D grid where each block is a line segment; positive slope = forward strand, negative slope = reverse/inversion)</td>
+</tr>
+<tr>
 <td><strong>Min identity</strong> slider</td>
-<td>Hide ribbons below this identity threshold (default 70 %)</td>
+<td>Hide blocks below this identity threshold (default 70 %)</td>
 </tr>
 <tr>
 <td><strong>Colour by</strong> selector</td>
@@ -1945,11 +1971,11 @@
 </tr>
 <tr>
 <td><strong>Show gene names</strong> checkbox</td>
-<td>On-ribbon labels for large blocks (≥ 40 px wide)</td>
+<td>On-ribbon labels for large blocks (≥ 40 px wide). Ribbon mode only.</td>
 </tr>
 <tr>
 <td><strong>Gene overlay</strong> checkbox</td>
-<td>Tick marks on the chromosome bars for every annotated gene — named genes highlighted in the accent colour</td>
+<td>Tick marks on the chromosome bars for every annotated gene — named genes highlighted in the accent colour. Ribbon mode only.</td>
 </tr>
 <tr>
 <td><strong>⬇ SVG</strong> button</td>
@@ -1961,6 +1987,11 @@
 </tr>
 </tbody>
 </table>
+<h3 id="when-to-use-which-view">When to use which view<a class="headerlink" href="#when-to-use-which-view" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Ribbon mode</strong> is best for seeing <em>which chromosomes correspond</em> between two closely related genomes — chromosome pairs light up because most ribbons bundle between one pair of contigs. Good for quick "is chromosome X conserved" questions and for labelling individual syntenic blocks with gene names.</li>
+<li><strong>Dot plot mode</strong> is better for <em>large-scale rearrangements</em> — inversions show as anti-diagonal segments, translocations as off-diagonal stripes, and highly collinear regions collapse into a single diagonal per chromosome pair. Essentially MUMmer's <code>mummerplot</code> output, without the Gnuplot dependency.</li>
+</ul>
 <h3 id="ribbon-tooltip">Ribbon tooltip<a class="headerlink" href="#ribbon-tooltip" title="Permanent link">&para;</a></h3>
 <p>Hover a ribbon to see:</p>
 <ul>

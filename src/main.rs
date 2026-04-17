@@ -473,6 +473,8 @@ fn main() -> Result<()> {
                 println!("  --label2 <name>       Label for genome B (default: Genome B)");
                 println!("  --min-block <bp>      Minimum block length to show (default: 1000)");
                 println!("  --chain-gap <bp>      Merge adjacent colinear hits within this gap (default: 100000, 0=off)");
+                println!("  --threads | -t <n>    Threads for minimap2 (default: 4)");
+                println!("  --keep-paf            Keep the intermediate PAF file for debugging");
                 println!("  --names <file.tsv>    ID→name mapping (labels shown on ribbons)");
                 println!("  --fetch-names         Auto-fetch gene names from NCBI/UniProt/FungiDB");
                 println!("  --taxon <id>          NCBI taxon ID for name lookup");
@@ -1677,6 +1679,16 @@ fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
                     config.chain_gap = n;
                 }
                 i += 2;
+            }
+            "--threads" | "-t" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u32>() {
+                    config.threads = n;
+                }
+                i += 2;
+            }
+            "--keep-paf" => {
+                config.keep_paf = true;
+                i += 1;
             }
             "--names" if i + 1 < args.len() => {
                 names_file = Some(args[i + 1].clone());

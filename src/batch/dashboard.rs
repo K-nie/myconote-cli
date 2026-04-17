@@ -280,14 +280,12 @@ impl Dashboard {
 /// Render the inline stage progress for interactive mode.
 fn render_stage_progress(genome: &str, current: &str, _completed: &[&str]) -> String {
     let mut parts = Vec::new();
-    let mut seen_current = false;
 
     for &stage in STAGES {
         if stage == current {
             parts.push(format!("{}{}\u{25b6} {}{}", C_BOLD, C_CYAN, stage, C_RESET));
-            seen_current = true;
         } else {
-            // Both completed (before current) and pending (after current) are dimmed
+            // Both completed (before current) and pending (after current) are dimmed.
             parts.push(format!("{}{}{}", C_DIM, stage, C_RESET));
         }
     }

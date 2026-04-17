@@ -308,16 +308,14 @@ fn chrom_sizes_from_gff(gff_path: &Path) -> Result<ChromSizes> {
     Ok(sizes)
 }
 
-/// Extract gene intervals from a GFF3, keeping only genes whose ID is present
-/// in `name_keys` (so the emitted JSON stays small and every serialised gene
-/// has a display name). Intervals are sorted by start per contig for the JS
-/// binary-search-style overlap lookup.
-fn named_genes_from_gff(gff_path: &Path, name_keys: &HashMap<String, String>) -> Result<GenesByContig> {
+/// Extract all gene intervals from a GFF3, sorted by start within each
+/// contig. Used both for the on-track gene overlay (rendered as tick marks)
+/// and for the PAF-block → overlapping-gene label lookup; label text is then
+/// resolved through the `geneNames` map on the JS side, falling back to the
+/// gene ID when no name is available.
+fn genes_from_gff(gff_path: &Path) -> Result<GenesByContig> {
     use crate::parser::gff::GFFReader;
     let mut genes: GenesByContig = HashMap::new();
-    if name_keys.is_empty() {
-        return Ok(genes);
-    }
     for result in GFFReader::from_path(gff_path)? {
         let rec = match result {
             Ok(r) => r,
@@ -327,9 +325,6 @@ fn named_genes_from_gff(gff_path: &Path, name_keys: &HashMap<String, String>) ->
             continue;
         }
         let Some(id) = rec.id().cloned() else { continue };
-        if !name_keys.contains_key(&id) {
-            continue;
-        }
         genes.entry(rec.seqid).or_default().push(GeneInterval {
             start: rec.start,
             end: rec.end,
@@ -462,6 +457,7 @@ fn render_synteny_html(
   <label>Min identity: <input type="range" id="minId" min="0" max="100" value="70" step="1"/><span id="minIdVal">70%</span></label>
   <label>Colour by: <select id="colourMode"><option value="strand">Strand</option><option value="identity">Identity</option><option value="chrom">Chromosome</option></select></label>
   <label>Show gene names: <input type="checkbox" id="showNames" checked/></label>
+  <label>Gene overlay: <input type="checkbox" id="showGenes"/></label>
   <div id="stats"></div>
 </div>
 <div id="canvas-wrap">
@@ -523,6 +519,7 @@ function draw() {{
   const minId = +document.getElementById('minId').value / 100;
   const colMode = document.getElementById('colourMode').value;
   const showNames = document.getElementById('showNames').checked;
+  const showGenes = document.getElementById('showGenes').checked;
   const filtered = synBlocks.filter(b => b.id >= minId);
   document.getElementById('stats').textContent =
     `Showing ${{filtered.length}} / ${{synBlocks.length}} blocks (≥ ${{Math.round(minId*100)}}% identity)`;
@@ -593,6 +590,45 @@ function draw() {{
   drawChroms(chromsA, scaleA, offA, yA, '{label1}');
   drawChroms(chromsB, scaleB, offB, yB, '{label2}');
 
+  // ── Draw gene overlay ───────────────────────────────────────────────────
+  // Tick marks on the chromosome bars for each annotated gene. Named genes
+  // pop in the accent colour; unnamed ones get a dim fill. Ticks < 0.5 px
+  // wide are skipped entirely (indistinguishable from a chromosome bar
+  // edge at that zoom). A single SVG <g> wraps the overlay so it toggles
+  // cleanly without re-walking the DOM.
+  if (showGenes) {{
+    function drawGenes(genesMap, offsets, scale, yTop, genomeLetter) {{
+      const layer = g.append('g').attr('class', 'gene-overlay');
+      for (const [contig, ivs] of Object.entries(genesMap)) {{
+        const base = offsets[contig];
+        if (base === undefined) continue;
+        for (const [gs, ge, gid] of ivs) {{
+          const w = Math.max(0.5, (ge - gs) * scale);
+          if (w < 0.5) continue;
+          const x = base + gs * scale;
+          const named = geneNames[gid] !== undefined;
+          layer.append('rect')
+            .attr('x', x).attr('y', yTop + 2)
+            .attr('width', w).attr('height', TRACK_H - 4)
+            .attr('fill', named ? 'var(--accent)' : '#a0aec0')
+            .attr('fill-opacity', named ? 0.85 : 0.35)
+            .style('cursor', 'pointer')
+            .on('mousemove', (event) => {{
+              const name = geneNames[gid] || gid;
+              tip.style.opacity = 1;
+              tip.style.left = (event.clientX + 12) + 'px';
+              tip.style.top  = (event.clientY - 10) + 'px';
+              tip.innerHTML  = `<b>${{name}}</b><br/>${{genomeLetter}} · ${{contig}}:${{gs.toLocaleString()}}–${{ge.toLocaleString()}}<br/>
+                Length: ${{(ge - gs).toLocaleString()}} bp`;
+            }})
+            .on('mouseleave', () => {{ tip.style.opacity = 0; }});
+        }}
+      }}
+    }}
+    drawGenes(genes_A, offA, scaleA, yA, '{label1}');
+    drawGenes(genes_B, offB, scaleB, yB, '{label2}');
+  }}
+
   // ── Draw ribbons ────────────────────────────────────────────────────────
   const tip = document.getElementById('tip');
 
@@ -660,6 +696,7 @@ document.getElementById('minId').addEventListener('input', function() {{
 }});
 document.getElementById('colourMode').addEventListener('change', draw);
 document.getElementById('showNames').addEventListener('change', draw);
+document.getElementById('showGenes').addEventListener('change', draw);
 window.addEventListener('resize', draw);
 
 // Initial draw
@@ -720,18 +757,14 @@ pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
         Vec::new()
     };
 
-    // 3. Extract named gene intervals so block labels can resolve gene IDs
-    //    via genomic overlap (PAF blocks key on contig, not on gene ID).
-    let genes1 = named_genes_from_gff(&config.gff1, &config.names)?;
-    let genes2 = named_genes_from_gff(&config.gff2, &config.names)?;
-    let labelable: usize = genes1.values().map(|v| v.len()).sum::<usize>()
+    // 3. Extract all gene intervals. Used both for the on-track gene overlay
+    //    and to resolve PAF-block labels via genomic overlap (blocks key on
+    //    contig, not gene ID — without this, `--names` does nothing).
+    let genes1 = genes_from_gff(&config.gff1)?;
+    let genes2 = genes_from_gff(&config.gff2)?;
+    let total_genes: usize = genes1.values().map(|v| v.len()).sum::<usize>()
         + genes2.values().map(|v| v.len()).sum::<usize>();
-    if !config.names.is_empty() {
-        println!(
-            "   {} named genes available for ribbon labels",
-            labelable
-        );
-    }
+    println!("   {} genes extracted for overlay + block labels", total_genes);
 
     // 4. Render HTML
     println!("🎨 Rendering synteny diagram…");

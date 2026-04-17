@@ -8,6 +8,7 @@ pub mod batch;
 pub mod chat;
 pub mod check;
 pub mod cli;
+pub mod compare;
 pub mod convert;
 pub mod fix;
 pub mod install;
@@ -100,6 +101,7 @@ fn print_main_help() {
     println!("  stats    Calculate statistics from annotation files");
     println!("  plot     Generate genome maps (linear PNG / circular PNG)");
     println!("  phylogeny Build a maximum-likelihood tree with IQ-TREE (from an alignment)");
+    println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
     println!("  view     Visualise annotations in JBrowse2 / UCSC browser");
     println!("  synteny  Compare two genomes — ribbon diagram (requires minimap2)");
     println!("  convert  Convert between genome annotation and sequence formats");
@@ -411,20 +413,32 @@ fn main() -> Result<()> {
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
-            // The previous `compare` implementation fabricated hits via internal
-            // simulate_*_hits() functions and wrote a fake star-topology Newick
-            // — never invoked BLAST, MMseqs2, MUMmer, or any tree inference.
-            // Removed in favour of the two real commands below; users can chain
-            // them for equivalent (and honest) multi-genome output.
-            eprintln!("`compare` has been removed: the old implementation produced fabricated");
-            eprintln!("results (no BLAST/MMseqs/MUMmer was ever executed).");
-            eprintln!();
-            eprintln!("Use the real commands instead:");
-            eprintln!("  myconote-cli synteny  <a.gff3> <b.gff3> --fasta1 <a.fa> --fasta2 <b.fa>");
-            eprintln!("      → 2-genome ribbon / dot-plot via minimap2 + D3 viewer");
-            eprintln!("  myconote-cli phylogeny <alignment.fa> --output tree.nwk");
-            eprintln!("      → maximum-likelihood tree via IQ-TREE");
-            return Ok(());
+            if args.len() < 4 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli compare <g1.gff3> <g1.fa> <g2.gff3> <g2.fa> [...] [options]");
+                println!("\nN-genome ortholog inference via OrthoFinder (Emms & Kelly 2019).");
+                println!("Produces an ortholog table, pan-genome summary (core / soft-core / shell / cloud),");
+                println!("rooted species tree, and a set of single-copy orthogroups ready for `phylogeny`.");
+                println!("\nOptions:");
+                println!("  --output <dir>         Output directory (default: compare_out)");
+                println!("  --threads <n>          Threads for OrthoFinder (default: all cores)");
+                println!("  --sensitive            Use diamond_ultra_sens search (default: on)");
+                println!("  --fast                 Use default diamond search (faster, less accurate)");
+                println!("  --msa                  MSA-based tree refinement (2–3× slower)");
+                println!("  --genetic-code <n>     NCBI translation table (default: 1)");
+                println!("  --soft-core <frac>     Soft-core threshold fraction (default: 0.95)");
+                println!("  --cloud <frac>         Cloud upper bound fraction (default: 0.15)");
+                println!("\nGenome-count caps (auto-detected from protein count):");
+                println!("  Small  (≤15 000 proteins/genome, e.g. fungi): cap = 5");
+                println!("  Medium (15–30 k, e.g. small plants):          cap = 3");
+                println!("  Large  (>30 k, e.g. crops):                    cap = 2");
+                println!("\nRequires `orthofinder` on PATH:");
+                println!("  conda install -c bioconda orthofinder");
+                println!("\nExamples:");
+                println!("  myconote-cli compare s1.gff3 s1.fa s2.gff3 s2.fa s3.gff3 s3.fa");
+                println!("  myconote-cli compare a.gff3 a.fa b.gff3 b.fa --threads 8 --msa");
+                return Ok(());
+            }
+            handle_compare(&args[2..])?;
         }
         "view" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -818,7 +832,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | plot | phylogeny | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -980,6 +994,91 @@ fn handle_plot(path: &str, args: &[String]) -> Result<()> {
         _ => println!("Unknown plot type: {}", plot_type),
     }
 
+    Ok(())
+}
+
+fn handle_compare(args: &[String]) -> Result<()> {
+    use compare::{parse_positional_inputs, run_compare, CompareConfig};
+
+    let mut config = CompareConfig::default();
+
+    // Split positional args (before the first `--flag`) from option args.
+    let mut positional: Vec<String> = Vec::new();
+    let mut i = 0usize;
+    while i < args.len() {
+        if args[i].starts_with("--") {
+            break;
+        }
+        positional.push(args[i].clone());
+        i += 1;
+    }
+
+    // Parse option args starting from where positional parsing stopped.
+    while i < args.len() {
+        match args[i].as_str() {
+            "--output" | "-o" if i + 1 < args.len() => {
+                config.output_dir = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            "--threads" | "-t" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.threads = n.max(1);
+                }
+                i += 2;
+            }
+            "--sensitive" => {
+                config.sensitive = true;
+                i += 1;
+            }
+            "--fast" => {
+                config.sensitive = false;
+                i += 1;
+            }
+            "--msa" => {
+                config.msa = true;
+                i += 1;
+            }
+            "--no-primary-only" => {
+                config.primary_only = false;
+                i += 1;
+            }
+            "--primary-only" => {
+                config.primary_only = true;
+                i += 1;
+            }
+            "--genetic-code" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u8>() {
+                    config.genetic_code = n;
+                }
+                i += 2;
+            }
+            "--soft-core" if i + 1 < args.len() => {
+                if let Ok(f) = args[i + 1].parse::<f64>() {
+                    config.soft_core_frac = f;
+                }
+                i += 2;
+            }
+            "--cloud" if i + 1 < args.len() => {
+                if let Ok(f) = args[i + 1].parse::<f64>() {
+                    config.cloud_frac = f;
+                }
+                i += 2;
+            }
+            "--force-cap" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.force_cap = Some(n);
+                }
+                i += 2;
+            }
+            _ => {
+                eprintln!("Unknown compare option: {}", args[i]);
+                i += 1;
+            }
+        }
+    }
+
+    config.inputs = parse_positional_inputs(&positional)?;
+    run_compare(&config)?;
     Ok(())
 }
 

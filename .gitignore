@@ -63,3 +63,7 @@ build_and_check.sh
 
 # Explain reproducibility bundles (generated at runtime)
 explain_*/
+
+# Python bytecode caches
+__pycache__/
+*.pyc

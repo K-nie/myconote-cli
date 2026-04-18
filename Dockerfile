@@ -17,7 +17,7 @@ FROM condaforge/mambaforge:latest
 
 LABEL maintainer="Benjamin Narh-Madey <narhmadey@wisc.edu>"
 LABEL org.opencontainers.image.description="myconote-cli: High-performance eukaryotic genome annotation pipeline"
-LABEL org.opencontainers.image.version="0.1.0"
+LABEL org.opencontainers.image.version="0.2.0"
 LABEL org.opencontainers.image.source="https://github.com/K-nie/myconote-cli"
 LABEL org.opencontainers.image.licenses="MIT"
 

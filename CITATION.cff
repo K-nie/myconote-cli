@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use myconote-cli in your research, please cite it as below."
 type: software
 title: "myconote-cli: High-performance eukaryotic genome annotation pipeline"
-version: 0.1.0
-date-released: 2026-04-09
+version: 0.2.0
+date-released: 2026-04-18
 authors:
   - family-names: "Narh-Madey"
     given-names: "Benjamin"

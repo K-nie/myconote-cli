@@ -12,7 +12,7 @@ If you use Myconote_CLI in your research, please cite:
   title   = {Myconote\_CLI: A modular genome annotation pipeline},
   year    = {2026},
   url     = {https://github.com/K-nie/myconote-cli},
-  version = {0.1.0}
+  version = {0.2.0}
 }
 ```
 

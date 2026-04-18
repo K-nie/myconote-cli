@@ -424,7 +424,7 @@ myconote-cli convert annotation/final.gff3 --to protein -o proteins.faa
 
 ---
 
-## Additional Capabilities (v0.1.0)
+## Additional Capabilities (v0.2.0)
 
 Since the initial workshop lesson was written, myconote-cli has gained several major features:
 

@@ -8,7 +8,7 @@ This package implements the comprehensive comparative benchmark requested by Rev
 
 ## Overview
 
-**Tools compared**: 4 (MycoNote-CLI v0.1.0, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
+**Tools compared**: 4 (MycoNote-CLI v0.2.0, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
 
 **Genomes**: 8 reference genomes spanning fungi, plants, insects, animals, and protists (Table 1)
 

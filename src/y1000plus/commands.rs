@@ -231,9 +231,7 @@ pub fn run_dry_run(args: &Y1000Args) -> Result<()> {
     println!("  to download : {}", format_bytes(to_download));
     println!("  already here: {}", format_bytes(already));
     println!();
-    println!(
-        "Run without --dry-run to proceed. Add --yes to skip the confirmation prompt."
-    );
+    println!("Run without --dry-run to proceed. Add --yes to skip the confirmation prompt.");
     Ok(())
 }
 
@@ -242,7 +240,9 @@ pub fn run_dry_run(args: &Y1000Args) -> Result<()> {
 /// existing DB-setup path); `Ok(false)` if the Y1000+ layer didn't apply
 /// and the caller should continue with regular database setup.
 pub fn dispatch(args: &Y1000Args) -> Result<bool> {
-    use crate::y1000plus::install::{install_many, pending_download_bytes, uninstall_many, InstallOptions};
+    use crate::y1000plus::install::{
+        install_many, pending_download_bytes, uninstall_many, InstallOptions,
+    };
 
     if args.list {
         run_list()?;

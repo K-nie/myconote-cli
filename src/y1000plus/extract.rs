@@ -21,7 +21,9 @@ pub fn extract_one(cache_root: &Path, archive_path: &Path, spec: &FileSpec) -> R
 
     match spec.extract {
         ExtractKind::Passthrough => passthrough(archive_path, &dest_dir, spec),
-        ExtractKind::TarGz | ExtractKind::TarGzThenDiamondIndex => extract_tar_gz(archive_path, &dest_dir),
+        ExtractKind::TarGz | ExtractKind::TarGzThenDiamondIndex => {
+            extract_tar_gz(archive_path, &dest_dir)
+        }
         ExtractKind::Zip => extract_zip(archive_path, &dest_dir),
         ExtractKind::Xlsx => {
             // For xlsx we just copy the file into place — conversion to TSV
@@ -57,13 +59,12 @@ fn extract_tar_gz(archive: &Path, dest_dir: &Path) -> Result<()> {
 
 fn extract_zip(archive: &Path, dest_dir: &Path) -> Result<()> {
     let f = File::open(archive).map_err(MycoNoteError::Io)?;
-    let mut zip = zip::ZipArchive::new(BufReader::new(f)).map_err(|e| {
-        MycoNoteError::ExternalTool(format!("zip open: {e}"))
-    })?;
+    let mut zip = zip::ZipArchive::new(BufReader::new(f))
+        .map_err(|e| MycoNoteError::ExternalTool(format!("zip open: {e}")))?;
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i).map_err(|e| {
-            MycoNoteError::ExternalTool(format!("zip entry {i}: {e}"))
-        })?;
+        let mut entry = zip
+            .by_index(i)
+            .map_err(|e| MycoNoteError::ExternalTool(format!("zip entry {i}: {e}")))?;
         let Some(rel) = entry.enclosed_name() else {
             // Skip entries with absolute or traversal-laden paths — defensive
             // even though figshare archives are trusted.

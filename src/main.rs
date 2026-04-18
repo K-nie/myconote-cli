@@ -1192,6 +1192,16 @@ fn handle_place(args: &[String]) -> Result<()> {
                     c.deviations.len()
                 );
             }
+            if let Some(ref m) = report.metabolic_prediction {
+                println!(
+                    "# metabolic_prediction\tcarbon={}\tcarbon_conf={:.3}\tnitrogen={}\tnitrogen_conf={:.3}\tn_neighbours={}",
+                    m.carbon_vote.label,
+                    m.carbon_vote.confidence,
+                    m.nitrogen_vote.label,
+                    m.nitrogen_vote.confidence,
+                    m.neighbours.len(),
+                );
+            }
         }
         _ => {
             println!();
@@ -1219,6 +1229,33 @@ fn handle_place(args: &[String]) -> Result<()> {
                     p.ref_kos,
                 );
             }
+            // Metabolic lifestyle prediction — rendered when the `metabolism`
+            // subset is installed and at least one neighbour was classified.
+            if let Some(ref m) = report.metabolic_prediction {
+                println!();
+                println!("── Predicted metabolic lifestyle ──");
+                println!(
+                    "  carbon  : {:<12}  confidence {:.0}%  (weighted vote across {} neighbours)",
+                    m.carbon_vote.label,
+                    m.carbon_vote.confidence * 100.0,
+                    m.neighbours.len()
+                );
+                println!(
+                    "  nitrogen: {:<12}  confidence {:.0}%",
+                    m.nitrogen_vote.label,
+                    m.nitrogen_vote.confidence * 100.0
+                );
+                if m.carbon_vote.tallies.len() > 1 || m.nitrogen_vote.tallies.len() > 1 {
+                    println!("  neighbour classifications:");
+                    for n in &m.neighbours {
+                        println!(
+                            "    {:<36}  J={:.4}  C={:<10} N={}",
+                            n.species, n.jaccard, n.carbon_class, n.nitrogen_class
+                        );
+                    }
+                }
+            }
+
             // Codon-table advice — only rendered when the `codontable` subset
             // is installed. Warns about CTG-Ser and other non-standard codes.
             if let Some(ref c) = report.top_codon_table {

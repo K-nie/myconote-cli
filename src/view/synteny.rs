@@ -68,6 +68,18 @@ pub struct SyntenyConfig {
     /// Per-genome track height (inches). Total figure height = n_genomes ×
     /// track_height.
     pub track_height_inches: f32,
+    /// Show individual gene/CDS features as arrows. Off by default for
+    /// whole-genome views (gene arrows compress into unreadable smears at
+    /// 24-contig × 6000-gene scale); implicitly on when `region` is set.
+    pub show_features: bool,
+    /// Restrict the figure to a single region `seqid:start-end`. When set,
+    /// feature arrows and their gene-name labels render legibly; without it,
+    /// the figure is a clean overview of contig bars + syntenic links.
+    pub region: Option<String>,
+    /// Only show the top-N largest contigs per genome (useful when an
+    /// assembly has many tiny contigs that would clutter the figure).
+    /// 0 = show all.
+    pub top_contigs: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,6 +176,9 @@ impl Default for SyntenyConfig {
             min_identity: 30,
             width_inches: 12.0,
             track_height_inches: 1.2,
+            show_features: false,
+            region: None,
+            top_contigs: 0,
         }
     }
 }

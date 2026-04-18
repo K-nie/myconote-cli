@@ -490,6 +490,9 @@ fn main() -> Result<()> {
                 println!("  --min-identity <n>    Minimum alignment identity %% (default: 30)");
                 println!("  --width <in>          Figure width in inches (default: 12)");
                 println!("  --track-height <in>   Per-genome track height (default: 1.2)");
+                println!("  --region <seqid:s-e>  Zoom to one region; enables gene arrows + labels");
+                println!("  --show-features       Force gene arrows in whole-genome view (noisy)");
+                println!("  --top-contigs <n>     Show only top-N largest contigs (default: all)");
                 println!("\nHTML backend options:");
                 println!("  --min-block <bp>      Minimum block length to show (default: 1000)");
                 println!("  --chain-gap <bp>      Merge adjacent colinear hits within gap (0=off)");
@@ -1813,6 +1816,20 @@ fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
             "--track-height" if i + 1 < args.len() => {
                 if let Ok(h) = args[i + 1].parse::<f32>() {
                     config.track_height_inches = h;
+                }
+                i += 2;
+            }
+            "--region" if i + 1 < args.len() => {
+                config.region = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--show-features" => {
+                config.show_features = true;
+                i += 1;
+            }
+            "--top-contigs" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    config.top_contigs = n;
                 }
                 i += 2;
             }

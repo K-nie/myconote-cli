@@ -288,10 +288,36 @@ pub fn write_genbank_record<W: Write>(
     let seq_len = fasta.len();
     let organism_str = organism.unwrap_or("Unknown fungal organism");
 
-    // LOCUS
+    // LOCUS — strict NCBI GenBank column spec (required by Biopython's
+    // Bio.GenBank.Scanner). The earlier freeform format rendered
+    // `LOCUS ... FUN` with no trailing date token, and Biopython rejected
+    // it with "LOCUS line does not contain space at position 68" when
+    // pgv-mummer tried to parse our converted genbank.
+    //
+    // Canonical form:
+    //   LOCUS       <name:16>  <length:11> bp    DNA     linear   FUN 17-APR-2026
+    // Column layout (1-indexed):
+    //   1-5  LOCUS
+    //   6-12 spaces (6 of them)
+    //   13-28 name (left-justified, truncated to 16 chars)
+    //   29    space
+    //   30-40 length (right-justified, 11 chars)
+    //   41    space
+    //   42-43 bp
+    //   44-47 spaces (4)
+    //   48-53 molecule type (6: "DNA   ")
+    //   54    space
+    //   55-62 topology (8: "linear  ")
+    //   63    space
+    //   64-66 division (3: "FUN")
+    //   67    space
+    //   68-78 date DD-MMM-YYYY
+    let name = format!("{:<16}", truncate(seqid, 16));
+    let length = format!("{:>11}", seq_len);
+    let date = current_genbank_date();
     let locus_line = format!(
-        "LOCUS       {:<16} {:>11} bp    DNA     linear   FUN",
-        seqid, seq_len
+        "LOCUS       {} {} bp    DNA     linear   FUN {}",
+        name, length, date
     );
     writeln!(w, "{}", &locus_line[..locus_line.len().min(LOCUS_WIDTH)])
         .map_err(MycoNoteError::Io)?;
@@ -373,4 +399,44 @@ pub fn write_genbank<W: Write>(
     }
 
     Ok(())
+}
+
+/// Truncate a string to at most `n` characters, preserving UTF-8 boundaries.
+fn truncate(s: &str, n: usize) -> &str {
+    match s.char_indices().nth(n) {
+        Some((end, _)) => &s[..end],
+        None => s,
+    }
+}
+
+/// Current date in GenBank's canonical format: `DD-MMM-YYYY` (uppercase
+/// month abbreviation). Falls back to `01-JAN-2026` when SystemTime isn't
+/// available — the date is cosmetic and Biopython just checks format.
+fn current_genbank_date() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(1_767_225_600); // 2026-01-01
+
+    // Civil-from-days (H. S. Warren variant) — avoids pulling chrono.
+    let days = secs / 86_400;
+    let (y, m, d) = civil_from_days(days);
+    let months = [
+        "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    ];
+    format!("{:02}-{}-{:04}", d, months[(m - 1) as usize], y)
+}
+
+fn civil_from_days(z: i64) -> (i64, u32, u32) {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64; // [0..146096]
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = (yoe as i64) + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    (y + if m <= 2 { 1 } else { 0 }, m as u32, d as u32)
 }

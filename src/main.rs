@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod align;
 pub mod annotate;
@@ -99,6 +99,7 @@ fn print_main_help() {
     println!("  stats    Calculate statistics from annotation files");
     println!("  phylogeny Build a maximum-likelihood tree with IQ-TREE (from an alignment)");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
+    println!("  place    Place your genome in the Y1000+ 1,154-yeast reference (functional)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
     println!("  fix      Repair errors in GenBank (.gbk) files");
@@ -321,6 +322,9 @@ fn main() -> Result<()> {
                 println!("  --primary-only                Collapse isoforms to primary transcript only");
                 println!("  --benchmark y1000plus         Append the Y1000+ reference distributions");
                 println!("                                (requires `setup --y1000plus --preset starter`)");
+                println!("  --annotated <path.tsv>        Combined with --benchmark: place the user's");
+                println!("                                KEGG-KO count on the 1,154-yeast percentile.");
+                println!("                                Accepts the TSV emitted by `myconote-cli annotate`.");
                 println!("\nTaxonomic groups: fungi, ascomycota, basidiomycota, plants, animals, mammals");
                 println!("\nOutputs (human format):");
                 println!("  Total features, genes, transcripts, CDS, exons");
@@ -418,6 +422,26 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             handle_compare(&args[2..])?;
+        }
+        "place" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli place --annotated <annotated.tsv> [options]");
+                println!("\nPlaces your genome against the Y1000+ bundle of 1,154 yeasts by");
+                println!("comparing functional profiles (KEGG-KO Jaccard similarity).");
+                println!("\nOptions:");
+                println!("  --annotated <file.tsv>   myconote `annotate` output (required)");
+                println!("  --top <n>                How many closest species to report (default: 10)");
+                println!("  --format <human|tsv>     Output format (default: human)");
+                println!("\nDependencies:");
+                println!("  Requires the `kegg` subset of the Y1000+ bundle:");
+                println!("    myconote-cli setup --y1000plus --include kegg");
+                println!("\nExamples:");
+                println!("  myconote-cli place --annotated annotated.tsv");
+                println!("  myconote-cli place --annotated annotated.tsv --top 20 --format tsv");
+                println!("\nCitation: Opulente DA et al. (2024). Science 384(6694): eadj4503.");
+                return Ok(());
+            }
+            handle_place(&args[2..])?;
         }
         "convert" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -770,7 +794,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | phylogeny | compare | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | phylogeny | compare | place | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -785,6 +809,7 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
     let mut exclude = Vec::new();
     let mut primary_only = false;
     let mut benchmark_y1000plus = false;
+    let mut annotated_path: Option<PathBuf> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -822,6 +847,10 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
                         args[i + 1]
                     );
                 }
+                i += 2;
+            }
+            "--annotated" if i + 1 < args.len() => {
+                annotated_path = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
             _ => i += 1,
@@ -895,7 +924,7 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             }
 
             if benchmark_y1000plus {
-                print_y1000plus_benchmark(&stats)?;
+                print_y1000plus_benchmark(&stats, annotated_path.as_deref())?;
             }
         }
     }
@@ -905,9 +934,13 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
 
 /// Append a Y1000+ reference-distribution block to the human-format stats
 /// output. Pulls from the installed bundle; silently skips distributions
-/// whose subset isn't on disk.
-fn print_y1000plus_benchmark(stats: &stats::GenomeStatistics) -> Result<()> {
-    use y1000plus::benchmark::{load_reference, DistStats};
+/// whose subset isn't on disk. If `annotated_tsv` is provided, reads the
+/// user's distinct KEGG KO count from it and places them on the percentile.
+fn print_y1000plus_benchmark(
+    stats: &stats::GenomeStatistics,
+    annotated_tsv: Option<&Path>,
+) -> Result<()> {
+    use y1000plus::benchmark::{count_user_kos, load_reference, DistStats};
 
     let reference = match load_reference() {
         Ok(r) => r,
@@ -916,6 +949,23 @@ fn print_y1000plus_benchmark(stats: &stats::GenomeStatistics) -> Result<()> {
             return Ok(());
         }
     };
+
+    // Optional: count user KOs from their annotated TSV for percentile rank.
+    let user_ko_count: Option<f64> = annotated_tsv.and_then(|p| match count_user_kos(p) {
+        Ok((kos, rows)) => {
+            println!(
+                "   ↪ scanned {} gene rows from {}; {} distinct KEGG KOs",
+                rows,
+                p.display(),
+                kos
+            );
+            Some(kos as f64)
+        }
+        Err(e) => {
+            eprintln!("   ⚠  couldn't parse --annotated: {e}");
+            None
+        }
+    });
 
     println!("\n══════════════════════════════════════════════════════════════════");
     println!(
@@ -957,7 +1007,7 @@ fn print_y1000plus_benchmark(stats: &stats::GenomeStatistics) -> Result<()> {
         println!("{pretty}\n  your genome: {user_col}");
     };
 
-    let _ = stats; // placeholder — until we extract user's BUSCO/KEGG counts directly
+    let _ = stats; // gene-count benchmarking arrives with the `annotations` subset
 
     if let Some(ref d) = reference.busco_completeness {
         row("BUSCO completeness", d, None, "pct");
@@ -967,11 +1017,13 @@ fn print_y1000plus_benchmark(stats: &stats::GenomeStatistics) -> Result<()> {
         );
     }
     if let Some(ref d) = reference.kegg_ko_count {
-        row("Distinct KEGG KOs", d, None, "int");
-        println!(
-            "  (run `annotate` with EggNog-mapper; count of distinct KEGG KOs \
-             in your annotated.tsv is comparable directly.)"
-        );
+        row("Distinct KEGG KOs", d, user_ko_count, "int");
+        if user_ko_count.is_none() {
+            println!(
+                "  (pass --annotated <path.tsv> pointing at the output of \
+                 `myconote-cli annotate` to see your percentile.)"
+            );
+        }
     }
 
     if reference.busco_completeness.is_none() && reference.kegg_ko_count.is_none() {
@@ -1076,6 +1128,117 @@ fn handle_compare(args: &[String]) -> Result<()> {
     config.inputs = parse_positional_inputs(&positional)?;
     run_compare(&config)?;
     Ok(())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// place command: species placement against the Y1000+ bundle
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn handle_place(args: &[String]) -> Result<()> {
+    use y1000plus::place::{place_functional, PlaceOptions};
+
+    let mut annotated: Option<PathBuf> = None;
+    let mut top_n: usize = 10;
+    let mut format = "human".to_string();
+    let mut i = 0usize;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--annotated" if i + 1 < args.len() => {
+                annotated = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            "--top" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<usize>() {
+                    top_n = n;
+                }
+                i += 2;
+            }
+            "--format" if i + 1 < args.len() => {
+                format = args[i + 1].clone();
+                i += 2;
+            }
+            _ => i += 1,
+        }
+    }
+
+    let annotated = annotated.ok_or_else(|| {
+        anyhow::anyhow!(
+            "--annotated <annotated.tsv> is required. Run `myconote-cli annotate` first."
+        )
+    })?;
+
+    println!(
+        "🧬 Placing your genome against Y1000+ (1,154 yeasts, Opulente et al. 2024, Science)…"
+    );
+    let report = place_functional(&PlaceOptions {
+        annotated_tsv: &annotated,
+        top_n: top_n.max(1),
+    })?;
+
+    match format.as_str() {
+        "tsv" => {
+            println!("species\tjaccard\tshared_kos\tref_kos\tuser_kos");
+            for p in &report.top {
+                println!(
+                    "{}\t{:.4}\t{}\t{}\t{}",
+                    p.species, p.jaccard, p.shared, p.ref_kos, report.user_kos,
+                );
+            }
+        }
+        _ => {
+            println!();
+            println!(
+                "  user KEGG-KO set : {} distinct KOs across {} gene rows",
+                report.user_kos, report.user_gene_rows
+            );
+            println!(
+                "  reference space  : {} species with KEGG annotations",
+                report.species_total
+            );
+            println!();
+            println!(
+                "{:<45}  {:>8}  {:>8}  {:>8}",
+                "Closest Y1000+ species", "Jaccard", "shared", "ref KOs"
+            );
+            println!("{}", "─".repeat(80));
+            for (i, p) in report.top.iter().enumerate() {
+                let badge = if i == 0 { " ⭐" } else { "   " };
+                println!(
+                    "{badge}{:<42}  {:>8.4}  {:>8}  {:>8}",
+                    prettify_species(&p.species),
+                    p.jaccard,
+                    p.shared,
+                    p.ref_kos,
+                );
+            }
+            println!();
+            println!(
+                "Note: functional placement via KEGG-KO Jaccard. True phylogenetic placement\n\
+                 (1,403 marker genes + EPA-ng) will land once the `phylogeny-place` subset\n\
+                 and EPA-ng integration are wired."
+            );
+            println!("Cite: Opulente DA et al. (2024). Science 384(6694): eadj4503.");
+        }
+    }
+
+    Ok(())
+}
+
+fn prettify_species(raw: &str) -> String {
+    // Per-species filenames in the Y1000+ kegg subset look like
+    // `candida_tropicalis.txt` after our walk yields `candida_tropicalis`.
+    // Render `Candida tropicalis` for humans, but leave underscores in the
+    // stem alone for readability (some names contain strain suffixes).
+    let mut parts = raw.splitn(2, '_');
+    match (parts.next(), parts.next()) {
+        (Some(genus), Some(rest)) if !genus.is_empty() => {
+            let mut g = genus.chars();
+            let upper = g.next().map(|c| c.to_ascii_uppercase()).unwrap_or_default();
+            let tail: String = g.collect();
+            format!("{upper}{tail} {rest}")
+        }
+        _ => raw.to_string(),
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

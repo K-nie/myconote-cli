@@ -228,6 +228,66 @@ fn per_species_ko_count(path: &Path) -> Result<usize> {
     Ok(kos.len())
 }
 
+/// Count distinct KEGG-KO IDs in a myconote-annotated TSV. Expects the
+/// EggNog-derived table written by `write_eggnog_table` (columns include
+/// `kegg_pathways`, which despite its name carries KEGG_ko entries straight
+/// from EggNog-mapper's column 12, i.e. `K00001`-style KOs).
+///
+/// Returns (distinct_ko_count, gene_rows_scanned) so callers can report
+/// how many genes carried any KEGG annotation at all.
+pub fn count_user_kos(annotated_tsv: &Path) -> Result<(usize, usize)> {
+    let f = File::open(annotated_tsv).map_err(MycoNoteError::Io)?;
+    let mut lines = BufReader::new(f).lines();
+
+    let header_line = lines
+        .next()
+        .transpose()
+        .map_err(MycoNoteError::Io)?
+        .ok_or_else(|| {
+            MycoNoteError::InvalidFormat(format!(
+                "Empty annotated TSV: {}",
+                annotated_tsv.display()
+            ))
+        })?;
+    let headers: Vec<&str> = header_line.split('\t').collect();
+    let kegg_col = headers
+        .iter()
+        .position(|h| {
+            let h = h.trim().to_lowercase();
+            h == "kegg_pathways" || h == "kegg_ko" || h == "kegg"
+        })
+        .ok_or_else(|| {
+            MycoNoteError::InvalidFormat(format!(
+                "No kegg_pathways/kegg_ko column in {}. Is this a myconote `annotate` output?",
+                annotated_tsv.display()
+            ))
+        })?;
+
+    let mut kos: HashSet<String> = HashSet::new();
+    let mut rows = 0usize;
+    for line in lines.map_while(|l| l.ok()) {
+        if line.is_empty() {
+            continue;
+        }
+        rows += 1;
+        let cols: Vec<&str> = line.split('\t').collect();
+        if cols.len() <= kegg_col {
+            continue;
+        }
+        for tok in cols[kegg_col].split(',') {
+            let tok = tok.trim();
+            if tok.starts_with('K')
+                && tok.len() >= 2
+                && tok.len() <= 8
+                && tok.chars().skip(1).all(|c| c.is_ascii_digit())
+            {
+                kos.insert(tok.to_string());
+            }
+        }
+    }
+    Ok((kos.len(), rows))
+}
+
 /// Recursive walk for `.tsv` / `.txt` files — handles the fact that each
 /// tarball extracts into a versioned subdir like
 /// `busco/Y1000p_BUCO_fulltable/<species>.full_table.tsv`.

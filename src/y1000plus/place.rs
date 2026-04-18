@@ -32,6 +32,21 @@ pub struct PlacementReport {
     pub user_gene_rows: usize,
     pub species_total: usize,
     pub top: Vec<Placement>,
+    /// Inferred genetic code for the top hit, if the `codontable` subset is
+    /// installed. Present only for the #1 closest species.
+    pub top_codon_table: Option<CodonTableAdvice>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CodonTableAdvice {
+    pub top_species: String,
+    /// The raw 64-character code string from codetta (amino acids in standard
+    /// codon order TTT, TTC, TTA, TTG, TCT, …).
+    pub code: String,
+    /// Deviations from NCBI standard table: (codon, standard_aa, inferred_aa).
+    pub deviations: Vec<(String, char, char)>,
+    /// Convenience: whether CTG is reassigned to Ser (CTG-Ser clade marker).
+    pub ctg_is_ser: bool,
 }
 
 pub struct PlaceOptions<'a> {
@@ -98,11 +113,98 @@ pub fn place_functional(opts: &PlaceOptions) -> Result<PlacementReport> {
     });
     results.truncate(opts.top_n);
 
+    // If the codontable subset is installed, derive the inferred genetic
+    // code for the #1 hit so we can warn about CTG-Ser clades at the end.
+    let top_codon_table = if manifest.installed.contains_key("codontable") {
+        results
+            .first()
+            .and_then(|hit| load_codon_table(&root, &hit.species).ok())
+    } else {
+        None
+    };
+
     Ok(PlacementReport {
         user_kos: user_ko_count,
         user_gene_rows,
         species_total,
         top: results,
+        top_codon_table,
+    })
+}
+
+/// NCBI standard genetic code — 64 single-letter amino acids in the codon
+/// order TTT, TTC, TTA, TTG, TCT, … (matches the codetta `.code` layout).
+const STANDARD_CODE: &[u8; 64] =
+    b"FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG";
+const CODON_INDEX_CTG: usize = 19;
+
+fn codon_at(idx: usize) -> String {
+    const BASES: [char; 4] = ['T', 'C', 'A', 'G'];
+    let b1 = BASES[(idx / 16) % 4];
+    let b2 = BASES[(idx / 4) % 4];
+    let b3 = BASES[idx % 4];
+    format!("{b1}{b2}{b3}")
+}
+
+/// Find and parse the `.code` file for the given species under the
+/// `codetta/` cache. Codetta may record unresolved codons as `?`; those are
+/// ignored rather than flagged as deviations.
+fn load_codon_table(cache_root: &Path, species_stem: &str) -> Result<CodonTableAdvice> {
+    let codetta_root = cache_root.join("codetta");
+    let mut found: Option<PathBuf> = None;
+    fn walk(p: &Path, stem: &str, found: &mut Option<PathBuf>) -> std::io::Result<()> {
+        if found.is_some() {
+            return Ok(());
+        }
+        for entry in std::fs::read_dir(p)?.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, stem, found)?;
+                if found.is_some() {
+                    return Ok(());
+                }
+            } else if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                if name.ends_with(".code") && name.contains(stem) {
+                    *found = Some(path);
+                    return Ok(());
+                }
+            }
+        }
+        Ok(())
+    }
+    walk(&codetta_root, species_stem, &mut found).map_err(MycoNoteError::Io)?;
+    let path = found.ok_or_else(|| {
+        MycoNoteError::InvalidFormat(format!(
+            "No codetta .code file for species '{species_stem}'"
+        ))
+    })?;
+    let raw = std::fs::read_to_string(&path).map_err(MycoNoteError::Io)?;
+    let code: String = raw.trim().chars().take(64).collect();
+    if code.len() < 64 {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "Truncated codetta code in {}: only {} chars",
+            path.display(),
+            code.len()
+        )));
+    }
+    let code_bytes = code.as_bytes();
+
+    let mut deviations = Vec::new();
+    for (i, (inferred, standard)) in code_bytes.iter().zip(STANDARD_CODE.iter()).enumerate() {
+        if *inferred == b'?' {
+            continue;
+        }
+        if inferred != standard {
+            deviations.push((codon_at(i), *standard as char, *inferred as char));
+        }
+    }
+    let ctg_is_ser = code_bytes[CODON_INDEX_CTG] == b'S';
+
+    Ok(CodonTableAdvice {
+        top_species: species_stem.to_string(),
+        code,
+        deviations,
+        ctg_is_ser,
     })
 }
 

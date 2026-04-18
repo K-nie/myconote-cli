@@ -1184,6 +1184,14 @@ fn handle_place(args: &[String]) -> Result<()> {
                     p.species, p.jaccard, p.shared, p.ref_kos, report.user_kos,
                 );
             }
+            if let Some(ref c) = report.top_codon_table {
+                println!(
+                    "# top_codon_table\tspecies={}\tctg_is_ser={}\tdeviations={}",
+                    c.top_species,
+                    c.ctg_is_ser,
+                    c.deviations.len()
+                );
+            }
         }
         _ => {
             println!();
@@ -1210,6 +1218,40 @@ fn handle_place(args: &[String]) -> Result<()> {
                     p.shared,
                     p.ref_kos,
                 );
+            }
+            // Codon-table advice — only rendered when the `codontable` subset
+            // is installed. Warns about CTG-Ser and other non-standard codes.
+            if let Some(ref c) = report.top_codon_table {
+                println!();
+                println!("── Inferred genetic code (codetta, top hit) ──");
+                println!(
+                    "  {:<42}  {} chars",
+                    prettify_species(&c.top_species),
+                    c.code.len()
+                );
+                if c.deviations.is_empty() {
+                    println!("  Standard NCBI genetic code — no reassignments detected.");
+                } else {
+                    println!(
+                        "  {} codon reassignment(s) vs NCBI standard:",
+                        c.deviations.len()
+                    );
+                    for (codon, std, inferred) in c.deviations.iter().take(8) {
+                        println!("    {codon}: {std} → {inferred}");
+                    }
+                    if c.deviations.len() > 8 {
+                        println!("    … and {} more", c.deviations.len() - 8);
+                    }
+                }
+                if c.ctg_is_ser {
+                    println!(
+                        "  ⚠  CTG-Ser clade detected — your closest yeast translates CTG as Serine,"
+                    );
+                    println!(
+                        "     not Leucine. Re-run `predict` / `convert --to protein` with the"
+                    );
+                    println!("     alternative yeast mitochondrial code (NCBI transl_table=12).");
+                }
             }
             println!();
             println!(

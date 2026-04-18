@@ -473,24 +473,40 @@ fn main() -> Result<()> {
         "synteny" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {
                 println!("Usage: myconote-cli synteny <genome_a.gff3> <genome_b.gff3> [options]");
-                println!("\nOptions:");
-                println!("  --fasta1 <file>       FASTA for genome A (enables alignment ribbons)");
-                println!("  --fasta2 <file>       FASTA for genome B");
-                println!("  --output <file.html>  Output file (default: synteny.html)");
+                println!("\nBackends:");
+                println!("  --backend html        Interactive D3 viewer (default) — exploration");
+                println!("  --backend pygenomeviz Static PNG/PDF/SVG via pyGenomeViz — publication");
+                println!("\nInputs:");
+                println!("  --fasta1 <file>       FASTA for genome A (required for both backends)");
+                println!("  --fasta2 <file>       FASTA for genome B (required for both backends)");
                 println!("  --label1 <name>       Label for genome A (default: Genome A)");
                 println!("  --label2 <name>       Label for genome B (default: Genome B)");
+                println!("\nOutput:");
+                println!("  --output <file>       Output path (default: synteny.html or synteny.pdf)");
+                println!("  --format png|pdf|svg  Static-backend format (implies --backend pygenomeviz)");
+                println!("\npyGenomeViz backend options:");
+                println!("  --aligner mummer|blast|mmseqs  Aligner choice (default: mummer)");
+                println!("  --theme light|dark    Figure theme (default: light)");
+                println!("  --min-identity <n>    Minimum alignment identity %% (default: 30)");
+                println!("  --width <in>          Figure width in inches (default: 12)");
+                println!("  --track-height <in>   Per-genome track height (default: 1.2)");
+                println!("\nHTML backend options:");
                 println!("  --min-block <bp>      Minimum block length to show (default: 1000)");
-                println!("  --chain-gap <bp>      Merge adjacent colinear hits within this gap (default: 100000, 0=off)");
+                println!("  --chain-gap <bp>      Merge adjacent colinear hits within gap (0=off)");
                 println!("  --threads | -t <n>    Threads for minimap2 (default: 4)");
                 println!("  --keep-paf            Keep the intermediate PAF file for debugging");
+                println!("\nGene-name resolution (both backends):");
                 println!("  --names <file.tsv>    ID→name mapping (labels shown on ribbons)");
                 println!("  --fetch-names         Auto-fetch gene names from NCBI/UniProt/FungiDB");
                 println!("  --taxon <id>          NCBI taxon ID for name lookup");
-                println!("\nRequires minimap2 in PATH for alignment. Install with:");
-                println!("  conda install -c bioconda minimap2");
+                println!("\nDependencies:");
+                println!("  html backend       → minimap2 (conda install -c bioconda minimap2)");
+                println!("  pygenomeviz backend→ conda create -n myconote-viz -c bioconda \\");
+                println!("                         python=3.12 pygenomeviz mummer4 blast matplotlib");
                 println!("\nExamples:");
                 println!("  myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa");
-                println!("  myconote-cli synteny a.gff3 b.gff3 --label1 'A.niger' --label2 'A.fumigatus'");
+                println!("  myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa \\");
+                println!("    --format pdf --theme dark --output figure2.pdf");
                 return Ok(());
             }
             let gff1 = &args[2];
@@ -1675,7 +1691,9 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
 fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
     use names::NameResolver;
     use parser::GFFReader;
-    use view::synteny::{generate_synteny, SyntenyConfig};
+    use view::synteny::{
+        generate_synteny, PlotFormat, PlotTheme, PygvAligner, SyntenyBackend, SyntenyConfig,
+    };
 
     let mut config = SyntenyConfig {
         gff1: PathBuf::from(gff1),
@@ -1731,6 +1749,72 @@ fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
             "--keep-paf" => {
                 config.keep_paf = true;
                 i += 1;
+            }
+            "--backend" if i + 1 < args.len() => {
+                config.backend = match args[i + 1].to_lowercase().as_str() {
+                    "pygenomeviz" | "pygv" | "pdf" | "png" => SyntenyBackend::PyGenomeViz,
+                    "html" | "d3" => SyntenyBackend::Html,
+                    other => {
+                        eprintln!(
+                            "Unknown synteny backend '{}', expected 'html' or 'pygenomeviz'. \
+                             Defaulting to html.",
+                            other
+                        );
+                        SyntenyBackend::Html
+                    }
+                };
+                i += 2;
+            }
+            "--format" | "-f" if i + 1 < args.len() => {
+                if let Some(fmt) = PlotFormat::from_str(&args[i + 1]) {
+                    config.format = fmt;
+                } else {
+                    eprintln!(
+                        "Unknown --format '{}', expected png / pdf / svg. Using default.",
+                        args[i + 1]
+                    );
+                }
+                // --format implies pygenomeviz backend unless explicitly overridden.
+                if config.backend == SyntenyBackend::Html {
+                    config.backend = SyntenyBackend::PyGenomeViz;
+                }
+                i += 2;
+            }
+            "--aligner" if i + 1 < args.len() => {
+                if let Some(a) = PygvAligner::from_str(&args[i + 1]) {
+                    config.aligner = a;
+                } else {
+                    eprintln!(
+                        "Unknown --aligner '{}', expected mummer / blast / mmseqs. Using default.",
+                        args[i + 1]
+                    );
+                }
+                i += 2;
+            }
+            "--theme" if i + 1 < args.len() => {
+                config.theme = match args[i + 1].to_lowercase().as_str() {
+                    "dark" => PlotTheme::Dark,
+                    _ => PlotTheme::Light,
+                };
+                i += 2;
+            }
+            "--min-identity" if i + 1 < args.len() => {
+                if let Ok(n) = args[i + 1].parse::<u32>() {
+                    config.min_identity = n;
+                }
+                i += 2;
+            }
+            "--width" if i + 1 < args.len() => {
+                if let Ok(w) = args[i + 1].parse::<f32>() {
+                    config.width_inches = w;
+                }
+                i += 2;
+            }
+            "--track-height" if i + 1 < args.len() => {
+                if let Ok(h) = args[i + 1].parse::<f32>() {
+                    config.track_height_inches = h;
+                }
+                i += 2;
             }
             "--names" if i + 1 < args.len() => {
                 names_file = Some(args[i + 1].clone());

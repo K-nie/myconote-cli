@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub mod jbrowse;
+pub mod pygenomeviz;
 pub mod synteny;
 pub mod ucsc;
 

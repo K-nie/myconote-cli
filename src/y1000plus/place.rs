@@ -11,6 +11,7 @@
 
 use crate::utils::error::{MycoNoteError, Result};
 use crate::y1000plus::benchmark::count_user_kos;
+use crate::y1000plus::environment::load_index as load_environment_index;
 use crate::y1000plus::manifest::{cache_root, load as load_manifest};
 use crate::y1000plus::metabolism::{load_index as load_metabolism_index, Classification};
 use crate::y1000plus::phenotypes::{
@@ -47,6 +48,23 @@ pub struct PlacementReport {
     /// subset is installed. Same Jaccard-weighted vote approach as the
     /// metabolism prediction, over Y/N/W/V/S labels.
     pub thermotolerance: Option<ThermoPrediction>,
+    /// Ecological niche / isolation-source prediction when the
+    /// `environment` subset is installed. Jaccard-weighted majority over
+    /// the friendly labels of the top-N neighbours' isolation ontology.
+    pub niche: Option<NichePrediction>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NichePrediction {
+    pub vote: Vote,
+    pub neighbours: Vec<NicheNeighbour>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NicheNeighbour {
+    pub species: String,
+    pub jaccard: f64,
+    pub niche_label: String,
 }
 
 #[derive(Debug, Clone)]
@@ -210,6 +228,23 @@ pub fn place_functional(opts: &PlaceOptions) -> Result<PlacementReport> {
         None
     };
 
+    // If the environment subset is installed, predict ecological niche /
+    // isolation source from the nearest neighbours' ontology labels.
+    let niche = if manifest.installed.contains_key("environment") {
+        load_environment_index(&root)
+            .ok()
+            .map(|idx| predict_niche(&results, &idx))
+            .and_then(|p| {
+                if p.neighbours.is_empty() {
+                    None
+                } else {
+                    Some(p)
+                }
+            })
+    } else {
+        None
+    };
+
     Ok(PlacementReport {
         user_kos: user_ko_count,
         user_gene_rows,
@@ -218,7 +253,32 @@ pub fn place_functional(opts: &PlaceOptions) -> Result<PlacementReport> {
         top_codon_table,
         metabolic_prediction,
         thermotolerance,
+        niche,
     })
+}
+
+fn predict_niche(
+    top: &[Placement],
+    idx: &crate::y1000plus::environment::EnvironmentIndex,
+) -> NichePrediction {
+    let mut neighbours = Vec::new();
+    let mut weights: HashMap<String, f64> = HashMap::new();
+    for hit in top {
+        let Some(n) = idx.lookup(&hit.species) else {
+            continue;
+        };
+        let weight = hit.jaccard.max(1e-4);
+        *weights.entry(n.niche_label.clone()).or_insert(0.0) += weight;
+        neighbours.push(NicheNeighbour {
+            species: n.species_pretty.clone(),
+            jaccard: hit.jaccard,
+            niche_label: n.niche_label.clone(),
+        });
+    }
+    NichePrediction {
+        vote: vote_from(weights),
+        neighbours,
+    }
 }
 
 /// Jaccard-weighted vote over nearest-neighbours' Y/N/W/V/S growth-at-37

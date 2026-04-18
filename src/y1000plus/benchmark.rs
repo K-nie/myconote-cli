@@ -107,7 +107,9 @@ pub fn load_reference() -> Result<Reference> {
         None
     };
 
-    let species_count = busco.as_ref().map(|d| d.n)
+    let species_count = busco
+        .as_ref()
+        .map(|d| d.n)
         .or_else(|| kegg.as_ref().map(|d| d.n))
         .unwrap_or(0);
 
@@ -171,8 +173,12 @@ fn per_species_busco_completeness(path: &Path) -> Result<f64> {
         }
         let busco_id = cols[0].to_string();
         match cols[1] {
-            "Complete"   => { complete.insert(busco_id); }
-            "Duplicated" => { duplicated.insert(busco_id); }
+            "Complete" => {
+                complete.insert(busco_id);
+            }
+            "Duplicated" => {
+                duplicated.insert(busco_id);
+            }
             _ => {}
         }
     }
@@ -234,7 +240,9 @@ fn walk_tsv_files(root: &Path) -> Result<Vec<PathBuf>> {
                 walk(&path, out)?;
                 continue;
             }
-            let Some(name) = path.file_name().and_then(|n| n.to_str()) else { continue };
+            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
             // Skip bundled READMEs and hidden files — they are not per-species data.
             if name.eq_ignore_ascii_case("README.txt")
                 || name.eq_ignore_ascii_case("README.md")

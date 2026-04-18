@@ -41,13 +41,20 @@ pub fn install_many(targets: &[Subset], opts: &InstallOptions) -> Result<()> {
     let mut manifest = load_manifest(&root).unwrap_or_default();
     manifest.schema_version = BUNDLE_SCHEMA_VERSION;
 
-    println!("Y1000+ install: {} subset(s) → {}", targets.len(), root.display());
+    println!(
+        "Y1000+ install: {} subset(s) → {}",
+        targets.len(),
+        root.display()
+    );
     println!();
 
     let mut installed_bytes = 0u64;
     for subset in targets {
         if manifest.installed.contains_key(subset.key()) && !opts.force {
-            println!("● {} already installed — skipping (pass --force to re-install)", subset.key());
+            println!(
+                "● {} already installed — skipping (pass --force to re-install)",
+                subset.key()
+            );
             continue;
         }
         println!(
@@ -96,7 +103,10 @@ pub fn uninstall_many(targets: &[Subset]) -> Result<()> {
     let root = cache_root();
     let mut manifest = load_manifest(&root).unwrap_or_default();
     if !root.exists() {
-        println!("No Y1000+ cache at {} — nothing to uninstall.", root.display());
+        println!(
+            "No Y1000+ cache at {} — nothing to uninstall.",
+            root.display()
+        );
         return Ok(());
     }
 

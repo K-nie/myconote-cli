@@ -243,4 +243,3 @@ pub struct CleanArgs {
     #[arg(long)]
     pub primary_only: bool,
 }
-

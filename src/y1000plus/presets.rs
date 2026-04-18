@@ -21,32 +21,32 @@ pub enum Preset {
 impl Preset {
     pub fn from_str(s: &str) -> Option<Preset> {
         match s.to_lowercase().as_str() {
-            "starter"   => Some(Preset::Starter),
+            "starter" => Some(Preset::Starter),
             "phylogeny" => Some(Preset::Phylogeny),
-            "compare"   => Some(Preset::Compare),
+            "compare" => Some(Preset::Compare),
             "reference" => Some(Preset::Reference),
-            "full"      => Some(Preset::Full),
+            "full" => Some(Preset::Full),
             _ => None,
         }
     }
 
     pub fn key(self) -> &'static str {
         match self {
-            Preset::Starter   => "starter",
+            Preset::Starter => "starter",
             Preset::Phylogeny => "phylogeny",
-            Preset::Compare   => "compare",
+            Preset::Compare => "compare",
             Preset::Reference => "reference",
-            Preset::Full      => "full",
+            Preset::Full => "full",
         }
     }
 
     pub fn description(self) -> &'static str {
         match self {
-            Preset::Starter   => "KEGG + BUSCO + Codetta + tRNA + metabolism + environment (~175 MB)",
+            Preset::Starter => "KEGG + BUSCO + Codetta + tRNA + metabolism + environment (~175 MB)",
             Preset::Phylogeny => "starter + phylogeny-place (~900 MB) — enables species placement",
-            Preset::Compare   => "phylogeny + proteomes + orthogroups + annotations (~4 GB)",
+            Preset::Compare => "phylogeny + proteomes + orthogroups + annotations (~4 GB)",
             Preset::Reference => "compare + genomes + cds (~12 GB) — full reference genome bundle",
-            Preset::Full      => "reference + repeats + domains + phenotypes (~52 GB) — everything",
+            Preset::Full => "reference + repeats + domains + phenotypes (~52 GB) — everything",
         }
     }
 
@@ -54,8 +54,12 @@ impl Preset {
     pub fn subsets(self) -> Vec<Subset> {
         match self {
             Preset::Starter => vec![
-                Subset::Kegg, Subset::Busco, Subset::Codontable,
-                Subset::Trna, Subset::Metabolism, Subset::Environment,
+                Subset::Kegg,
+                Subset::Busco,
+                Subset::Codontable,
+                Subset::Trna,
+                Subset::Metabolism,
+                Subset::Environment,
             ],
             Preset::Phylogeny => {
                 let mut s = Preset::Starter.subsets();
@@ -81,7 +85,10 @@ impl Preset {
     }
 
     pub const ALL: &'static [Preset] = &[
-        Preset::Starter, Preset::Phylogeny, Preset::Compare,
-        Preset::Reference, Preset::Full,
+        Preset::Starter,
+        Preset::Phylogeny,
+        Preset::Compare,
+        Preset::Reference,
+        Preset::Full,
     ];
 }

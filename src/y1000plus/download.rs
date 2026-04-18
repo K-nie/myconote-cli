@@ -56,12 +56,16 @@ pub fn download_file(cache_root: &Path, spec: &FileSpec) -> Result<(PathBuf, Str
     }
 
     let client = Client::builder()
-        .timeout(Duration::from_secs(60 * 60))  // figshare can be slow; 1 h cap
+        .timeout(Duration::from_secs(60 * 60)) // figshare can be slow; 1 h cap
         .connect_timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| MycoNoteError::ExternalTool(format!("reqwest build: {e}")))?;
 
-    println!("   ↓ downloading {} ({})", spec.name, format_bytes(spec.size_bytes));
+    println!(
+        "   ↓ downloading {} ({})",
+        spec.name,
+        format_bytes(spec.size_bytes)
+    );
     let mut resp = client
         .get(spec.url)
         .send()

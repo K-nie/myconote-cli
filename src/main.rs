@@ -2223,14 +2223,17 @@ fn handle_setup(args: &[String]) -> Result<()> {
     // Any `--y1000plus` flag (alone, or with --list/--dry-run/--include/...)
     // routes to the Y1000+ bundle subsystem and skips the regular DB flow.
     if args.iter().any(|a| a == "--y1000plus") {
-        let filtered: Vec<String> = args.iter()
+        let filtered: Vec<String> = args
+            .iter()
             .filter(|a| a.as_str() != "--y1000plus")
             .cloned()
             .collect();
         let (y_args, _unused) = y1000_cmds::parse_args(&filtered)?;
         // Default to --list when nothing else is asked for.
-        if !y_args.list && !y_args.dry_run
-            && y_args.preset.is_none() && y_args.include.is_empty()
+        if !y_args.list
+            && !y_args.dry_run
+            && y_args.preset.is_none()
+            && y_args.include.is_empty()
             && y_args.uninstall.is_empty()
         {
             y1000_cmds::run_list()?;

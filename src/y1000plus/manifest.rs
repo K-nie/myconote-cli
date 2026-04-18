@@ -71,9 +71,8 @@ pub fn load(root: &Path) -> Result<Manifest> {
         });
     }
     let raw = std::fs::read_to_string(&path).map_err(MycoNoteError::Io)?;
-    let m: Manifest = toml::from_str(&raw).map_err(|e| {
-        MycoNoteError::InvalidFormat(format!("Corrupt MANIFEST.toml: {e}"))
-    })?;
+    let m: Manifest = toml::from_str(&raw)
+        .map_err(|e| MycoNoteError::InvalidFormat(format!("Corrupt MANIFEST.toml: {e}")))?;
     if m.schema_version != BUNDLE_SCHEMA_VERSION {
         return Err(MycoNoteError::InvalidFormat(format!(
             "Y1000+ cache at {} was built with schema v{} but myconote expects v{}. \
@@ -88,9 +87,8 @@ pub fn load(root: &Path) -> Result<Manifest> {
 
 pub fn save(root: &Path, manifest: &Manifest) -> Result<()> {
     std::fs::create_dir_all(root).map_err(MycoNoteError::Io)?;
-    let toml_str = toml::to_string_pretty(manifest).map_err(|e| {
-        MycoNoteError::InvalidFormat(format!("Serialising MANIFEST.toml: {e}"))
-    })?;
+    let toml_str = toml::to_string_pretty(manifest)
+        .map_err(|e| MycoNoteError::InvalidFormat(format!("Serialising MANIFEST.toml: {e}")))?;
     std::fs::write(manifest_path(root), toml_str).map_err(MycoNoteError::Io)?;
     Ok(())
 }

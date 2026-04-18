@@ -33,72 +33,82 @@ pub enum Subset {
 impl Subset {
     /// All subsets in a stable order — drives `--list` output.
     pub const ALL: &'static [Subset] = &[
-        Subset::Kegg, Subset::Busco, Subset::Codontable, Subset::Trna,
-        Subset::Metabolism, Subset::Environment, Subset::Phenotypes,
-        Subset::PhylogenyPlace, Subset::Annotations, Subset::Orthogroups,
-        Subset::Proteomes, Subset::Cds, Subset::Genomes, Subset::Repeats,
+        Subset::Kegg,
+        Subset::Busco,
+        Subset::Codontable,
+        Subset::Trna,
+        Subset::Metabolism,
+        Subset::Environment,
+        Subset::Phenotypes,
+        Subset::PhylogenyPlace,
+        Subset::Annotations,
+        Subset::Orthogroups,
+        Subset::Proteomes,
+        Subset::Cds,
+        Subset::Genomes,
+        Subset::Repeats,
         Subset::Domains,
     ];
 
     pub fn from_str(s: &str) -> Option<Subset> {
         match s.to_lowercase().as_str() {
-            "kegg"            => Some(Subset::Kegg),
-            "busco"           => Some(Subset::Busco),
-            "codontable"      => Some(Subset::Codontable),
-            "trna"            => Some(Subset::Trna),
-            "metabolism"      => Some(Subset::Metabolism),
-            "environment"     => Some(Subset::Environment),
-            "phenotypes"      => Some(Subset::Phenotypes),
+            "kegg" => Some(Subset::Kegg),
+            "busco" => Some(Subset::Busco),
+            "codontable" => Some(Subset::Codontable),
+            "trna" => Some(Subset::Trna),
+            "metabolism" => Some(Subset::Metabolism),
+            "environment" => Some(Subset::Environment),
+            "phenotypes" => Some(Subset::Phenotypes),
             "phylogeny-place" | "phylogeny_place" | "phyloplace" => Some(Subset::PhylogenyPlace),
-            "annotations"     => Some(Subset::Annotations),
-            "orthogroups"     => Some(Subset::Orthogroups),
-            "proteomes"       => Some(Subset::Proteomes),
-            "cds"             => Some(Subset::Cds),
-            "genomes"         => Some(Subset::Genomes),
-            "repeats"         => Some(Subset::Repeats),
-            "domains"         => Some(Subset::Domains),
+            "annotations" => Some(Subset::Annotations),
+            "orthogroups" => Some(Subset::Orthogroups),
+            "proteomes" => Some(Subset::Proteomes),
+            "cds" => Some(Subset::Cds),
+            "genomes" => Some(Subset::Genomes),
+            "repeats" => Some(Subset::Repeats),
+            "domains" => Some(Subset::Domains),
             _ => None,
         }
     }
 
     pub fn key(self) -> &'static str {
         match self {
-            Subset::Kegg            => "kegg",
-            Subset::Busco           => "busco",
-            Subset::Codontable      => "codontable",
-            Subset::Trna            => "trna",
-            Subset::Metabolism      => "metabolism",
-            Subset::Environment     => "environment",
-            Subset::Phenotypes      => "phenotypes",
-            Subset::PhylogenyPlace  => "phylogeny-place",
-            Subset::Annotations     => "annotations",
-            Subset::Orthogroups     => "orthogroups",
-            Subset::Proteomes       => "proteomes",
-            Subset::Cds             => "cds",
-            Subset::Genomes         => "genomes",
-            Subset::Repeats         => "repeats",
-            Subset::Domains         => "domains",
+            Subset::Kegg => "kegg",
+            Subset::Busco => "busco",
+            Subset::Codontable => "codontable",
+            Subset::Trna => "trna",
+            Subset::Metabolism => "metabolism",
+            Subset::Environment => "environment",
+            Subset::Phenotypes => "phenotypes",
+            Subset::PhylogenyPlace => "phylogeny-place",
+            Subset::Annotations => "annotations",
+            Subset::Orthogroups => "orthogroups",
+            Subset::Proteomes => "proteomes",
+            Subset::Cds => "cds",
+            Subset::Genomes => "genomes",
+            Subset::Repeats => "repeats",
+            Subset::Domains => "domains",
         }
     }
 
     /// One-line description shown by `setup --y1000plus --list`.
     pub fn summary(self) -> &'static str {
         match self {
-            Subset::Kegg            => "KEGG pathway transfer for annotate",
-            Subset::Busco           => "BUSCO percentile benchmarking for stats",
-            Subset::Codontable      => "Auto-detect CTG-Ser clade codon tables (predict)",
-            Subset::Trna            => "tRNA-count benchmarking vs 1,154 yeasts",
-            Subset::Metabolism      => "Carbon/nitrogen specialism prediction",
-            Subset::Environment     => "Isolation-source / ecological niche prediction",
-            Subset::Phenotypes      => "Growth-rate & phenotype prediction",
-            Subset::PhylogenyPlace  => "Place a new genome in the 1,154-yeast tree (EPA-ng)",
-            Subset::Annotations     => "Reference GFF3/GTF for comparative analyses",
-            Subset::Orthogroups     => "Pre-computed OrthoFinder orthogroups (skip OrthoFinder)",
-            Subset::Proteomes       => "Yeast-specific gene naming via DIAMOND",
-            Subset::Cds             => "CDS FASTAs for codon-usage / alignment work",
-            Subset::Genomes         => "Raw reference genome FASTAs",
-            Subset::Repeats         => "RepeatMasker-annotated repeats for mask lift-over",
-            Subset::Domains         => "InterProScan domain annotations (full bundle)",
+            Subset::Kegg => "KEGG pathway transfer for annotate",
+            Subset::Busco => "BUSCO percentile benchmarking for stats",
+            Subset::Codontable => "Auto-detect CTG-Ser clade codon tables (predict)",
+            Subset::Trna => "tRNA-count benchmarking vs 1,154 yeasts",
+            Subset::Metabolism => "Carbon/nitrogen specialism prediction",
+            Subset::Environment => "Isolation-source / ecological niche prediction",
+            Subset::Phenotypes => "Growth-rate & phenotype prediction",
+            Subset::PhylogenyPlace => "Place a new genome in the 1,154-yeast tree (EPA-ng)",
+            Subset::Annotations => "Reference GFF3/GTF for comparative analyses",
+            Subset::Orthogroups => "Pre-computed OrthoFinder orthogroups (skip OrthoFinder)",
+            Subset::Proteomes => "Yeast-specific gene naming via DIAMOND",
+            Subset::Cds => "CDS FASTAs for codon-usage / alignment work",
+            Subset::Genomes => "Raw reference genome FASTAs",
+            Subset::Repeats => "RepeatMasker-annotated repeats for mask lift-over",
+            Subset::Domains => "InterProScan domain annotations (full bundle)",
         }
     }
 
@@ -109,7 +119,7 @@ impl Subset {
             Subset::Kegg => &[FileSpec {
                 name: "y1000plus_annotations_pep_kegg.tar.gz",
                 url: "https://ndownloader.figshare.com/files/40479305",
-                size_bytes: 20_500_000,  // ~20.5 MB
+                size_bytes: 20_500_000, // ~20.5 MB
                 extract: ExtractKind::TarGz,
                 dest_subdir: "kegg",
             }],
@@ -326,8 +336,13 @@ pub fn format_bytes(n: u64) -> String {
     const GB: u64 = 1_000_000_000;
     const MB: u64 = 1_000_000;
     const KB: u64 = 1_000;
-    if n >= GB { format!("{:.2} GB", n as f64 / GB as f64) }
-    else if n >= MB { format!("{:.1} MB", n as f64 / MB as f64) }
-    else if n >= KB { format!("{:.1} kB", n as f64 / KB as f64) }
-    else            { format!("{} B", n) }
+    if n >= GB {
+        format!("{:.2} GB", n as f64 / GB as f64)
+    } else if n >= MB {
+        format!("{:.1} MB", n as f64 / MB as f64)
+    } else if n >= KB {
+        format!("{:.1} kB", n as f64 / KB as f64)
+    } else {
+        format!("{} B", n)
+    }
 }

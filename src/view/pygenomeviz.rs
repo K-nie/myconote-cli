@@ -132,6 +132,16 @@ fn build_spec_json(config: &SyntenyConfig) -> String {
     let gff2 = config.gff2.display().to_string();
     let out = config.output.display().to_string();
 
+    let region_json = match &config.region {
+        Some(r) => escape_json(r),
+        None => "null".to_string(),
+    };
+    // Implicit rule: --region turns on gene-feature arrows even when the
+    // user didn't pass --show-features; the whole point of zooming is to
+    // inspect features. show_features can still be explicitly set true for
+    // whole-genome views if the user really wants it.
+    let show_features = config.show_features || config.region.is_some();
+
     format!(
         r#"{{
   "genomes": [
@@ -146,9 +156,12 @@ fn build_spec_json(config: &SyntenyConfig) -> String {
   "min_block_len": {min_block},
   "width_inches": {width},
   "track_height_inches": {track_h},
-  "feature_track_ratio": 0.35,
+  "feature_track_ratio": 0.25,
   "dpi": 300,
-  "show_labels": true
+  "show_features": {show_features},
+  "show_gene_labels": {show_labels},
+  "region": {region},
+  "top_contigs": {top_contigs}
 }}"#,
         label1 = escape_json(&config.label1),
         label2 = escape_json(&config.label2),
@@ -164,6 +177,10 @@ fn build_spec_json(config: &SyntenyConfig) -> String {
         min_block = config.min_block_len,
         width = config.width_inches,
         track_h = config.track_height_inches,
+        show_features = show_features,
+        show_labels = config.region.is_some(), // only label in region mode
+        region = region_json,
+        top_contigs = config.top_contigs,
     )
 }
 
@@ -203,7 +220,7 @@ from pathlib import Path
 
 
 def fail(msg, code=1):
-    print(msg, file=sys.stderr)
+    print(msg, flush=True)
     sys.exit(code)
 
 
@@ -240,16 +257,41 @@ if aligner_cls is None:
 theme = spec.get("theme", "light")
 width = float(spec.get("width_inches", 12.0))
 track_h = float(spec.get("track_height_inches", 1.2))
-feat_ratio = float(spec.get("feature_track_ratio", 0.35))
+feat_ratio = float(spec.get("feature_track_ratio", 0.25))
 min_identity = float(spec.get("min_identity", 30))
 min_block = int(spec.get("min_block_len", 1000))
-show_labels = bool(spec.get("show_labels", True))
+show_features = bool(spec.get("show_features", False))
+show_gene_labels = bool(spec.get("show_gene_labels", False))
+region = spec.get("region")
+top_contigs = int(spec.get("top_contigs", 0))
 dpi = int(spec.get("dpi", 300))
 
 ColorCycler.set_cmap("tab10")
 
-# Parse the FASTA inputs so we can size chromosome tracks. GFF3 drives the
-# gene features displayed on each track (2-2-1 in the pyGenomeViz docs).
+
+def parse_region(s):
+    """seqid:start-end → (seqid, start, end) or fail."""
+    if ":" not in s:
+        fail(f"invalid --region {s!r}; expected seqid:start-end", 2)
+    seqid, coords = s.split(":", 1)
+    if "-" not in coords:
+        fail(f"invalid --region {s!r}; expected seqid:start-end", 2)
+    lo, hi = coords.replace(",", "").split("-", 1)
+    try:
+        return seqid.strip(), int(lo), int(hi)
+    except ValueError:
+        fail(f"invalid --region {s!r}; coords must be integers", 2)
+
+
+region_seqid, region_start, region_end = (None, None, None)
+if region:
+    region_seqid, region_start, region_end = parse_region(region)
+    print(
+        f"Region view: {region_seqid}:{region_start:,}-{region_end:,}",
+        flush=True,
+    )
+
+# Parse the FASTA inputs so we can size chromosome tracks.
 fasta_list = []
 gff_list = []
 for g in spec["genomes"]:
@@ -260,6 +302,14 @@ for g in spec["genomes"]:
     fasta_list.append(Fasta(fa_path))
     gff_list.append(Gff(gff_path) if gff_path and Path(gff_path).exists() else None)
 
+# Optionally filter to top-N largest contigs per genome for clarity.
+def filter_seqid2size(seqid2size, n):
+    if n <= 0 or n >= len(seqid2size):
+        return seqid2size
+    items = sorted(seqid2size.items(), key=lambda kv: kv[1], reverse=True)[:n]
+    return dict(items)
+
+
 # ── Build GenomeViz figure ───────────────────────────────────────────────
 gv = GenomeViz(
     fig_track_height=track_h,
@@ -267,38 +317,40 @@ gv = GenomeViz(
     theme=theme,
     track_align_type="center",
 )
-gv.set_scale_bar(ymargin=0.5)
+# In region mode the scale is tight, use xticks; in whole-genome mode a
+# single scale bar in the corner is less cluttered.
+if region:
+    gv.set_scale_xticks(ymargin=0.5)
+else:
+    gv.set_scale_bar(ymargin=0.5)
 
-# pyGenomeViz's AlignCoord objects reference tracks by the FASTA parser's
-# `.name` attribute (file stem), not the display label. To avoid stem
-# collisions when a user compares a file with itself (self-compare smoke
-# test) or two inputs that happen to share a stem, suffix each parser's
-# name by index. The display label comes separately from spec["genomes"].
+# Disambiguate parser names so AlignCoord refs don't collide on self-compare.
 seen_stems = {}
-for idx, (g, fa) in enumerate(zip(spec["genomes"], fasta_list)):
+for idx, fa in enumerate(fasta_list):
     base = fa.name
     seen_stems[base] = seen_stems.get(base, 0) + 1
-    if seen_stems[base] > 1 or g.get("label_uniquify"):
-        # Rename the parser so internal tracking is unique.
+    if seen_stems[base] > 1:
         fa.name = f"{base}#{idx + 1}"
 
 track_colors = []
-track_name_to_label = {}
 for g, fa, gff in zip(spec["genomes"], fasta_list, gff_list):
     color = ColorCycler()
     track_colors.append(color)
-    # label_kws cannot include `size` — pygenomeviz passes its own
-    # `fontsize` internally and matplotlib raises TypeError on the alias
-    # collision. Stick to color-only overrides.
+
+    # Decide the track's segment layout: either a single region range, or
+    # (optionally top-N) contigs at full length.
+    if region:
+        segs = (region_start, region_end)
+    else:
+        segs = filter_seqid2size(fa.get_seqid2size(), top_contigs)
+
     track = gv.add_feature_track(
-        fa.name,  # internal key that matches AlignCoord's references
-        fa.get_seqid2size(),
+        fa.name,
+        segs,
         label_kws={"color": color if theme == "dark" else "black"},
         align_label=False,
     )
-    # Pretty display label independent of the internal track name.
     track.set_label(g["name"])
-    track_name_to_label[fa.name] = g["name"]
 
     for segment in track.segments:
         segment.add_feature(
@@ -309,58 +361,124 @@ for g, fa, gff in zip(spec["genomes"], fasta_list, gff_list):
             ec="black",
             lw=0.4,
         )
-        segment.add_sublabel(ymargin=0.3)
+        # Sublabels are useful in region mode and when few contigs; with
+        # 20+ contigs the "0 - X bp" strings overlap into noise.
+        seg_count = len(track.segments)
+        if region or seg_count <= 6:
+            segment.add_sublabel(ymargin=0.3)
 
-    if gff is not None:
+    # Gene feature arrows only when explicitly requested — at
+    # whole-chromosome × 6000-gene scale they compress to solid smears.
+    if show_features and gff is not None:
+        seqid_filter = {region_seqid} if region else None
         for seqid, features in gff.get_seqid2features("CDS").items():
+            if seqid_filter is not None and seqid not in seqid_filter:
+                continue
             try:
                 segment = track.get_segment(seqid)
             except Exception:  # noqa: BLE001
-                # GFF3 can legitimately carry seqids absent from the FASTA
-                # (scaffolds trimmed during assembly polishing, for example).
-                # Skip rather than crash.
                 continue
+            if region:
+                features = [
+                    f
+                    for f in features
+                    if not (
+                        int(f.location.end) < region_start
+                        or int(f.location.start) > region_end
+                    )
+                ]
             segment.add_features(
                 features,
                 plotstyle="bigarrow",
                 fc="skyblue" if theme == "light" else "steelblue",
                 lw=0.3,
-                label_type="gene" if show_labels else None,
+                label_type="gene" if show_gene_labels else None,
             )
 
 # ── Run aligner ──────────────────────────────────────────────────────────
 print(f"Running {aligner_name} alignment on {len(fasta_list)} genomes…",
-      file=sys.stderr)
+      flush=True)
 aligner = aligner_cls(fasta_list)
 align_coords = aligner.run()
 align_coords = AlignCoord.filter(
     align_coords, length_thr=min_block, identity_thr=min_identity
 )
 print(f"{len(align_coords)} alignment link(s) passed filters "
-      f"(min_len={min_block}, min_id={min_identity}).", file=sys.stderr)
+      f"(min_len={min_block}, min_id={min_identity}).", flush=True)
 
 # ── Plot alignment links ─────────────────────────────────────────────────
+# --top-contigs and --region drop some contigs from the tracks; MUMmer
+# may still return alignments touching those dropped contigs, and
+# gv.add_link raises if it can't find the segment. Try each link and
+# swallow the not-found exception rather than pre-filtering (which is
+# hard to do 100%-correctly across pygenomeviz's internal name mangling).
+from pygenomeviz.exception import (  # type: ignore
+    FeatureTrackNotFoundError,
+    SegmentNotFoundError,
+)
+
 if align_coords:
     idents = [ac.identity for ac in align_coords if ac.identity is not None]
     min_ident_seen = int(min(idents)) if idents else int(min_identity)
-    fwd_color, inv_color = "grey", "red"
+    # Degenerate case: all links share the same identity (e.g. self-
+    # compare → 100 everywhere). With vmin=vmax=100 the colormap collapses
+    # to the lightest shade and links become invisible. Drop the floor so
+    # full-identity renders at the saturated end of the gradient.
+    if min_ident_seen >= 99:
+        min_ident_seen = max(int(min_identity) - 5, 50)
+    # Saturated colors so links are visible against a light-grey link track.
+    # Grey-on-grey was invisible; light-blue/red pops and still reads as
+    # "forward = same orientation, red = inverted" to most readers.
+    if theme == "dark":
+        fwd_color, inv_color = "skyblue", "tomato"
+    else:
+        fwd_color, inv_color = "steelblue", "tomato"
+    plotted = 0
+    skipped = 0
     for ac in align_coords:
-        gv.add_link(
-            ac.query_link,
-            ac.ref_link,
-            color=fwd_color,
-            inverted_color=inv_color,
-            v=ac.identity,
-            vmin=min_ident_seen,
-            size=0.95,
-            curve=False,
+        # Region view: clip by coord range on the query side before trying
+        # to plot (avoids draw-off-screen links + saves try/except cost).
+        if region:
+            q_seqid = ac.query_link[1]
+            q_start = ac.query_link[2]
+            q_end = ac.query_link[3]
+            if q_seqid != region_seqid:
+                skipped += 1
+                continue
+            if q_end < region_start or q_start > region_end:
+                skipped += 1
+                continue
+        try:
+            # Dropped `size=0.95` — that compresses link polygons vertically
+            # to 95% of the track gap, which at small-track heights becomes
+            # effectively invisible. Default (1.0, full track gap) is what
+            # the pygenomeviz docs use.
+            # Dropped `curve=False` — straight links are the default and the
+            # flag wasn't behaving as expected on self-compare data (links
+            # rendered but not visible against the track-gap background).
+            gv.add_link(
+                ac.query_link,
+                ac.ref_link,
+                color=fwd_color,
+                inverted_color=inv_color,
+                v=ac.identity,
+                vmin=min_ident_seen,
+            )
+            plotted += 1
+        except (FeatureTrackNotFoundError, SegmentNotFoundError):
+            # Link references a contig that was filtered out
+            # (--top-contigs). Silently skip.
+            skipped += 1
+
+    print(f"Plotted {plotted} link(s); {skipped} skipped (filtered contigs / region).",
+          flush=True)
+    if plotted > 0:
+        gv.set_colorbar(
+            [fwd_color, inv_color], vmin=min_ident_seen, bar_label="Identity (%)"
         )
-    gv.set_colorbar(
-        [fwd_color, inv_color], vmin=min_ident_seen, bar_label="Identity (%)"
-    )
 else:
     print("⚠  No alignment links passed filters — figure shows genome tracks only.",
-          file=sys.stderr)
+          flush=True)
 
 # ── Size + save ──────────────────────────────────────────────────────────
 n_taxa = len(spec["genomes"])

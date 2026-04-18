@@ -1232,6 +1232,14 @@ fn handle_place(args: &[String]) -> Result<()> {
                     t.neighbours.len(),
                 );
             }
+            if let Some(ref n) = report.niche {
+                println!(
+                    "# niche\tlabel={}\tconfidence={:.3}\tn_neighbours={}",
+                    n.vote.label,
+                    n.vote.confidence,
+                    n.neighbours.len(),
+                );
+            }
         }
         _ => {
             println!();
@@ -1284,6 +1292,33 @@ fn handle_place(args: &[String]) -> Result<()> {
                         );
                     }
                 }
+            }
+
+            // Ecological niche prediction — rendered when the `environment`
+            // subset is installed and at least one neighbour had an
+            // isolation-source entry in the ontology.
+            if let Some(ref n) = report.niche {
+                println!();
+                println!("── Predicted ecological niche (isolation source) ──");
+                println!(
+                    "  prediction : {}  (confidence {:.0}%)",
+                    n.vote.label,
+                    n.vote.confidence * 100.0
+                );
+                if n.vote.tallies.len() > 1 {
+                    println!("  vote tallies:");
+                    for (label, w) in n.vote.tallies.iter().take(5) {
+                        println!("    {:<32} weight {:.4}", label, w);
+                    }
+                    if n.vote.tallies.len() > 5 {
+                        println!("    … and {} more niche labels", n.vote.tallies.len() - 5);
+                    }
+                }
+                println!(
+                    "  neighbours consulted: {}/{} of top-N had ontology data",
+                    n.neighbours.len(),
+                    report.top.len()
+                );
             }
 
             // Thermotolerance prediction — rendered when the `phenotypes`

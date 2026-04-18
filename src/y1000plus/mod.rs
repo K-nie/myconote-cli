@@ -16,6 +16,7 @@
 pub mod benchmark;
 pub mod commands;
 pub mod download;
+pub mod environment;
 pub mod extract;
 pub mod install;
 pub mod manifest;

@@ -46,6 +46,99 @@ pub struct SyntenyConfig {
     /// after rendering. Useful for debugging alignment issues or loading the
     /// raw hits into an external dotplot tool.
     pub keep_paf: bool,
+    /// Which backend to render with. `html` (default) is the in-tree D3
+    /// viewer — self-contained, interactive, good for exploration. `pygenomeviz`
+    /// shells out to the pyGenomeViz Python library to produce publication-
+    /// quality static figures (PNG, PDF, SVG) at 300 DPI with gene-name labels
+    /// and identity-based alignment colorbars.
+    pub backend: SyntenyBackend,
+    /// Output format when backend is pygenomeviz. Ignored for html backend.
+    pub format: PlotFormat,
+    /// Aligner to use in the pygenomeviz backend. MUMmer is the default
+    /// because it's the right tool at whole-genome scale; BLAST and MMseqs
+    /// are protein-level and best for feature-level comparisons.
+    pub aligner: PygvAligner,
+    /// Dark or light theme in the pygenomeviz backend.
+    pub theme: PlotTheme,
+    /// Minimum alignment identity (%) to display as a link. Filters noisy
+    /// low-similarity links that clutter the figure.
+    pub min_identity: u32,
+    /// Image width in inches for the pygenomeviz backend.
+    pub width_inches: f32,
+    /// Per-genome track height (inches). Total figure height = n_genomes ×
+    /// track_height.
+    pub track_height_inches: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyntenyBackend {
+    Html,
+    PyGenomeViz,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlotFormat {
+    Png,
+    Pdf,
+    Svg,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PygvAligner {
+    MUMmer,
+    Blast,
+    MMseqs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlotTheme {
+    Light,
+    Dark,
+}
+
+impl PlotFormat {
+    pub fn extension(self) -> &'static str {
+        match self {
+            PlotFormat::Png => "png",
+            PlotFormat::Pdf => "pdf",
+            PlotFormat::Svg => "svg",
+        }
+    }
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "png" => Some(PlotFormat::Png),
+            "pdf" => Some(PlotFormat::Pdf),
+            "svg" => Some(PlotFormat::Svg),
+            _ => None,
+        }
+    }
+}
+
+impl PygvAligner {
+    pub fn as_py_class(self) -> &'static str {
+        match self {
+            PygvAligner::MUMmer => "MUMmer",
+            PygvAligner::Blast => "Blast",
+            PygvAligner::MMseqs => "MMseqs",
+        }
+    }
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "mummer" => Some(PygvAligner::MUMmer),
+            "blast" => Some(PygvAligner::Blast),
+            "mmseqs" => Some(PygvAligner::MMseqs),
+            _ => None,
+        }
+    }
+}
+
+impl PlotTheme {
+    pub fn as_py_str(self) -> &'static str {
+        match self {
+            PlotTheme::Light => "light",
+            PlotTheme::Dark => "dark",
+        }
+    }
 }
 
 impl Default for SyntenyConfig {
@@ -64,6 +157,13 @@ impl Default for SyntenyConfig {
             chain_gap: 100_000,
             threads: 4,
             keep_paf: false,
+            backend: SyntenyBackend::Html,
+            format: PlotFormat::Pdf,
+            aligner: PygvAligner::MUMmer,
+            theme: PlotTheme::Light,
+            min_identity: 30,
+            width_inches: 12.0,
+            track_height_inches: 1.2,
         }
     }
 }
@@ -939,6 +1039,13 @@ else {{ setTimeout(() => {{ if (typeof d3 !== 'undefined') draw(); }}, 500); }}
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn generate_synteny(config: &SyntenyConfig) -> Result<()> {
+    // Route to the pyGenomeViz backend when selected — it drives its own
+    // aligner (MUMmer / BLAST / MMseqs) and produces publication-quality
+    // static figures, so we short-circuit the in-tree minimap2+D3 path.
+    if config.backend == SyntenyBackend::PyGenomeViz {
+        return crate::view::pygenomeviz::render_synteny(config);
+    }
+
     // 1. Get chromosome sizes from GFF3 (works even without FASTA)
     println!("📐 Reading chromosome sizes from GFF3 files…");
     let sizes1 = chrom_sizes_from_gff(&config.gff1)?;

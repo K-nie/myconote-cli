@@ -63,6 +63,11 @@ indicatif = "0.17"
 duct = "0.13"
 which = "6.0"
 
+# Archive extraction for the Y1000+ bundle
+tar = "0.4"
+zip = { version = "2.1", default-features = false, features = ["deflate"] }
+sha2 = "0.10"
+
 [dev-dependencies]
 tempfile = "3.10"
 assert_cmd = "2.0"

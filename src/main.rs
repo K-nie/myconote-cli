@@ -17,7 +17,6 @@ pub mod mask;
 pub mod names;
 pub mod parser;
 pub mod phylogeny;
-pub mod plot;
 pub mod predict;
 pub mod progress;
 pub mod remote;
@@ -29,10 +28,9 @@ pub mod submit;
 pub mod train;
 pub mod update;
 pub mod utils;
-pub mod view;
+pub mod y1000plus;
 
 use parser::region::RegionSelector;
-use plot::PlotConfig;
 
 /// Returns true if `--help` or `-h` appears anywhere in the slice.
 fn has_help_flag(args: &[String]) -> bool {
@@ -99,11 +97,8 @@ fn print_main_help() {
     println!("  batch    Annotate multiple genomes (directory or sample sheet, HTCondor support)");
     println!("\nAnalysis commands:");
     println!("  stats    Calculate statistics from annotation files");
-    println!("  plot     Generate genome maps (linear PNG / circular PNG)");
     println!("  phylogeny Build a maximum-likelihood tree with IQ-TREE (from an alignment)");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
-    println!("  view     Visualise annotations in JBrowse2 / UCSC browser");
-    println!("  synteny  Compare two genomes — ribbon diagram (requires minimap2)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
     println!("  fix      Repair errors in GenBank (.gbk) files");
@@ -120,18 +115,14 @@ fn print_main_help() {
     println!("  --region <chr:start-end>      Focus on specific region");
     println!("  --exclude <chr>               Exclude a chromosome");
     println!("  --primary-only                Collapse isoforms");
-    println!("\nOptions for plot:");
-    println!("  --output <file>               Output file (PNG/SVG/PDF)");
-    println!("  --type <linear|circular>      Plot type (default: linear)");
-    println!("  --region <chr:start-end>      Region to plot");
-    println!("  --title <text>                Plot title");
-    println!("  --width <pixels>              Plot width (default: 1200)");
-    println!("  --height <pixels>             Plot height (default: 800)");
     println!("\nTaxonomic groups: fungi, ascomycota, basidiomycota, plants, animals, mammals");
     println!("\nExamples:");
     println!("  myconote-cli stats genome.gff3");
-    println!("  myconote-cli plot genes.gff3 --output map.png --type circular");
-    println!("  myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa");
+    println!("  myconote-cli annotate genes.gff3 --fasta genome.fa --kingdom fungi");
+    println!("\nFor visualisation, pipe myconote outputs into external tools:");
+    println!("  • Proksee (web)  — upload the GenBank from `convert --to genbank`");
+    println!("  • IGV (desktop) — drop GFF3 + FASTA for interactive browsing");
+    println!("  • clinker (pip) — cross-species gene-cluster synteny from .gbk files");
     println!("\nRun 'myconote-cli <command> --help' for detailed help on any command.");
 }
 
@@ -328,6 +319,8 @@ fn main() -> Result<()> {
                 println!("  --region <chr:start-end>      Focus on a specific genomic region");
                 println!("  --exclude <chr>               Exclude a sequence from stats");
                 println!("  --primary-only                Collapse isoforms to primary transcript only");
+                println!("  --benchmark y1000plus         Append the Y1000+ reference distributions");
+                println!("                                (requires `setup --y1000plus --preset starter`)");
                 println!("\nTaxonomic groups: fungi, ascomycota, basidiomycota, plants, animals, mammals");
                 println!("\nOutputs (human format):");
                 println!("  Total features, genes, transcripts, CDS, exons");
@@ -343,26 +336,6 @@ fn main() -> Result<()> {
             }
             let path = &args[2];
             handle_stats(path, &args[3..])?;
-        }
-        "plot" => {
-            if args.len() < 3 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli plot <annotation.gff3> [options]");
-                println!("\nGenerates a PNG genome map from a GFF3 annotation file.");
-                println!("\nOptions:");
-                println!("  --output <file>               Output PNG file (default: genome_map.png)");
-                println!("  --type <linear|circular>      Plot type (default: linear)");
-                println!("  --region <chr:start-end>      Restrict plot to a specific region");
-                println!("  --title <text>                Plot title");
-                println!("  --width <pixels>              Canvas width (default: 1200)");
-                println!("  --height <pixels>             Canvas height (default: 800)");
-                println!("\nExamples:");
-                println!("  myconote-cli plot genes.gff3 --output linear.png");
-                println!("  myconote-cli plot genes.gff3 --type circular --output circular.png");
-                println!("  myconote-cli plot genes.gff3 --region scaffold_1:1-500000 --title 'Scaffold 1'");
-                return Ok(());
-            }
-            let path = &args[2];
-            handle_plot(path, &args[3..])?;
         }
         "phylogeny" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -445,76 +418,6 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             handle_compare(&args[2..])?;
-        }
-        "view" => {
-            if args.len() < 3 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli view <annotations.gff3> [options]");
-                println!("\nOptions:");
-                println!("  --fasta <file>             Reference FASTA (enables sequence track)");
-                println!("  --output <file.html>       Output file (default: genome_view.html)");
-                println!("  --browser <jbrowse2|ucsc>  Browser backend (default: jbrowse2)");
-                println!("  --region <seq:start-end>   Region to focus on");
-                println!("  --title <text>             Viewer title");
-                println!("  --assembly <name>          Assembly/species name");
-                println!("  --also-ucsc                Also print a UCSC custom-track URL");
-                println!("  --names <file.tsv>         ID→name mapping file (tab-separated)");
-                println!("  --fetch-names              Auto-fetch gene names from NCBI/UniProt/FungiDB");
-                println!("  --taxon <id>               NCBI taxon ID for name lookup (improves accuracy)");
-                println!("\nExamples:");
-                println!("  myconote-cli view genome.gff3");
-                println!("  myconote-cli view genome.gff3 --fetch-names --taxon 5207");
-                println!("  myconote-cli view genome.gff3 --names my_names.tsv");
-                println!("  myconote-cli view genome.gff3 --region NODE_1:1-50000");
-                return Ok(());
-            }
-            let path = &args[2];
-            handle_view(path, &args[3..])?;
-        }
-        "synteny" => {
-            if args.len() < 4 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli synteny <genome_a.gff3> <genome_b.gff3> [options]");
-                println!("\nBackends:");
-                println!("  --backend html        Interactive D3 viewer (default) — exploration");
-                println!("  --backend pygenomeviz Static PNG/PDF/SVG via pyGenomeViz — publication");
-                println!("\nInputs:");
-                println!("  --fasta1 <file>       FASTA for genome A (required for both backends)");
-                println!("  --fasta2 <file>       FASTA for genome B (required for both backends)");
-                println!("  --label1 <name>       Label for genome A (default: Genome A)");
-                println!("  --label2 <name>       Label for genome B (default: Genome B)");
-                println!("\nOutput:");
-                println!("  --output <file>       Output path (default: synteny.html or synteny.pdf)");
-                println!("  --format png|pdf|svg  Static-backend format (implies --backend pygenomeviz)");
-                println!("\npyGenomeViz backend options:");
-                println!("  --aligner mummer|blast|mmseqs  Aligner choice (default: mummer)");
-                println!("  --theme light|dark    Figure theme (default: light)");
-                println!("  --min-identity <n>    Minimum alignment identity %% (default: 30)");
-                println!("  --width <in>          Figure width in inches (default: 12)");
-                println!("  --track-height <in>   Per-genome track height (default: 1.2)");
-                println!("  --region <seqid:s-e>  Zoom to one region; enables gene arrows + labels");
-                println!("  --show-features       Force gene arrows in whole-genome view (noisy)");
-                println!("  --top-contigs <n>     Show only top-N largest contigs (default: all)");
-                println!("\nHTML backend options:");
-                println!("  --min-block <bp>      Minimum block length to show (default: 1000)");
-                println!("  --chain-gap <bp>      Merge adjacent colinear hits within gap (0=off)");
-                println!("  --threads | -t <n>    Threads for minimap2 (default: 4)");
-                println!("  --keep-paf            Keep the intermediate PAF file for debugging");
-                println!("\nGene-name resolution (both backends):");
-                println!("  --names <file.tsv>    ID→name mapping (labels shown on ribbons)");
-                println!("  --fetch-names         Auto-fetch gene names from NCBI/UniProt/FungiDB");
-                println!("  --taxon <id>          NCBI taxon ID for name lookup");
-                println!("\nDependencies:");
-                println!("  html backend       → minimap2 (conda install -c bioconda minimap2)");
-                println!("  pygenomeviz backend→ conda create -n myconote-viz -c bioconda \\");
-                println!("                         python=3.12 pygenomeviz mummer4 blast matplotlib");
-                println!("\nExamples:");
-                println!("  myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa");
-                println!("  myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa \\");
-                println!("    --format pdf --theme dark --output figure2.pdf");
-                return Ok(());
-            }
-            let gff1 = &args[2];
-            let gff2 = &args[3];
-            handle_synteny(gff1, gff2, &args[4..])?;
         }
         "convert" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -679,11 +582,19 @@ fn main() -> Result<()> {
                 println!("  busco        BUSCO fungi lineage data — used by annotate");
                 println!("  chat-corpus  Q1 open-access paper corpus — used by explain");
                 println!("  ollama       Ollama LLM runtime + model — used by explain");
+                println!("\nY1000+ yeast reference bundle (Opulente et al. 2024, Science):");
+                println!("  --y1000plus                  Enter the Y1000+ subsystem");
+                println!("  --y1000plus --list           Show all subsets + what's installed");
+                println!("  --y1000plus --dry-run --preset starter   Preview the ~175 MB starter bundle");
+                println!("  --y1000plus --include kegg,busco         Install just these subsets");
+                println!("  --y1000plus --preset phylogeny           Enables phylogenetic placement");
+                println!("  --y1000plus --uninstall <subsets>        Remove specific subsets");
                 println!("\nExamples:");
                 println!("  myconote-cli setup --list");
                 println!("  myconote-cli setup                     # download everything");
                 println!("  myconote-cli setup --db swiss-prot pfam");
                 println!("  myconote-cli setup --check");
+                println!("  myconote-cli setup --y1000plus --list");
                 return Ok(());
             }
             handle_setup(&args[2..])?;
@@ -859,7 +770,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | plot | phylogeny | compare | view | synteny | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | phylogeny | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -873,6 +784,7 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
     let mut regions = Vec::new();
     let mut exclude = Vec::new();
     let mut primary_only = false;
+    let mut benchmark_y1000plus = false;
 
     let mut i = 0;
     while i < args.len() {
@@ -900,6 +812,17 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             "--primary-only" => {
                 primary_only = true;
                 i += 1;
+            }
+            "--benchmark" if i + 1 < args.len() => {
+                if args[i + 1].eq_ignore_ascii_case("y1000plus") {
+                    benchmark_y1000plus = true;
+                } else {
+                    eprintln!(
+                        "Unknown --benchmark target '{}'. Only 'y1000plus' is supported.",
+                        args[i + 1]
+                    );
+                }
+                i += 2;
             }
             _ => i += 1,
         }
@@ -970,57 +893,99 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
                     println!("\n{}", warning);
                 }
             }
+
+            if benchmark_y1000plus {
+                print_y1000plus_benchmark(&stats)?;
+            }
         }
     }
 
     Ok(())
 }
 
-fn handle_plot(path: &str, args: &[String]) -> Result<()> {
-    let mut config = PlotConfig::default();
-    let mut plot_type = "linear".to_string();
+/// Append a Y1000+ reference-distribution block to the human-format stats
+/// output. Pulls from the installed bundle; silently skips distributions
+/// whose subset isn't on disk.
+fn print_y1000plus_benchmark(stats: &stats::GenomeStatistics) -> Result<()> {
+    use y1000plus::benchmark::{load_reference, DistStats};
 
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--output" if i + 1 < args.len() => {
-                config.output_path = args[i + 1].clone();
-                i += 2;
-            }
-            "--type" if i + 1 < args.len() => {
-                plot_type = args[i + 1].clone();
-                i += 2;
-            }
-            "--region" if i + 1 < args.len() => {
-                config.region = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--title" if i + 1 < args.len() => {
-                config.title = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--width" if i + 1 < args.len() => {
-                if let Ok(w) = args[i + 1].parse() {
-                    config.width = w;
-                }
-                i += 2;
-            }
-            "--height" if i + 1 < args.len() => {
-                if let Ok(h) = args[i + 1].parse() {
-                    config.height = h;
-                }
-                i += 2;
-            }
-            _ => i += 1,
+    let reference = match load_reference() {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("\n⚠  --benchmark y1000plus skipped: {e}");
+            return Ok(());
         }
+    };
+
+    println!("\n══════════════════════════════════════════════════════════════════");
+    println!(
+        "📊 Y1000+ benchmark  ({} species · Opulente et al. 2024, Science)",
+        reference.species_count
+    );
+    println!("══════════════════════════════════════════════════════════════════");
+
+    let row = |label: &str, d: &DistStats, user: Option<f64>, fmt: &str| {
+        let user_col = match user {
+            Some(u) => {
+                let pct = d.percentile_of(u);
+                let marker = if pct < 25.0 {
+                    "below p25 — lean"
+                } else if pct < 75.0 {
+                    "typical range"
+                } else {
+                    "above p75 — rich"
+                };
+                if fmt == "int" {
+                    format!("{:>7} ({:>5.1} pct · {})", u as u64, pct, marker)
+                } else {
+                    format!("{:>7.1}% ({:>5.1} pct · {})", u, pct, marker)
+                }
+            }
+            None => "(not measured)".to_string(),
+        };
+        let pretty = if fmt == "int" {
+            format!(
+                "{:<22} min {:>6.0}   p25 {:>6.0}   median {:>6.0}   p75 {:>6.0}   max {:>6.0}",
+                label, d.min, d.p25, d.median, d.p75, d.max
+            )
+        } else {
+            format!(
+                "{:<22} min {:>5.1}%  p25 {:>5.1}%  median {:>5.1}%  p75 {:>5.1}%  max {:>5.1}%",
+                label, d.min, d.p25, d.median, d.p75, d.max
+            )
+        };
+        println!("{pretty}\n  your genome: {user_col}");
+    };
+
+    let _ = stats; // placeholder — until we extract user's BUSCO/KEGG counts directly
+
+    if let Some(ref d) = reference.busco_completeness {
+        row("BUSCO completeness", d, None, "pct");
+        println!(
+            "  (run BUSCO on your genome to see where you land; we surface \
+             the Y1000+ distribution so you can interpret it in context.)"
+        );
+    }
+    if let Some(ref d) = reference.kegg_ko_count {
+        row("Distinct KEGG KOs", d, None, "int");
+        println!(
+            "  (run `annotate` with EggNog-mapper; count of distinct KEGG KOs \
+             in your annotated.tsv is comparable directly.)"
+        );
     }
 
-    match plot_type.as_str() {
-        "linear" => plot::generate_linear_plot(path, &config)?,
-        "circular" => plot::generate_circular_plot(path, &config)?,
-        _ => println!("Unknown plot type: {}", plot_type),
+    if reference.busco_completeness.is_none() && reference.kegg_ko_count.is_none() {
+        println!(
+            "No usable reference subsets installed. Install with:\n  \
+             myconote-cli setup --y1000plus --include busco,kegg"
+        );
     }
 
+    println!();
+    println!(
+        "Reference cache: {}\nCitation: Opulente DA et al. (2024). Science 384(6694): eadj4503.",
+        reference.source_root.display()
+    );
     Ok(())
 }
 
@@ -1110,112 +1075,6 @@ fn handle_compare(args: &[String]) -> Result<()> {
 
     config.inputs = parse_positional_inputs(&positional)?;
     run_compare(&config)?;
-    Ok(())
-}
-
-fn handle_view(path: &str, args: &[String]) -> Result<()> {
-    use names::NameResolver;
-    use parser::GFFReader;
-    use view::{generate_view, BrowserType, ViewConfig};
-
-    let mut config = ViewConfig {
-        gff_path: PathBuf::from(path),
-        ..ViewConfig::default()
-    };
-
-    let mut names_file: Option<String> = None;
-    let mut fetch_names = false;
-    let mut taxon_id: Option<u32> = None;
-
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--fasta" if i + 1 < args.len() => {
-                config.fasta_path = Some(PathBuf::from(&args[i + 1]));
-                i += 2;
-            }
-            "--output" | "-o" if i + 1 < args.len() => {
-                config.output = PathBuf::from(&args[i + 1]);
-                i += 2;
-            }
-            "--browser" if i + 1 < args.len() => {
-                config.browser = BrowserType::from_str(&args[i + 1]);
-                i += 2;
-            }
-            "--region" if i + 1 < args.len() => {
-                config.region = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--title" if i + 1 < args.len() => {
-                config.title = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--assembly" if i + 1 < args.len() => {
-                config.assembly_name = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--also-ucsc" => {
-                config.also_ucsc = true;
-                i += 1;
-            }
-            "--names" if i + 1 < args.len() => {
-                names_file = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--fetch-names" => {
-                fetch_names = true;
-                i += 1;
-            }
-            "--taxon" if i + 1 < args.len() => {
-                taxon_id = args[i + 1].parse::<u32>().ok();
-                i += 2;
-            }
-            _ => i += 1,
-        }
-    }
-
-    // ── Resolve gene names ────────────────────────────────────────────────
-    if names_file.is_some() || fetch_names {
-        let mut resolver = NameResolver::new();
-
-        // Load local file first (highest priority)
-        if let Some(ref nf) = names_file {
-            println!("📖 Loading gene names from {}…", nf);
-            resolver.load_local_file(nf);
-            println!("   {} names loaded", resolver.len());
-        }
-
-        // Fetch missing names from online APIs
-        if fetch_names {
-            // Collect all gene IDs from the GFF3
-            let gene_ids: Vec<String> = GFFReader::from_path(path)?
-                .filter_map(|r| r.ok())
-                .filter(|r| r.feature_type == "gene")
-                .filter_map(|r| r.id().cloned())
-                .collect();
-
-            println!(
-                "🌐 Fetching names for {} genes (NCBI → UniProt → FungiDB)…",
-                gene_ids.len()
-            );
-            resolver.fetch_missing(&gene_ids, taxon_id);
-        }
-
-        // Copy into config.names
-        for (k, v) in resolver.to_tsv().lines().filter_map(|l| {
-            let mut p = l.splitn(2, '\t');
-            Some((p.next()?.to_string(), p.next()?.to_string()))
-        }) {
-            config.names.insert(k, v);
-        }
-
-        println!(
-            "   {} total gene names available for display",
-            config.names.len()
-        );
-    }
-
-    generate_view(&config)?;
     Ok(())
 }
 
@@ -1684,216 +1543,6 @@ fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
     }
     println!("\n✓ Clean GFF3: {}", output_path);
 
-    Ok(())
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// synteny command: 2-genome ribbon diagram
-// ─────────────────────────────────────────────────────────────────────────────
-
-fn handle_synteny(gff1: &str, gff2: &str, args: &[String]) -> Result<()> {
-    use names::NameResolver;
-    use parser::GFFReader;
-    use view::synteny::{
-        generate_synteny, PlotFormat, PlotTheme, PygvAligner, SyntenyBackend, SyntenyConfig,
-    };
-
-    let mut config = SyntenyConfig {
-        gff1: PathBuf::from(gff1),
-        gff2: PathBuf::from(gff2),
-        ..SyntenyConfig::default()
-    };
-
-    let mut names_file: Option<String> = None;
-    let mut fetch_names = false;
-    let mut taxon_id: Option<u32> = None;
-
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--fasta1" if i + 1 < args.len() => {
-                config.fasta1 = Some(PathBuf::from(&args[i + 1]));
-                i += 2;
-            }
-            "--fasta2" if i + 1 < args.len() => {
-                config.fasta2 = Some(PathBuf::from(&args[i + 1]));
-                i += 2;
-            }
-            "--output" | "-o" if i + 1 < args.len() => {
-                config.output = PathBuf::from(&args[i + 1]);
-                i += 2;
-            }
-            "--label1" if i + 1 < args.len() => {
-                config.label1 = args[i + 1].clone();
-                i += 2;
-            }
-            "--label2" if i + 1 < args.len() => {
-                config.label2 = args[i + 1].clone();
-                i += 2;
-            }
-            "--min-block" if i + 1 < args.len() => {
-                if let Ok(n) = args[i + 1].parse::<u64>() {
-                    config.min_block_len = n;
-                }
-                i += 2;
-            }
-            "--chain-gap" if i + 1 < args.len() => {
-                if let Ok(n) = args[i + 1].parse::<u64>() {
-                    config.chain_gap = n;
-                }
-                i += 2;
-            }
-            "--threads" | "-t" if i + 1 < args.len() => {
-                if let Ok(n) = args[i + 1].parse::<u32>() {
-                    config.threads = n;
-                }
-                i += 2;
-            }
-            "--keep-paf" => {
-                config.keep_paf = true;
-                i += 1;
-            }
-            "--backend" if i + 1 < args.len() => {
-                config.backend = match args[i + 1].to_lowercase().as_str() {
-                    "pygenomeviz" | "pygv" | "pdf" | "png" => SyntenyBackend::PyGenomeViz,
-                    "html" | "d3" => SyntenyBackend::Html,
-                    other => {
-                        eprintln!(
-                            "Unknown synteny backend '{}', expected 'html' or 'pygenomeviz'. \
-                             Defaulting to html.",
-                            other
-                        );
-                        SyntenyBackend::Html
-                    }
-                };
-                i += 2;
-            }
-            "--format" | "-f" if i + 1 < args.len() => {
-                if let Some(fmt) = PlotFormat::from_str(&args[i + 1]) {
-                    config.format = fmt;
-                } else {
-                    eprintln!(
-                        "Unknown --format '{}', expected png / pdf / svg. Using default.",
-                        args[i + 1]
-                    );
-                }
-                // --format implies pygenomeviz backend unless explicitly overridden.
-                if config.backend == SyntenyBackend::Html {
-                    config.backend = SyntenyBackend::PyGenomeViz;
-                }
-                i += 2;
-            }
-            "--aligner" if i + 1 < args.len() => {
-                if let Some(a) = PygvAligner::from_str(&args[i + 1]) {
-                    config.aligner = a;
-                } else {
-                    eprintln!(
-                        "Unknown --aligner '{}', expected mummer / blast / mmseqs. Using default.",
-                        args[i + 1]
-                    );
-                }
-                i += 2;
-            }
-            "--theme" if i + 1 < args.len() => {
-                config.theme = match args[i + 1].to_lowercase().as_str() {
-                    "dark" => PlotTheme::Dark,
-                    _ => PlotTheme::Light,
-                };
-                i += 2;
-            }
-            "--min-identity" if i + 1 < args.len() => {
-                if let Ok(n) = args[i + 1].parse::<u32>() {
-                    config.min_identity = n;
-                }
-                i += 2;
-            }
-            "--width" if i + 1 < args.len() => {
-                if let Ok(w) = args[i + 1].parse::<f32>() {
-                    config.width_inches = w;
-                }
-                i += 2;
-            }
-            "--track-height" if i + 1 < args.len() => {
-                if let Ok(h) = args[i + 1].parse::<f32>() {
-                    config.track_height_inches = h;
-                }
-                i += 2;
-            }
-            "--region" if i + 1 < args.len() => {
-                config.region = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--show-features" => {
-                config.show_features = true;
-                i += 1;
-            }
-            "--top-contigs" if i + 1 < args.len() => {
-                if let Ok(n) = args[i + 1].parse::<usize>() {
-                    config.top_contigs = n;
-                }
-                i += 2;
-            }
-            "--names" if i + 1 < args.len() => {
-                names_file = Some(args[i + 1].clone());
-                i += 2;
-            }
-            "--fetch-names" => {
-                fetch_names = true;
-                i += 1;
-            }
-            "--taxon" if i + 1 < args.len() => {
-                taxon_id = args[i + 1].parse::<u32>().ok();
-                config.taxon_id = taxon_id;
-                i += 2;
-            }
-            _ => i += 1,
-        }
-    }
-
-    // ── Resolve gene names ────────────────────────────────────────────────
-    if names_file.is_some() || fetch_names {
-        let mut resolver = NameResolver::new();
-
-        if let Some(ref nf) = names_file {
-            println!("📖 Loading gene names from {}…", nf);
-            resolver.load_local_file(nf);
-        }
-
-        if fetch_names {
-            // Collect gene IDs from both GFF3 files
-            let ids1: Vec<String> = GFFReader::from_path(gff1)?
-                .filter_map(|r| r.ok())
-                .filter(|r| r.feature_type == "gene")
-                .filter_map(|r| r.id().cloned())
-                .collect();
-            let ids2: Vec<String> = GFFReader::from_path(gff2)?
-                .filter_map(|r| r.ok())
-                .filter(|r| r.feature_type == "gene")
-                .filter_map(|r| r.id().cloned())
-                .collect();
-            let mut all_ids = ids1;
-            all_ids.extend(ids2);
-            all_ids.sort();
-            all_ids.dedup();
-
-            println!("🌐 Fetching names for {} genes…", all_ids.len());
-            resolver.fetch_missing(&all_ids, taxon_id);
-        }
-
-        for (k, v) in resolver.to_tsv().lines().filter_map(|l| {
-            let mut p = l.splitn(2, '\t');
-            Some((p.next()?.to_string(), p.next()?.to_string()))
-        }) {
-            config.names.insert(k, v);
-        }
-
-        println!(
-            "   {} gene names loaded for ribbon labels",
-            config.names.len()
-        );
-    }
-
-    generate_synteny(&config)?;
     Ok(())
 }
 
@@ -2568,6 +2217,28 @@ fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
 
 fn handle_setup(args: &[String]) -> Result<()> {
     use setup::{check_databases, download_databases, list_databases};
+    use y1000plus::commands as y1000_cmds;
+
+    // ── Y1000+ branch ─────────────────────────────────────────────────────
+    // Any `--y1000plus` flag (alone, or with --list/--dry-run/--include/...)
+    // routes to the Y1000+ bundle subsystem and skips the regular DB flow.
+    if args.iter().any(|a| a == "--y1000plus") {
+        let filtered: Vec<String> = args.iter()
+            .filter(|a| a.as_str() != "--y1000plus")
+            .cloned()
+            .collect();
+        let (y_args, _unused) = y1000_cmds::parse_args(&filtered)?;
+        // Default to --list when nothing else is asked for.
+        if !y_args.list && !y_args.dry_run
+            && y_args.preset.is_none() && y_args.include.is_empty()
+            && y_args.uninstall.is_empty()
+        {
+            y1000_cmds::run_list()?;
+            return Ok(());
+        }
+        y1000_cmds::dispatch(&y_args)?;
+        return Ok(());
+    }
 
     let db_dir_default = {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());

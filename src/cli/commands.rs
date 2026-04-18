@@ -28,14 +28,8 @@ pub enum Commands {
     /// Build phylogenetic trees with IQ-TREE
     Phylogeny(PhylogenyArgs),
 
-    /// Generate publication-quality plots
-    Plot(PlotArgs),
-
     /// Compare multiple genomes (alignment + visualization)
     Compare(CompareArgs),
-
-    /// Interactive genome browser (JBrowse2 / UCSC / NCBI)
-    View(ViewArgs),
 }
 
 #[derive(Args)]
@@ -168,40 +162,6 @@ pub struct PhylogenyArgs {
 }
 
 #[derive(Args)]
-pub struct PlotArgs {
-    /// Input annotation file
-    pub input: PathBuf,
-
-    /// Plot type (linear, circular, heatmap, tree)
-    #[arg(short, long)]
-    pub plot_type: String,
-
-    /// Output file (PDF, PNG, SVG)
-    #[arg(short, long)]
-    pub output: PathBuf,
-
-    /// Tracks to include (comma-separated)
-    #[arg(long)]
-    pub tracks: Option<String>,
-
-    /// Specific region to plot
-    #[arg(long)]
-    pub region: Option<String>,
-
-    /// Title for the plot
-    #[arg(long)]
-    pub title: Option<String>,
-
-    /// Width in inches
-    #[arg(long, default_value_t = 10.0)]
-    pub width: f64,
-
-    /// Height in inches
-    #[arg(long, default_value_t = 8.0)]
-    pub height: f64,
-}
-
-#[derive(Args)]
 pub struct CompareArgs {
     /// Input genome files
     #[arg(required = true)]
@@ -284,41 +244,3 @@ pub struct CleanArgs {
     pub primary_only: bool,
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// View (genome browser) command
-// ─────────────────────────────────────────────────────────────────────────────
-
-#[derive(Args)]
-pub struct ViewArgs {
-    /// Input GFF3 annotation file
-    pub input: PathBuf,
-
-    /// Reference FASTA file (enables the sequence track in JBrowse2)
-    /// The .fai index must already exist alongside the FASTA.
-    #[arg(long)]
-    pub fasta: Option<PathBuf>,
-
-    /// Output HTML file
-    #[arg(short, long, default_value = "genome_view.html")]
-    pub output: PathBuf,
-
-    /// Browser backend: jbrowse2 (default), ucsc, ncbi
-    #[arg(long, default_value = "jbrowse2")]
-    pub browser: String,
-
-    /// Genomic region to focus on (format: seqid:start-end, 1-based)
-    #[arg(long)]
-    pub region: Option<String>,
-
-    /// Title shown in the viewer header
-    #[arg(long)]
-    pub title: Option<String>,
-
-    /// Assembly / species name (defaults to the GFF3 filename stem)
-    #[arg(long)]
-    pub assembly: Option<String>,
-
-    /// Also print a UCSC custom-track URL even when using JBrowse2
-    #[arg(long)]
-    pub also_ucsc: bool,
-}

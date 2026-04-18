@@ -12,7 +12,7 @@ The following software versions were used for all reported benchmarks:
 
 | Software | Version | Source |
 |----------|---------|--------|
-| MycoNote-CLI | v0.1.0 | https://github.com/K-nie/myconote-cli/releases/tag/v0.1.0 |
+| MycoNote-CLI | v0.2.0 | https://github.com/K-nie/myconote-cli/releases/tag/v0.2.0 |
 | Rust toolchain | 1.85.0 | rustup default stable |
 | Augustus | 3.5.0 | bioconda channel |
 | SNAP | 2013_11_29 | bioconda channel |
@@ -91,10 +91,10 @@ For thread-count flags, we used `--threads 4` to match the count of performance 
 ### 5.1 Setup
 
 ```bash
-# Install MycoNote-CLI v0.1.0
+# Install MycoNote-CLI v0.2.0
 git clone https://github.com/K-nie/myconote-cli.git
 cd myconote-cli
-git checkout v0.1.0
+git checkout v0.2.0
 cargo build --release
 sudo cp target/release/myconote-cli /usr/local/bin/
 
@@ -215,7 +215,7 @@ wc -l hmmsearch_out.domtblout hmmscan_out.domtblout
 
 ## 6. Planned Comparative Benchmark (For Final Manuscript)
 
-**This section describes the comprehensive benchmark we plan to run before final manuscript submission. These results are not yet available; the v0.1.0 release contains only the two-genome demonstration.**
+**This section describes the comprehensive benchmark we plan to run before final manuscript submission. These results are not yet available; the v0.2.0 release contains only the two-genome demonstration.**
 
 ### 6.1 Reference Genomes (Planned)
 
@@ -236,7 +236,7 @@ We plan to benchmark on the following 8 reference genomes spanning four eukaryot
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| MycoNote-CLI | v0.1.0 | This manuscript |
+| MycoNote-CLI | v0.2.0 | This manuscript |
 | funannotate | 1.8.17 | Established fungal pipeline |
 | MAKER3 | 3.01.04 | Flexible multi-kingdom |
 | BRAKER3 | 3.0.8 | RNA-seq based gold standard |
@@ -303,7 +303,7 @@ We are committed to making MycoNote-CLI as reproducible as possible, but several
 5. **Random number seeds are not currently controlled.** Operations using stochastic methods (e.g., bootstrapping in IQ-TREE) are not seeded by MycoNote-CLI.
 
 For maximum reproducibility, we recommend:
-1. Using the Docker container with the v0.1.0 tag
+1. Using the Docker container with the v0.2.0 tag
 2. Archiving your database files (not just version metadata)
 3. Documenting your hardware in publications
 4. Running multiple replicates and reporting variability

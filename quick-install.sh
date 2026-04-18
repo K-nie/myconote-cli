@@ -58,7 +58,7 @@ if [[ -z "${RELEASE_URL:-}" ]]; then
     # No release yet — fall back to building from source
     echo ""
     echo -e "${CYAN}  No pre-built release found.${RESET}"
-    echo -e "  This is expected for v0.1.0 — the first release hasn't been tagged yet."
+    echo -e "  If this is a new checkout, run 'git fetch --tags' to sync release tags."
     echo ""
     echo -e "  ${BOLD}Install from source instead:${RESET}"
     echo ""

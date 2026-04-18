@@ -4,7 +4,7 @@ From: condaforge/mambaforge:latest
 %labels
     Author Benjamin Narh-Madey <narhmadey@wisc.edu>
     Description myconote-cli: High-performance eukaryotic genome annotation pipeline
-    Version 0.1.0
+    Version 0.2.0
     URL https://github.com/K-nie/myconote-cli
 
 %files

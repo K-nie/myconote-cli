@@ -1,6 +1,6 @@
 [package]
 name = "myconote-cli"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Benjamin Narh-Madey <narhmadey@wisc.edu>"]
 description = "High-performance eukaryotic genome annotation pipeline — from raw assembly to NCBI-ready submission"

@@ -79,6 +79,7 @@ pub struct Reference {
     pub busco_completeness: Option<DistStats>,
     pub kegg_ko_count: Option<DistStats>,
     pub trna_count: Option<DistStats>,
+    pub gene_count: Option<DistStats>,
     pub source_root: PathBuf,
     pub species_count: usize,
 }
@@ -114,10 +115,17 @@ pub fn load_reference() -> Result<Reference> {
         None
     };
 
+    let gene = if manifest.installed.contains_key("annotations") {
+        load_annotations_distribution(&root.join("gff3")).ok()
+    } else {
+        None
+    };
+
     let species_count = [
         busco.as_ref().map(|d| d.n),
         kegg.as_ref().map(|d| d.n),
         trna.as_ref().map(|d| d.n),
+        gene.as_ref().map(|d| d.n),
     ]
     .into_iter()
     .flatten()
@@ -128,6 +136,7 @@ pub fn load_reference() -> Result<Reference> {
         busco_completeness: busco,
         kegg_ko_count: kegg,
         trna_count: trna,
+        gene_count: gene,
         source_root: root,
         species_count,
     })
@@ -249,6 +258,103 @@ fn load_trna_distribution(trna_root: &Path) -> Result<DistStats> {
             trna_root.display()
         ))
     })
+}
+
+/// Load per-species gene counts from the `annotations` subset.
+///
+/// First tries `<root>/.myconote_gene_count.tsv` — a one-line-per-species
+/// cache we write on first read. If the cache is missing, walk every
+/// `*.final.gff3` under the root, count `gene`-type feature rows per file,
+/// persist the cache, and return the distribution. Subsequent calls are
+/// microseconds instead of the first-run's ~tens of seconds.
+fn load_annotations_distribution(annotations_root: &Path) -> Result<DistStats> {
+    let cache = annotations_root.join(".myconote_gene_count.tsv");
+    let counts = if cache.exists() {
+        read_gene_count_cache(&cache).unwrap_or_default()
+    } else {
+        compute_and_cache_gene_counts(annotations_root, &cache)?
+    };
+    let values: Vec<f64> = counts.into_iter().map(|(_, n)| n as f64).collect();
+    DistStats::from(values).ok_or_else(|| {
+        MycoNoteError::InvalidFormat(format!(
+            "No parseable GFF3s under {}",
+            annotations_root.display()
+        ))
+    })
+}
+
+fn read_gene_count_cache(cache: &Path) -> Result<Vec<(String, u64)>> {
+    let mut out = Vec::new();
+    let f = File::open(cache).map_err(MycoNoteError::Io)?;
+    for line in BufReader::new(f).lines().map_while(|l| l.ok()) {
+        if line.starts_with('#') || line.is_empty() {
+            continue;
+        }
+        let mut p = line.splitn(2, '\t');
+        let species = p.next().unwrap_or("").to_string();
+        let count: u64 = p.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+        if !species.is_empty() && count > 0 {
+            out.push((species, count));
+        }
+    }
+    Ok(out)
+}
+
+fn compute_and_cache_gene_counts(
+    annotations_root: &Path,
+    cache: &Path,
+) -> Result<Vec<(String, u64)>> {
+    let mut out: Vec<(String, u64)> = Vec::new();
+    fn walk(p: &Path, out: &mut Vec<(String, u64)>) {
+        let Ok(entries) = std::fs::read_dir(p) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            if !name.ends_with(".gff3") {
+                continue;
+            }
+            // Skip the tiny spurious files that occasionally ship with these
+            // tarballs (README, etc.).
+            let Ok(f) = File::open(&path) else { continue };
+            let mut count = 0u64;
+            for line in BufReader::new(f).lines().map_while(|l| l.ok()) {
+                if line.starts_with('#') || line.is_empty() {
+                    continue;
+                }
+                let cols: Vec<&str> = line.split('\t').collect();
+                if cols.len() >= 3 && cols[2] == "gene" {
+                    count += 1;
+                }
+            }
+            if count > 0 {
+                // Strip the doubled .final suffix (`x.final.gff3` → `x`).
+                let stem = name
+                    .strip_suffix(".gff3")
+                    .and_then(|s| s.strip_suffix(".final"))
+                    .unwrap_or(name);
+                out.push((stem.to_string(), count));
+            }
+        }
+    }
+    walk(annotations_root, &mut out);
+
+    // Persist the cache so subsequent benchmarks are instant.
+    use std::io::Write;
+    if let Ok(mut f) = File::create(cache) {
+        let _ = writeln!(f, "# species\tgene_count");
+        for (s, n) in &out {
+            let _ = writeln!(f, "{s}\t{n}");
+        }
+    }
+    Ok(out)
 }
 
 /// Count tRNA features in a user's GFF3. Used to place the user on the

@@ -1016,8 +1016,6 @@ fn print_y1000plus_benchmark(
         println!("{pretty}\n  your genome: {user_col}");
     };
 
-    let _ = stats; // gene-count benchmarking arrives with the `annotations` subset
-
     if let Some(ref d) = reference.busco_completeness {
         row("BUSCO completeness", d, None, "pct");
         println!(
@@ -1044,14 +1042,21 @@ fn print_y1000plus_benchmark(
             );
         }
     }
+    if let Some(ref d) = reference.gene_count {
+        // The user's gene count is already sitting on the stats struct the
+        // caller built from the input GFF3.
+        let user_genes = Some(stats.total_genes as f64).filter(|v| *v > 0.0);
+        row("Protein-coding genes", d, user_genes, "int");
+    }
 
     if reference.busco_completeness.is_none()
         && reference.kegg_ko_count.is_none()
         && reference.trna_count.is_none()
+        && reference.gene_count.is_none()
     {
         println!(
             "No usable reference subsets installed. Install with:\n  \
-             myconote-cli setup --y1000plus --include busco,kegg,trna"
+             myconote-cli setup --y1000plus --include busco,kegg,trna,annotations"
         );
     }
 

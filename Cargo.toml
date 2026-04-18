@@ -67,6 +67,7 @@ which = "6.0"
 tar = "0.4"
 zip = { version = "2.1", default-features = false, features = ["deflate"] }
 sha2 = "0.10"
+calamine = "0.26"
 
 [dev-dependencies]
 tempfile = "3.10"

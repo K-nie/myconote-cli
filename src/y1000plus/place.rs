@@ -12,7 +12,8 @@
 use crate::utils::error::{MycoNoteError, Result};
 use crate::y1000plus::benchmark::count_user_kos;
 use crate::y1000plus::manifest::{cache_root, load as load_manifest};
-use std::collections::HashSet;
+use crate::y1000plus::metabolism::{load_index as load_metabolism_index, Classification};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -35,6 +36,37 @@ pub struct PlacementReport {
     /// Inferred genetic code for the top hit, if the `codontable` subset is
     /// installed. Present only for the #1 closest species.
     pub top_codon_table: Option<CodonTableAdvice>,
+    /// Carbon / nitrogen lifestyle prediction when the `metabolism` subset
+    /// is installed. Derived from a Jaccard-weighted majority vote over
+    /// those members of `top` that have classification entries.
+    pub metabolic_prediction: Option<MetabolicPrediction>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MetabolicPrediction {
+    pub carbon_vote: Vote,
+    pub nitrogen_vote: Vote,
+    /// Per-neighbour rows (top-N that had classifications), in the same
+    /// order as `PlacementReport::top`.
+    pub neighbours: Vec<NeighbourClassification>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Vote {
+    /// Winning label.
+    pub label: String,
+    /// Weight share the winner received (0.0–1.0).
+    pub confidence: f64,
+    /// All label → weight pairs that participated in the vote.
+    pub tallies: Vec<(String, f64)>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NeighbourClassification {
+    pub species: String,
+    pub jaccard: f64,
+    pub carbon_class: String,
+    pub nitrogen_class: String,
 }
 
 #[derive(Debug, Clone)]
@@ -123,13 +155,98 @@ pub fn place_functional(opts: &PlaceOptions) -> Result<PlacementReport> {
         None
     };
 
+    // If the metabolism subset is installed, derive a carbon/nitrogen
+    // lifestyle prediction from a Jaccard-weighted majority vote over the
+    // top-N neighbours that we can classify.
+    let metabolic_prediction = if manifest.installed.contains_key("metabolism") {
+        load_metabolism_index(&root)
+            .ok()
+            .map(|idx| predict_metabolism(&results, &idx))
+            .and_then(|p| {
+                if p.neighbours.is_empty() {
+                    None
+                } else {
+                    Some(p)
+                }
+            })
+    } else {
+        None
+    };
+
     Ok(PlacementReport {
         user_kos: user_ko_count,
         user_gene_rows,
         species_total,
         top: results,
         top_codon_table,
+        metabolic_prediction,
     })
+}
+
+/// Jaccard-weighted majority vote over the carbon/nitrogen classes of the
+/// top-N neighbours that appear in the metabolism index. Unknown species
+/// are silently skipped — the prediction degrades gracefully as overlap
+/// with the index shrinks.
+fn predict_metabolism(
+    top: &[Placement],
+    idx: &crate::y1000plus::metabolism::MetabolismIndex,
+) -> MetabolicPrediction {
+    let mut neighbours = Vec::new();
+    let mut carbon_weights: HashMap<String, f64> = HashMap::new();
+    let mut nitrogen_weights: HashMap<String, f64> = HashMap::new();
+
+    for hit in top {
+        let Some(cls) = idx.lookup(&hit.species) else {
+            continue;
+        };
+        // Use max(epsilon, jaccard) so a 0-Jaccard neighbour still
+        // contributes trivially (the earlier sort already put the best
+        // ones first, and dropping them entirely would silently lose
+        // neighbours the user expects to see in the report).
+        let weight = hit.jaccard.max(1e-4);
+        *carbon_weights
+            .entry(classify_label(&cls.carbon_class))
+            .or_insert(0.0) += weight;
+        *nitrogen_weights
+            .entry(classify_label(&cls.nitrogen_class))
+            .or_insert(0.0) += weight;
+        neighbours.push(NeighbourClassification {
+            species: cls.species_pretty.clone(),
+            jaccard: hit.jaccard,
+            carbon_class: cls.carbon_class.clone(),
+            nitrogen_class: cls.nitrogen_class.clone(),
+        });
+    }
+
+    MetabolicPrediction {
+        carbon_vote: vote_from(carbon_weights),
+        nitrogen_vote: vote_from(nitrogen_weights),
+        neighbours,
+    }
+}
+
+fn classify_label(raw: &str) -> String {
+    let t = raw.trim();
+    if t.is_empty() {
+        "Unknown".to_string()
+    } else {
+        t.to_string()
+    }
+}
+
+fn vote_from(mut weights: HashMap<String, f64>) -> Vote {
+    let total: f64 = weights.values().sum();
+    if total == 0.0 {
+        return Vote::default();
+    }
+    let mut tallies: Vec<(String, f64)> = weights.drain().collect();
+    tallies.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let (label, top_weight) = tallies[0].clone();
+    Vote {
+        label,
+        confidence: top_weight / total,
+        tallies,
+    }
 }
 
 /// NCBI standard genetic code — 64 single-letter amino acids in the codon

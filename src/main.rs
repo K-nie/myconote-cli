@@ -1202,6 +1202,14 @@ fn handle_place(args: &[String]) -> Result<()> {
                     m.neighbours.len(),
                 );
             }
+            if let Some(ref t) = report.thermotolerance {
+                println!(
+                    "# thermotolerance_37C\tlabel={}\tconfidence={:.3}\tn_neighbours={}",
+                    t.vote.label,
+                    t.vote.confidence,
+                    t.neighbours.len(),
+                );
+            }
         }
         _ => {
             println!();
@@ -1254,6 +1262,36 @@ fn handle_place(args: &[String]) -> Result<()> {
                         );
                     }
                 }
+            }
+
+            // Thermotolerance prediction — rendered when the `phenotypes`
+            // subset is installed and at least one neighbour had a growth-at-37 label.
+            if let Some(ref t) = report.thermotolerance {
+                use y1000plus::place::thermo_label_description;
+                println!();
+                println!("── Predicted thermotolerance (growth at 37 °C) ──");
+                println!(
+                    "  prediction : {}  ({})  confidence {:.0}%",
+                    t.vote.label,
+                    thermo_label_description(&t.vote.label),
+                    t.vote.confidence * 100.0
+                );
+                if t.vote.tallies.len() > 1 {
+                    println!("  vote tallies:");
+                    for (label, w) in &t.vote.tallies {
+                        println!(
+                            "    {:<2} ({}): weight {:.4}",
+                            label,
+                            thermo_label_description(label),
+                            w
+                        );
+                    }
+                }
+                println!(
+                    "  neighbours consulted: {}/{} of top-N had phenotype data",
+                    t.neighbours.len(),
+                    report.top.len()
+                );
             }
 
             // Codon-table advice — only rendered when the `codontable` subset

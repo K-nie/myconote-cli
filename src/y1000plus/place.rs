@@ -13,6 +13,9 @@ use crate::utils::error::{MycoNoteError, Result};
 use crate::y1000plus::benchmark::count_user_kos;
 use crate::y1000plus::manifest::{cache_root, load as load_manifest};
 use crate::y1000plus::metabolism::{load_index as load_metabolism_index, Classification};
+use crate::y1000plus::phenotypes::{
+    label_description as growth_label_desc, load_index as load_phenotype_index,
+};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -40,6 +43,23 @@ pub struct PlacementReport {
     /// is installed. Derived from a Jaccard-weighted majority vote over
     /// those members of `top` that have classification entries.
     pub metabolic_prediction: Option<MetabolicPrediction>,
+    /// Growth-at-37 °C thermotolerance prediction when the `phenotypes`
+    /// subset is installed. Same Jaccard-weighted vote approach as the
+    /// metabolism prediction, over Y/N/W/V/S labels.
+    pub thermotolerance: Option<ThermoPrediction>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ThermoPrediction {
+    pub vote: Vote,
+    pub neighbours: Vec<ThermoNeighbour>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ThermoNeighbour {
+    pub species: String,
+    pub jaccard: f64,
+    pub label: String,
 }
 
 #[derive(Debug, Clone)]
@@ -173,6 +193,23 @@ pub fn place_functional(opts: &PlaceOptions) -> Result<PlacementReport> {
         None
     };
 
+    // If the phenotypes subset is installed, predict thermotolerance from
+    // the nearest neighbours' growth-at-37 labels.
+    let thermotolerance = if manifest.installed.contains_key("phenotypes") {
+        load_phenotype_index(&root)
+            .ok()
+            .map(|idx| predict_thermotolerance(&results, &idx))
+            .and_then(|p| {
+                if p.neighbours.is_empty() {
+                    None
+                } else {
+                    Some(p)
+                }
+            })
+    } else {
+        None
+    };
+
     Ok(PlacementReport {
         user_kos: user_ko_count,
         user_gene_rows,
@@ -180,7 +217,40 @@ pub fn place_functional(opts: &PlaceOptions) -> Result<PlacementReport> {
         top: results,
         top_codon_table,
         metabolic_prediction,
+        thermotolerance,
     })
+}
+
+/// Jaccard-weighted vote over nearest-neighbours' Y/N/W/V/S growth-at-37
+/// labels. Unknown species are silently skipped.
+fn predict_thermotolerance(
+    top: &[Placement],
+    idx: &crate::y1000plus::phenotypes::PhenotypeIndex,
+) -> ThermoPrediction {
+    let mut neighbours = Vec::new();
+    let mut weights: HashMap<String, f64> = HashMap::new();
+    for hit in top {
+        let Some(g) = idx.lookup_37(&hit.species) else {
+            continue;
+        };
+        let weight = hit.jaccard.max(1e-4);
+        *weights.entry(g.label.clone()).or_insert(0.0) += weight;
+        neighbours.push(ThermoNeighbour {
+            species: g.species_pretty.clone(),
+            jaccard: hit.jaccard,
+            label: g.label.clone(),
+        });
+    }
+    ThermoPrediction {
+        vote: vote_from(weights),
+        neighbours,
+    }
+}
+
+/// Friendly name for a Y/N/W/V/S label so callers can surface it in
+/// `place` output without knowing the legend by heart.
+pub fn thermo_label_description(label: &str) -> &'static str {
+    growth_label_desc(label)
 }
 
 /// Jaccard-weighted majority vote over the carbon/nitrogen classes of the

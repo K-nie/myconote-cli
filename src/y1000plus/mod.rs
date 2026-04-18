@@ -20,6 +20,7 @@ pub mod extract;
 pub mod install;
 pub mod manifest;
 pub mod metabolism;
+pub mod phenotypes;
 pub mod place;
 pub mod presets;
 pub mod subsets;

@@ -924,7 +924,7 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             }
 
             if benchmark_y1000plus {
-                print_y1000plus_benchmark(&stats, annotated_path.as_deref())?;
+                print_y1000plus_benchmark(&stats, Path::new(path), annotated_path.as_deref())?;
             }
         }
     }
@@ -938,9 +938,10 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
 /// user's distinct KEGG KO count from it and places them on the percentile.
 fn print_y1000plus_benchmark(
     stats: &stats::GenomeStatistics,
+    gff_path: &Path,
     annotated_tsv: Option<&Path>,
 ) -> Result<()> {
-    use y1000plus::benchmark::{count_user_kos, load_reference, DistStats};
+    use y1000plus::benchmark::{count_user_kos, count_user_trnas, load_reference, DistStats};
 
     let reference = match load_reference() {
         Ok(r) => r,
@@ -966,6 +967,14 @@ fn print_y1000plus_benchmark(
             None
         }
     });
+
+    // User tRNA count from the input GFF3 — only meaningful if the file has
+    // any tRNA features at all (which requires having run `annotate --trnascan`
+    // or an equivalent pipeline step).
+    let user_trna_count: Option<f64> = match count_user_trnas(gff_path) {
+        Ok(n) if n > 0 => Some(n as f64),
+        _ => None,
+    };
 
     println!("\n══════════════════════════════════════════════════════════════════");
     println!(
@@ -1025,11 +1034,24 @@ fn print_y1000plus_benchmark(
             );
         }
     }
+    if let Some(ref d) = reference.trna_count {
+        row("tRNA gene count", d, user_trna_count, "int");
+        if user_trna_count.is_none() {
+            println!(
+                "  (no tRNA features in {} — run `annotate --trnascan` first to \
+                 see your percentile.)",
+                gff_path.display()
+            );
+        }
+    }
 
-    if reference.busco_completeness.is_none() && reference.kegg_ko_count.is_none() {
+    if reference.busco_completeness.is_none()
+        && reference.kegg_ko_count.is_none()
+        && reference.trna_count.is_none()
+    {
         println!(
             "No usable reference subsets installed. Install with:\n  \
-             myconote-cli setup --y1000plus --include busco,kegg"
+             myconote-cli setup --y1000plus --include busco,kegg,trna"
         );
     }
 

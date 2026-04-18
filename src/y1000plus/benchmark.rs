@@ -78,6 +78,7 @@ impl DistStats {
 pub struct Reference {
     pub busco_completeness: Option<DistStats>,
     pub kegg_ko_count: Option<DistStats>,
+    pub trna_count: Option<DistStats>,
     pub source_root: PathBuf,
     pub species_count: usize,
 }
@@ -107,15 +108,26 @@ pub fn load_reference() -> Result<Reference> {
         None
     };
 
-    let species_count = busco
-        .as_ref()
-        .map(|d| d.n)
-        .or_else(|| kegg.as_ref().map(|d| d.n))
-        .unwrap_or(0);
+    let trna = if manifest.installed.contains_key("trna") {
+        load_trna_distribution(&root.join("trna")).ok()
+    } else {
+        None
+    };
+
+    let species_count = [
+        busco.as_ref().map(|d| d.n),
+        kegg.as_ref().map(|d| d.n),
+        trna.as_ref().map(|d| d.n),
+    ]
+    .into_iter()
+    .flatten()
+    .max()
+    .unwrap_or(0);
 
     Ok(Reference {
         busco_completeness: busco,
         kegg_ko_count: kegg,
+        trna_count: trna,
         source_root: root,
         species_count,
     })
@@ -190,6 +202,72 @@ fn per_species_busco_completeness(path: &Path) -> Result<f64> {
         )));
     }
     Ok(100.0 * (complete.len() + duplicated.len()) as f64 / total as f64)
+}
+
+/// Walk `<root>/trna/**/*.tRNA.gff`; for each species count the number of
+/// features with `type == "tRNA"`. Each GFF file represents one species
+/// (the `y1000p_tRNA_scan` subset ships one tRNAscan run per genome).
+fn load_trna_distribution(trna_root: &Path) -> Result<DistStats> {
+    let mut values = Vec::new();
+    fn walk(p: &Path, out: &mut Vec<f64>) {
+        let Ok(entries) = std::fs::read_dir(p) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            if !name.ends_with(".tRNA.gff") {
+                continue;
+            }
+            if let Ok(f) = File::open(&path) {
+                let mut count = 0u64;
+                for line in BufReader::new(f).lines().map_while(|l| l.ok()) {
+                    if line.starts_with('#') || line.is_empty() {
+                        continue;
+                    }
+                    let cols: Vec<&str> = line.split('\t').collect();
+                    if cols.len() >= 3 && cols[2] == "tRNA" {
+                        count += 1;
+                    }
+                }
+                if count > 0 {
+                    out.push(count as f64);
+                }
+            }
+        }
+    }
+    walk(trna_root, &mut values);
+    DistStats::from(values).ok_or_else(|| {
+        MycoNoteError::InvalidFormat(format!(
+            "No parseable tRNAscan GFFs under {}",
+            trna_root.display()
+        ))
+    })
+}
+
+/// Count tRNA features in a user's GFF3. Used to place the user on the
+/// Y1000+ tRNA-count distribution. Returns the raw count; 0 if the GFF
+/// has no tRNA features (which is itself meaningful — probably annotate
+/// wasn't run with tRNAscan enabled).
+pub fn count_user_trnas(gff_path: &Path) -> Result<usize> {
+    let f = File::open(gff_path).map_err(MycoNoteError::Io)?;
+    let mut count = 0usize;
+    for line in BufReader::new(f).lines().map_while(|l| l.ok()) {
+        if line.starts_with('#') || line.is_empty() {
+            continue;
+        }
+        let cols: Vec<&str> = line.split('\t').collect();
+        if cols.len() >= 3 && cols[2] == "tRNA" {
+            count += 1;
+        }
+    }
+    Ok(count)
 }
 
 /// Per-species KEGG-KO files: two-column TSVs `gene_id<TAB>KO`. We count

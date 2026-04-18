@@ -29,7 +29,7 @@ Aliases also work: `myconote-cli tutorial` or `myconote-cli swirl`
 | 5 | **Functional Annotation** | ~10 min | Swiss-Prot, Pfam, BUSCO, tRNA, genetic codes, InterProScan |
 | 6 | **Advanced: Training & Evidence** | ~8 min | RNA-seq training, Trinity, PASA, custom evidence weights |
 | 7 | **NCBI Submission** | ~6 min | GFF3 validation, `.tbl` generation, table2asn, BioProject |
-| 8 | **Analysis & Visualization** | ~8 min | Stats, plots, phylogenetics, synteny, format conversion |
+| 8 | **Analysis & Handoff** | ~8 min | Stats, phylogenetics, Y1000+ placement, format conversion, handoff to Proksee/IGV/clinker |
 
 **Total: ~63 minutes** covering the full pipeline from basics to NCBI submission.
 

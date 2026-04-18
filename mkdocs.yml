@@ -49,15 +49,14 @@ nav:
     - predict: pipeline/predict.md
     - update: pipeline/update.md
     - annotate: pipeline/annotate.md
-  - Analysis Commands:
-    - phylogeny: analysis/phylogeny.md
-    - plot: analysis/plot.md
-    - stats: analysis/stats.md
-    - blast: analysis/blast.md
-    - synteny: analysis/synteny.md
-    - compare: analysis/compare.md
-  - Pipeline Commands:
     - submit: pipeline/submit.md
+    - batch: analysis/batch.md
+  - Analysis Commands:
+    - stats: analysis/stats.md
+    - phylogeny: analysis/phylogeny.md
+    - compare: analysis/compare.md
+    - place: analysis/place.md
+    - explain: analysis/explain.md
   - Databases: databases.md
   - Learning:
     - Interactive Tutorial: learn.md

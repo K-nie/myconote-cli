@@ -14,7 +14,7 @@ Myconote_CLI takes a genome assembly (FASTA) through a structured, reproducible 
 Sort -> Mask -> Train -> Predict -> Update -> Annotate -> Submit
 ```
 
-Each step is a separate subcommand, giving you full control over where to start, pause, or resume. All intermediate files use standard formats (GFF3, FASTA, GenBank) compatible with Geneious, IGV, JBrowse2, and UCSC Genome Browser.
+Each step is a separate subcommand, giving you full control over where to start, pause, or resume. All intermediate files use standard formats (GFF3, FASTA, GenBank) compatible with Proksee (web), IGV (desktop), and clinker (cross-species gene-cluster synteny) — the tools MycoNote hands off to rather than reimplementing.
 
 ---
 
@@ -28,8 +28,8 @@ Each step is a separate subcommand, giving you full control over where to start,
 - **18 NCBI genetic code tables** -- Candida CTG clade, mitochondrial genomes, etc.
 - **NCBI submission prep** -- GFF3 validation, .tbl generation, table2asn integration
 - **Ploidy awareness** -- allelic duplicate detection for polyploid genomes
-- **Comparative genomics** -- phylogenetics (IQ-TREE), synteny diagrams, multi-genome comparison
-- **Visualization** -- circular/linear genome plots, JBrowse2, UCSC browser
+- **Comparative genomics** -- phylogenetics (IQ-TREE), N-genome orthology via OrthoFinder, Y1000+ functional placement
+- **Y1000+ reference placement** -- `myconote-cli place` compares a genome's KEGG-KO profile against 1,154 sequenced yeasts; auto-predicts codon table, C/N lifestyle, thermotolerance, and ecological niche when the relevant subsets are installed
 - **15+ format conversions** -- GFF3/GTF/BED/GenBank/FASTA/FASTQ/PHYLIP/NEXUS/VCF
 - **Interactive tutorial** -- `myconote-cli learn` (8 lessons, swirl-style)
 - **5 kingdoms supported** -- fungi, plants, animals, insects, protists

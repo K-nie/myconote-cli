@@ -133,14 +133,12 @@ myconote-cli submit annotate_out/annotated.gff3 \
 # Summary statistics with taxonomic benchmarking
 myconote-cli stats annotate_out/annotated.gff3 --taxon fungi
 
-# Generate a genome map
-myconote-cli plot annotate_out/annotated.gff3 --type circular --output genome_map.png
-
-# Interactive genome browser
-myconote-cli view annotate_out/annotated.gff3 --fasta assembly_masked.fa
-
-# Convert formats
+# Convert to GenBank for Proksee upload or IGV browsing
 myconote-cli convert annotate_out/annotated.gff3 --to genbank --fasta assembly_masked.fa
+
+# For interactive exploration, load the GFF3 + FASTA in IGV (desktop)
+# or upload the .gbk to Proksee (https://proksee.ca/) for publication maps.
+# For cross-species gene-cluster synteny, pipe multiple .gbk files into clinker.
 ```
 
 ---
@@ -201,5 +199,6 @@ myconote-cli batch genomes/ --condor --condor-mem 64G
 - Interpret results: `myconote-cli explain <stage>` ([docs](analysis/explain.md))
 - Annotate many genomes: `myconote-cli batch genomes/` ([docs](analysis/batch.md))
 - Build a phylogenetic tree: [phylogeny](analysis/phylogeny.md)
-- Compare two genomes: `myconote-cli synteny a.gff3 b.gff3 --fasta1 a.fa --fasta2 b.fa`
+- Place your genome in the Y1000+ reference: `myconote-cli place --annotated annotate_out/annotations.tsv`
+- Pairwise synteny of two genomes: convert both to GenBank with `convert --to genbank` and load into clinker
 - Full workshop tutorial: [Workshop Lesson](lesson.md)

@@ -107,6 +107,6 @@ HPC nodes with 32+ cores scale roughly linearly for the DIAMOND step.
 
 ## Related commands
 
-- [`synteny`](synteny.md) — whole-genome syntenic ribbons for 2 genomes (visual, structural).
 - [`phylogeny`](phylogeny.md) — ML tree from a single alignment via IQ-TREE. Feeds naturally from compare's single-copy-ortholog output.
+- For visual pairwise or multi-way synteny, convert each genome to GenBank (`convert --to genbank`) and load the `.gbk` files into **clinker** (`pip install clinker`).
 - [`annotate`](../pipeline/annotate.md) — produces the GFF3 + FASTA pairs that compare consumes.

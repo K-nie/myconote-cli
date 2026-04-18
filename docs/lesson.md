@@ -23,7 +23,7 @@ By the end of this lesson you will be able to:
 2. Install and verify Myconote_CLI and its external tool dependencies
 3. Run each pipeline step — sort, mask, predict, and annotate — on a real genome
 4. Interpret annotation statistics and quality metrics
-5. Visualise gene models in JBrowse2 and export to standard formats
+5. Export to standard formats and hand off to downstream tools (Proksee, IGV, clinker)
 
 ---
 
@@ -371,30 +371,27 @@ What percentage of predicted genes received at least one functional annotation? 
 
 **Time:** ~20 minutes
 
-### Genome plots
+MycoNote does not ship its own plotting or browser — the built-in versions
+were removed in v0.2.0 because established tools already do this better.
+Instead, export your annotation and hand off to:
+
+- **Proksee** (web, <https://proksee.ca/>) — publication-quality circular
+  genome maps. Upload the `.gbk` from `convert --to genbank`.
+- **IGV** (desktop) — drop the GFF3 + FASTA for interactive browsing.
+- **clinker** (`pip install clinker`) — cross-species gene-cluster synteny
+  ribbons from multiple `.gbk` files.
+
+### Convert once, use everywhere
 
 ```bash
-# Linear map of the largest scaffold
-myconote-cli plot annotation/final.gff3 \
-    --type linear \
-    --region scaffold_1:1-500000 \
-    --output scaffold1_map.png
-
-# Circular whole-genome map
-myconote-cli plot annotation/final.gff3 \
-    --type circular \
-    --output whole_genome.png
-```
-
-### Interactive browser
-
-```bash
-myconote-cli view annotation/final.gff3 \
+myconote-cli convert annotation/final.gff3 \
+    --to genbank \
     --fasta sorted.fa \
-    --output genome_browser.html
-```
+    -o final.gbk
 
-Open `genome_browser.html` in any web browser for a full JBrowse2 interactive view — no internet connection required.
+# Upload final.gbk to Proksee for a circular map, or:
+clinker final.gbk other_species.gbk -o synteny.html
+```
 
 ### Converting to other formats
 

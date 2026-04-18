@@ -15,7 +15,9 @@ Myconote_CLI takes a genome assembly (FASTA) through a structured, reproducible 
 Sort → Mask → Train → Predict → Update → Annotate → Submit
 ```
 
-Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) compatible with Geneious, IGV, JBrowse2, and UCSC Genome Browser.
+Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) that hand off cleanly to **Proksee** (web circular maps), **IGV** (desktop browser), and **clinker** (cross-species synteny).
+
+**New in v0.2.0** — `explain` (local-LLM result interpreter), `batch` (multi-genome + HTCondor), `place` (Y1000+ 1,154-yeast placement), and `stats --benchmark y1000plus` percentile context. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 **New to myconote?** Run `myconote-cli learn` for an interactive, swirl-style tutorial right in your terminal.
 
@@ -117,16 +119,19 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 
 | Command | Description |
 |---------|-------------|
-| `stats` | Gene counts, lengths, GC content, N50, isoform stats (JSON / CSV / human-readable) |
-| `plot` | Genome maps (linear PNG, circular PNG) |
+| `stats` | Gene counts, lengths, GC content, N50, isoform stats; `--benchmark y1000plus --annotated` places your gene and tRNA counts on the 1,154-yeast percentile distribution |
 | `phylogeny` | Maximum-likelihood tree with IQ-TREE 2 (ModelFinder + UFBoot) |
-| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large plants) |
-| `view` | Interactive genome browser (JBrowse2 or UCSC custom track) |
-| `synteny` | Ribbon + dot-plot viewer comparing two genomes (minimap2 asm5 + block chaining) |
-| `convert` | Format conversion: GFF3 <-> GTF / BED / GenBank / protein FASTA; FASTA <-> FASTQ / PHYLIP / NEXUS; VCF conversions |
+| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large plants); optional MAFFT supermatrix bridge into `phylogeny` |
+| `place` | Place a genome into the Y1000+ 1,154-yeast functional reference via KEGG-KO Jaccard. Auto-predicts codon table, C/N lifestyle, growth-at-37 °C, and ecological niche when the relevant Y1000+ subsets are installed |
+| `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |
 | `fix` | Repair errors in GenBank (.gbk) files |
-| `align` | Sequence alignment (BLAST, MMseqs2, MUMmer, minimap2) |
+
+**Visualization hand-off** — MycoNote-CLI does not ship its own genome browser or synteny renderer. Use the `convert` command to produce standard outputs, then hand off to best-in-class external tools:
+
+- **Proksee** (web, <https://proksee.ca/>) — circular genome maps from GenBank
+- **IGV** (desktop) — interactive browsing of GFF3 + FASTA
+- **clinker** (`pip install clinker`) — cross-species gene-cluster synteny from GenBank files
 
 ---
 
@@ -238,15 +243,13 @@ Database versions are tracked with timestamps for reproducibility. Run `myconote
 
 ## Output formats
 
-- **GFF3** -- gene models (IGV, JBrowse2, UCSC, Geneious compatible)
-- **GenBank (.gbk)** -- Geneious, SnapGene, BioPython
+- **GFF3** -- gene models (load in IGV, JBrowse2, UCSC, Geneious)
+- **GenBank (.gbk)** -- upload to Proksee or open in Geneious / SnapGene / BioPython; feed into clinker for synteny
 - **NCBI .tbl + .sqn** -- GenBank submission-ready files
 - **FASTA** -- protein and nucleotide sequences
-- **TSV** -- functional annotation tables (R/Python analysis)
-- **PNG/SVG** -- linear and circular genome maps
-- **HTML** -- interactive JBrowse2 and UCSC browser views
+- **TSV** -- functional annotation tables (R / Python analysis)
 - **Newick** -- IQ-TREE phylogenetic trees
-- **JSON** -- reproducibility reports (tool versions, parameters, checksums)
+- **JSON** -- reproducibility reports (tool versions, parameters, checksums); `explain` reproducibility bundles in `explain_<stage>_<timestamp>/`
 
 ---
 
@@ -361,7 +364,7 @@ tail -f batch_out/condor_logs/job_0.out
 
 Generates `condor.sub`, `run_genome.sh` (per-job wrapper), and `condor_genomes.txt` (argument list). Each genome runs as a separate job. Works with shared filesystems.
 
-**Next steps hint:** When 2+ genomes succeed, prints a concrete `synteny` and `phylogeny` command recipe for downstream comparative analysis.
+**Next steps hint:** When 2+ genomes succeed, prints a concrete `compare` and `phylogeny` command recipe for downstream comparative analysis.
 
 ---
 

@@ -7,7 +7,8 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ## [0.2.0] — 2026-04-18
 
 Major release: AI-assisted interpretation, multi-genome batch orchestration,
-Y1000+ placement, and publication-quality synteny plots.
+Y1000+ 1,154-yeast placement with functional predictions, and real
+N-genome ortholog inference via OrthoFinder.
 
 ### Added
 - **`explain` subcommand** — LLM-powered interpreter for every pipeline stage.
@@ -31,12 +32,6 @@ Y1000+ placement, and publication-quality synteny plots.
   - Ecological-niche prediction from the `environment` OWL subset.
 - **`stats --benchmark`** — percentile-of-user gene-count and tRNA-count
   against the Y1000+ reference distribution.
-- **`synteny` subcommand** — publication-quality PDF/PNG/SVG output via a
-  pyGenomeViz backend.
-  - Whole-genome overview plus `--region` zoom.
-  - Shells out to `pgv-mummer` CLI on GenBank inputs.
-  - `--threads` / `--keep-paf` flags; dot-plot view toggle; SVG/PNG export.
-  - Gene-tick overlay on chromosome bars; adjacent colinear PAF hits chained.
 - **`compare` (real)** — N-genome ortholog inference wrapping OrthoFinder
   (default `dendroblast`; MAFFT species-tree bridge available).
 - **Ollama auto-setup** — install check, version probe, model pull.
@@ -45,7 +40,7 @@ Y1000+ placement, and publication-quality synteny plots.
 
 ### Changed
 - `compare` now wraps OrthoFinder properly instead of returning the stale
-  synteny placeholder; users running synteny are redirected to `synteny`.
+  synteny placeholder.
 - `predict`: real per-contig Augustus parallelism.
 - `predict`: SNAP ZOE lookup fixed.
 - `predict`: `--glimmerhmm` / `--genemark` dispatch wired into
@@ -61,8 +56,11 @@ Y1000+ placement, and publication-quality synteny plots.
   (already in v0.1.0, re-confirmed).
 
 ### Removed
-- Deprecated `plot` and `view` subcommands (replaced by `synteny` +
-  external tools: IGV, Proksee, clinker).
+- `plot` (circular/linear) and `view` (JBrowse2/UCSC/synteny) subcommands
+  — their outputs fell short of publication-grade; users are now directed
+  to external tools (Proksee, IGV, clinker) that already do this well.
+  A pyGenomeViz synteny backend was prototyped during the cycle but not
+  retained.
 - Fake `compare` subcommand (redirects users to the real implementation).
 
 ### Fixed

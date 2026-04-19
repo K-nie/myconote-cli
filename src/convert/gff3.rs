@@ -434,6 +434,14 @@ pub fn gff3_to_protein(gff_path: &Path, fasta_path: &Path, output: &Path) -> Res
         count += 1;
     }
 
+    if count == 0 {
+        return Err(MycoNoteError::InvalidFormat(
+            "No proteins written: check that GFF3 seqids match FASTA headers \
+             (seqid must equal the first whitespace-delimited token of the '>' line)"
+                .to_string(),
+        ));
+    }
+
     Ok(count)
 }
 

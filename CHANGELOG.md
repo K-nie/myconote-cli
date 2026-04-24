@@ -7,6 +7,53 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ## [Unreleased]
 
 ### Added
+- **`ase` subcommand** — allele-specific expression for heterozygous,
+  hybrid, or polyploid fungal genomes. Builds personalized
+  transcriptomes per haplotype from a phased VCF, then quantifies
+  each sample against each haplotype with salmon. Emits
+  transcript × (sample.haplotype) counts + TPM matrices, a
+  per-transcript informativeness summary, variants-applied and
+  variants-skipped audit TSVs, and an `ase_bundle.json`
+  reproducibility manifest (extends the `quant_bundle.json` schema
+  with per-haplotype transcriptome SHA256s, variant-application
+  counts by category, and per-sample per-haplotype mapping rates +
+  asymmetry flag). Full design in `scratch/ase_spec.md`; all 10
+  open decisions locked on 2026-04-24 before implementation.
+  - Custom phased-VCF parser (`src/ase/vcf.rs`) — zero new crates.
+    Unphased heterozygous sites are a hard error with line number,
+    not a silent skip. Supports `.vcf` and `.vcf.gz`. Handles SNVs,
+    MNPs, and indels up to `--max-indel-size` (default 50 bp).
+  - Personalization (`src/ase/personalize.rs`) — strand-aware
+    variant → CDS mapping, reverse-complement on `-` strand,
+    in-cis variant-overlap rejection, exon-boundary-spanning
+    indels skipped. Nine documented skip categories; every variant
+    lands on one side of the applied/skipped divide with a reason.
+  - Per-sample-per-haplotype salmon driver (`src/ase/quant.rs`) —
+    reuses `quant`'s SHA256-keyed index cache (different CDS FASTA
+    → different cache slot automatically), one fastp per sample
+    shared across both salmon runs, mapping-rate asymmetry
+    detector (default threshold 5 %).
+  - Merge + summary (`src/ase/merge.rs`) — long-to-wide join with
+    deterministic column ordering (`<sample>.<hap>`), per-transcript
+    informativeness flag computed from variant counts, max
+    read-count asymmetry across samples.
+  - Requires `salmon` (≥1.10) and `fastp` (≥0.23) on PATH; both
+    registered in `install` / `check` already via `quant`.
+  - 54 unit tests covering VCF parsing, variant application,
+    asymmetry detection, merge logic, bundle round-tripping, and
+    argument parsing.
+- **`ase-template` subcommand** — companion R-script generator for
+  `ase` output, same Option 1D pattern as `de-template`. Emits a
+  base-R script (no Bioconductor) that runs a per-transcript
+  binomial exact test on `(count_hap0, count_hap1)` with a
+  sample-specific null proportion derived from total hap0:hap1
+  library-size ratio (corrects for global mapping-rate asymmetry).
+  BH-adjusts per sample. Outputs a long-format results TSV and a
+  per-sample imbalance-histogram PDF. Handles column parsing that
+  allows dots in sample IDs, filters to informative transcripts by
+  default (overridable via `--include-uninformative`), and skips
+  low-count rows below `--min-reads` (default 20) with a logged
+  reason. 21 unit tests.
 - **`de-template` subcommand** — generate a self-contained R script
   that runs DESeq2 differential-expression analysis on `quant`
   output. The tool writes the script; the user runs it with

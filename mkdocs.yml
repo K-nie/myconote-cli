@@ -56,6 +56,8 @@ nav:
     - quant: analysis/quant.md
     - fetch-rna: analysis/fetch-rna.md
     - de-template: analysis/de-template.md
+    - ase: analysis/ase.md
+    - ase-template: analysis/ase-template.md
     - compare: analysis/compare.md
     - explain: analysis/explain.md
   - Databases: databases.md

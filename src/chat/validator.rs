@@ -31,6 +31,8 @@ pub const VALID_SUBCOMMANDS: &[&str] = &[
     "quant",
     "fetch-rna",
     "de-template",
+    "ase",
+    "ase-template",
     "compare",
     "convert",
     "clean",

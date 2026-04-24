@@ -123,6 +123,8 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `quant` | RNA-seq expression quantification: fastp QC → salmon with decoy-aware index → wide count + TPM matrices + tximport-ready per-sample `quant.sf` + reproducibility bundle |
 | `fetch-rna` | Download public RNA-seq FASTQs by SRA/ENA accession (ENA REST default, sra-toolkit fallback); emits a `samples.tsv` ready for `quant` |
 | `de-template` | Generate a DESeq2 differential-expression R script from `quant` output (tximport → DESeq2 → apeglm → TSV + MA + volcano plots). Requires R + Bioconductor installed by the user; the tool writes the script, the user runs `Rscript`. |
+| `ase` | Allele-specific expression for phased/heterozygous/hybrid fungal genomes — builds personalized transcriptomes per haplotype from a phased VCF, then runs salmon against each haplotype independently. Emits `<sample>.<hap>` counts + TPM, informativeness summary, and per-haplotype mapping-rate asymmetry flags. |
+| `ase-template` | Generate a binomial-ASE R script from `ase` output (base R only, no Bioconductor). Per-transcript `binom.test` with sample-specific null from hap0:hap1 library ratio, BH-adjusted per sample. Tool writes the script, user runs `Rscript`. |
 | `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large) |
 | `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / CDS / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |

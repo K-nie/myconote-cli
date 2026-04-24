@@ -38,8 +38,9 @@ pub fn render(
     prompt.push_str("VALID SUBCOMMANDS (use ONLY these):\n");
     prompt.push_str(
         "sort, mask, train, predict, update, annotate, submit, batch, remote, \
-         stats, quant, fetch-rna, de-template, compare, convert, clean, fix, \
-         install, check, setup, species, learn, explain, help.\n\n",
+         stats, quant, fetch-rna, de-template, ase, ase-template, compare, \
+         convert, clean, fix, install, check, setup, species, learn, explain, \
+         help.\n\n",
     );
 
     // Stage-specific reference ranges

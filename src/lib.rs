@@ -1,5 +1,6 @@
 pub mod annotate;
 pub mod ase;
+pub mod ase_template;
 pub mod batch;
 pub mod chat;
 pub mod check;

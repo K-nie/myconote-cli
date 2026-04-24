@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 pub mod annotate;
 pub mod ase;
+pub mod ase_template;
 pub mod batch;
 pub mod chat;
 pub mod check;
@@ -101,6 +102,10 @@ fn print_main_help() {
     println!("  quant    Quantify RNA-seq expression against the annotated genome (salmon)");
     println!("  fetch-rna Download RNA-seq FASTQs by SRA/ENA accession");
     println!("  de-template  Emit an R script for DESeq2 differential expression (requires R + Bioconductor)");
+    println!("  ase      Allele-specific expression for phased/heterozygous/hybrid fungal genomes (salmon × 2 haplotypes)");
+    println!(
+        "  ase-template Emit an R script for binomial ASE tests on `ase` output (base R only)"
+    );
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
@@ -456,6 +461,85 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             de_template::run_de_template(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
+        "ase" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli ase <cds.fa> --vcf <phased.vcf.gz> --gff3 <annotated.gff3> --samples <sheet.tsv> --genome <genome.fa> [options]");
+                println!("\nAllele-specific expression for heterozygous, hybrid, or polyploid");
+                println!("fungal genomes. Builds personalized transcriptomes per haplotype from");
+                println!("a phased VCF, then quantifies each sample against each haplotype with");
+                println!("salmon. Emits count + TPM matrices suitable for binomial ASE tests");
+                println!("(see `ase-template`) or custom cis/trans regression in R.");
+                println!("\nREQUIRES on PATH:");
+                println!("  salmon (≥1.10)   conda install -c bioconda salmon");
+                println!("  fastp  (≥0.23)   conda install -c bioconda fastp");
+                println!("\nInput (all required):");
+                println!("  <cds.fa>                   Reference CDS FASTA (produced by `convert --to cds`)");
+                println!("  --vcf <phased.vcf[.gz]>    Phased VCF. Unphased heterozygous sites error out with a line number.");
+                println!("  --gff3 <annotated.gff3>    Same GFF3 used to build <cds.fa> (needed for genome→CDS coords)");
+                println!("  --samples <sheet.tsv>      Sample sheet (sample_id, fastq_1[, fastq_2, condition, batch, ...])");
+                println!("  --genome <genome.fa>       Reference genome FASTA (used as decoy set in salmon index)");
+                println!("\nOptions:");
+                println!("  --output <dir> / -o        Output directory (default: ase_out)");
+                println!("  --haplotype-names <N1,N2>  Haplotype labels (default: hap0,hap1)");
+                println!("  -k <n>                     salmon k-mer length (default: 31)");
+                println!("  --threads <n> / -t         Threads per salmon / fastp run (default: all cores)");
+                println!("  --tmpdir <dir>             Temp-dir root for fastp output (default: $TMPDIR)");
+                println!("  --index-cache <dir>        Index cache root (default: $MYCONOTE_INDEX_CACHE or XDG)");
+                println!("  --keep-trimmed <dir>       Persist fastp-trimmed FASTQs to this directory");
+                println!("  --max-indel-size <n>       Skip indels longer than N bp (default: 50)");
+                println!("  --asymmetry-threshold <f>  Flag samples with |hap0 rate − hap1 rate| > f (default: 0.05)");
+                println!("  --seed <n>                 Deterministic seed (default: 42)");
+                println!("  --fastp <path>             Override fastp binary");
+                println!("  --salmon <path>            Override salmon binary");
+                println!("\nOutputs (under <dir>):");
+                println!("  cds_<hap>.fa               Personalized CDS FASTA per haplotype");
+                println!("  salmon/<sample>.<hap>/     One salmon quant directory per sample × haplotype");
+                println!("  ase_counts.tsv             transcript × <sample>.<hap> counts");
+                println!("  ase_tpm.tsv                transcript × <sample>.<hap> TPM");
+                println!("  ase_summary.tsv            Per-transcript: informative, variant counts, max asymmetry");
+                println!("  variants_applied.tsv       Audit trail: which variants landed on which haplotype");
+                println!("  variants_skipped.tsv       Audit trail: why each skipped variant was skipped");
+                println!("  ase_bundle.json            Reproducibility manifest (all SHA256s + tool versions)");
+                println!("\nExample:");
+                println!("  myconote-cli ase cds.fa \\");
+                println!("      --vcf phased.vcf.gz --gff3 annotated.gff3 \\");
+                println!("      --samples samples.tsv --genome genome.fa -o ase_out");
+                println!("  myconote-cli ase-template --ase-dir ase_out -o ase_analysis.R");
+                println!("  Rscript ase_analysis.R");
+                return Ok(());
+            }
+            ase::run_ase(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
+        "ase-template" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli ase-template --counts <ase_counts.tsv> [options]");
+                println!("   or: myconote-cli ase-template --ase-dir <ase_out> [options]");
+                println!("\nEmit a self-contained R script that runs a binomial exact test per");
+                println!("(transcript × sample) on `ase` output. Null hap0 proportion is set");
+                println!("from each sample's total hap0:hap1 library-size ratio, so global");
+                println!("mapping-rate asymmetry doesn't inflate false positives. BH-adjusts");
+                println!("per sample and writes a long-format TSV + imbalance histogram PDF.");
+                println!("\nREQUIRES: base R ≥ 4.0. No Bioconductor packages needed.");
+                println!("\nInput (one of):");
+                println!("  --ase-dir <dir>            Shortcut: fills --counts and --summary from <dir>");
+                println!("  --counts <ase_counts.tsv>  Explicit counts file (from `myconote-cli ase`)");
+                println!("  --summary <ase_summary.tsv> Optional; used to filter uninformative transcripts");
+                println!("\nOptions:");
+                println!("  --output <file.R> / -o     Output R script (default: ase_analysis.R)");
+                println!("  --haplotype-names <N1,N2>  Must match what `ase` used (default: hap0,hap1)");
+                println!("  --fdr <n>                  BH significance threshold (default: 0.05)");
+                println!("  --min-reads <n>            Skip (transcript × sample) below this total (default: 20)");
+                println!("  --include-uninformative    Test every transcript, not just informative ones");
+                println!("\nOutputs (script emits when run):");
+                println!("  ase_results.tsv            Long-format table: transcript × sample × pvalue + padj");
+                println!("  ase_imbalance.pdf          Per-sample hap0-fraction histograms");
+                println!("\nExample:");
+                println!("  myconote-cli ase-template --ase-dir ase_out -o ase_analysis.R");
+                println!("  Rscript ase_analysis.R");
+                return Ok(());
+            }
+            ase_template::run_ase_template(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {
@@ -830,7 +914,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | de-template | compare | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | de-template | ase | ase-template | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())

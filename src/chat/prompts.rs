@@ -38,7 +38,7 @@ pub fn render(
     prompt.push_str("VALID SUBCOMMANDS (use ONLY these):\n");
     prompt.push_str(
         "sort, mask, train, predict, update, annotate, submit, batch, remote, \
-         stats, quant, compare, convert, clean, fix, \
+         stats, quant, fetch-rna, compare, convert, clean, fix, \
          install, check, setup, species, learn, explain, help.\n\n",
     );
 

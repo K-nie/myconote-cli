@@ -306,6 +306,19 @@ const TOOLS: &[Tool] = &[
         manual_note: "https://github.com/OpenGene/fastp",
         version_arg: "--version",
     },
+    // `fetch-rna` defaults to ENA (no external binary required).
+    // sra-toolkit is only consulted when ENA has nothing for a run
+    // or when the user forces `--backend sra`, so it's optional.
+    Tool {
+        name: "prefetch",
+        used_by: "fetch-rna",
+        conda_pkg: Some("sra-tools"),
+        conda_chan: "bioconda",
+        pip_pkg: None,
+        manual_note:
+            "https://github.com/ncbi/sra-tools — run `vdb-config --interactive` once after install",
+        version_arg: "--version",
+    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

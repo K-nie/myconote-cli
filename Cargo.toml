@@ -64,6 +64,9 @@ which = "6.0"
 # Hashing — used by src/quant/index.rs for the salmon index cache key
 # (sha256 of cds_fa || genome_fa || salmon_version || k).
 sha2 = "0.10"
+# MD5 — used by src/fetch_rna/ena.rs to verify ENA-provided fastq_md5
+# checksums after each download.
+md-5 = "0.10"
 
 [dev-dependencies]
 tempfile = "3.10"

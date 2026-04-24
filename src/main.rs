@@ -9,6 +9,7 @@ pub mod check;
 pub mod cli;
 pub mod compare;
 pub mod convert;
+pub mod fetch_rna;
 pub mod fix;
 pub mod install;
 pub mod learn;
@@ -96,6 +97,7 @@ fn print_main_help() {
     println!("\nAnalysis commands:");
     println!("  stats    Calculate statistics from annotation files");
     println!("  quant    Quantify RNA-seq expression against the annotated genome (salmon)");
+    println!("  fetch-rna Download RNA-seq FASTQs by SRA/ENA accession");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
@@ -381,6 +383,36 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             quant::run_quant(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
+        "fetch-rna" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli fetch-rna <accession...> [-o <dir>] [options]");
+                println!("\nDownload public RNA-seq FASTQs from ENA (default) or NCBI SRA.");
+                println!("Accepts run IDs (SRR/ERR/DRR), study IDs (SRP/ERP/DRP),");
+                println!("project IDs (PRJNA/PRJEB/PRJDB), sample IDs (SRS/ERS/DRS),");
+                println!("experiment IDs (SRX/ERX/DRX), or a path to a file containing");
+                println!("one accession per line.");
+                println!("\nOptions:");
+                println!("  --output <dir>  -o     Output directory (default: rna/)");
+                println!("  --threads <n>   -t     Parallel downloads (default: 1)");
+                println!("  --retries <n>          Download retry count (default: 3)");
+                println!("  --backend ena|sra|auto Backend choice (default: auto — ENA first)");
+                println!("  --no-verify-md5        Skip MD5 verification (not recommended)");
+                println!("  --dry-run              Resolve URLs without downloading");
+                println!("\nOutputs (under --output dir):");
+                println!("  {{run}}.fastq.gz                     single-end runs");
+                println!("  {{run}}_R1.fastq.gz, {{run}}_R2.fastq.gz  paired-end runs");
+                println!("  samples.tsv                        pre-populated for `quant`");
+                println!("\nExamples:");
+                println!("  myconote-cli fetch-rna SRR12345678");
+                println!("  myconote-cli fetch-rna PRJNA123456 -o rna/");
+                println!("  myconote-cli fetch-rna accessions.txt --threads 4");
+                println!("\nENA is the default backend: no credentials, no sra-toolkit.");
+                println!("sra-toolkit (`conda install -c bioconda sra-tools`) is only");
+                println!("consulted when ENA has nothing for an accession.");
+                return Ok(());
+            }
+            fetch_rna::run_fetch_rna(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {
@@ -755,7 +787,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | compare | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())

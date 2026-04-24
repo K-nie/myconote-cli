@@ -54,6 +54,7 @@ nav:
   - Analysis Commands:
     - stats: analysis/stats.md
     - quant: analysis/quant.md
+    - fetch-rna: analysis/fetch-rna.md
     - compare: analysis/compare.md
     - explain: analysis/explain.md
   - Databases: databases.md

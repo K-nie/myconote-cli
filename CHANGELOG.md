@@ -7,6 +7,17 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ## [Unreleased]
 
 ### Added
+- **`fetch-rna` subcommand** — download public RNA-seq FASTQs by
+  SRA/ENA accession. ENA REST is the default backend (no credentials,
+  no `vdb-config`); sra-toolkit (`prefetch` + `fasterq-dump`) is an
+  opt-in fallback for runs ENA hasn't mirrored. Accepts run IDs,
+  study IDs, project IDs, sample IDs, experiment IDs, or a text
+  file with one accession per line. Streams files with on-the-fly
+  MD5 verification and retry on transient failures. Emits a
+  `samples.tsv` pre-populated for `quant`.
+  - Dep added: `md-5 = "0.10"` for ENA MD5 checksum verification.
+  - `sra-tools` registered in `install` / `check` with
+    `used_by="fetch-rna"` (optional).
 - **`quant` subcommand** — RNA-seq expression quantification against
   an annotated fungal genome using salmon with a decoy-aware index.
   Reads → fastp (QC/trim) → salmon quant → wide `counts.tsv` +

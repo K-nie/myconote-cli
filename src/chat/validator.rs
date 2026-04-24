@@ -17,10 +17,29 @@
 /// the whole line is stripped.
 pub const VALID_SUBCOMMANDS: &[&str] = &[
     // Pipeline
-    "sort", "mask", "train", "predict", "update", "annotate", "submit", "batch", "remote",
+    "sort",
+    "mask",
+    "train",
+    "predict",
+    "update",
+    "annotate",
+    "submit",
+    "batch",
+    "remote",
     // Analysis
-    "stats", "quant", "compare", "convert", "clean", "fix", // Utility
-    "install", "check", "setup", "species", "learn", "explain", // Meta
+    "stats",
+    "quant",
+    "fetch-rna",
+    "compare",
+    "convert",
+    "clean",
+    "fix", // Utility
+    "install",
+    "check",
+    "setup",
+    "species",
+    "learn",
+    "explain", // Meta
     "help",
 ];
 

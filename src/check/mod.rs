@@ -192,6 +192,12 @@ const TOOLS: &[Tool] = &[
         version_arg: "--version",
         install_cmd: "conda install -c bioconda fastp",
     },
+    Tool {
+        name: "prefetch",
+        used_by: "fetch-rna",
+        version_arg: "--version",
+        install_cmd: "conda install -c bioconda sra-tools  # optional — ENA backend is default",
+    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

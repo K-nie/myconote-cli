@@ -264,8 +264,7 @@ fn test_convert_gff3_to_cds() {
 
     // Parse the emitted FASTA into (id -> sequence). Simple inline parse —
     // the test has no need to depend on the internal FastaReader.
-    let mut records: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
+    let mut records: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     let mut cur_id = String::new();
     let mut cur_seq = String::new();
     for line in content.lines() {
@@ -273,11 +272,7 @@ fn test_convert_gff3_to_cds() {
             if !cur_id.is_empty() {
                 records.insert(cur_id.clone(), cur_seq.clone());
             }
-            cur_id = rest
-                .split_whitespace()
-                .next()
-                .unwrap_or("")
-                .to_string();
+            cur_id = rest.split_whitespace().next().unwrap_or("").to_string();
             cur_seq.clear();
         } else {
             cur_seq.push_str(line.trim());

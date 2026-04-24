@@ -31,11 +31,7 @@ use std::path::Path;
 /// Returns the number of transcripts written. Errors on I/O failures;
 /// records with missing seqids or empty CDS sets are logged to stderr
 /// and skipped, not fatal.
-pub fn extract_spliced_cds(
-    gff_path: &Path,
-    fasta_path: &Path,
-    output: &Path,
-) -> Result<usize> {
+pub fn extract_spliced_cds(gff_path: &Path, fasta_path: &Path, output: &Path) -> Result<usize> {
     let fasta_index = read_fasta_index(fasta_path)?;
 
     // Index records in one pass. GFF3 does not guarantee CDS come after their
@@ -60,7 +56,10 @@ pub fn extract_spliced_cds(
             }
             "CDS" => {
                 if let Some(p) = rec.parent() {
-                    cds_by_parent.entry(p.clone()).or_default().push(rec.clone());
+                    cds_by_parent
+                        .entry(p.clone())
+                        .or_default()
+                        .push(rec.clone());
                 }
             }
             _ => {}
@@ -88,10 +87,7 @@ pub fn extract_spliced_cds(
             _ => {
                 // Empty or missing CDS children: common for ncRNA-like mRNAs
                 // or broken annotations. Log and skip rather than abort.
-                eprintln!(
-                    "warn: mRNA {} has no CDS children; skipping",
-                    mrna_id
-                );
+                eprintln!("warn: mRNA {} has no CDS children; skipping", mrna_id);
                 continue;
             }
         };
@@ -132,9 +128,7 @@ pub fn extract_spliced_cds(
         // a heuristic — a CDS flush against the contig edge might be
         // complete biologically — but it's the signal the spec asked for.
         let contig_len = seq_rec.len() as u64;
-        let partial = ordered
-            .iter()
-            .any(|c| c.start == 1 || c.end == contig_len);
+        let partial = ordered.iter().any(|c| c.start == 1 || c.end == contig_len);
 
         // Concatenate segments in genomic order into a single buffer.
         let mut cds_seq = String::new();
@@ -157,9 +151,7 @@ pub fn extract_spliced_cds(
         } else {
             ordered.first()
         };
-        let phase = first_transcript_cds
-            .and_then(|c| c.phase)
-            .unwrap_or(0) as usize;
+        let phase = first_transcript_cds.and_then(|c| c.phase).unwrap_or(0) as usize;
         if phase > 0 && phase < cds_seq.len() {
             cds_seq = cds_seq[phase..].to_string();
         }

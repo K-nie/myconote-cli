@@ -634,16 +634,13 @@ for (contrast in CONTRASTS) {
   summary(res_shrunk)
 
   # TSV output — one row per transcript, sorted by padj.
-  out_df <- data.frame(
-    transcript      = rownames(res_shrunk),
-    baseMean        = res_shrunk$baseMean,
-    log2FoldChange  = res_shrunk$log2FoldChange,
-    lfcSE           = res_shrunk$lfcSE,
-    stat            = res_shrunk$stat,
-    pvalue          = res_shrunk$pvalue,
-    padj            = res_shrunk$padj,
-    stringsAsFactors = FALSE
-  )
+  # Columns chosen to cover both unshrunk (has $stat) and apeglm-shrunk
+  # (no $stat) result objects: we always emit the five core columns
+  # that both object types provide.
+  out_df <- as.data.frame(res_shrunk)
+  out_df$transcript <- rownames(out_df)
+  out_df <- out_df[, c("transcript", "baseMean", "log2FoldChange",
+                        "lfcSE", "pvalue", "padj")]
   out_df <- out_df[order(out_df$padj, na.last = TRUE), ]
   out_tsv <- sprintf("%s_%s.tsv", OUT_PREFIX, tag)
   write.table(out_df, out_tsv, sep = "\t",

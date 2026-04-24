@@ -1,4 +1,5 @@
 pub mod annotate;
+pub mod ase;
 pub mod batch;
 pub mod chat;
 pub mod check;

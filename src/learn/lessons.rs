@@ -1278,33 +1278,6 @@ your assembly or prediction."
             ),
 
             LessonItem::Text(
-"PHYLOGENETICS (myconote-cli phylogeny)
-
-Build maximum-likelihood phylogenetic trees using IQ-TREE 2, the
-state-of-the-art ML tree inference program.
-
-Key features:
-  - ModelFinder Plus (MFP): automatically selects the best-fit
-    substitution model from 286 candidates
-  - Ultrafast Bootstrap (UFBoot2): 1000 replicates in minutes
-    instead of hours
-  - Partitioned analysis for multi-gene datasets
-
-Ref: Minh et al. (2020) Mol Biol Evol 37:1530 (IQ-TREE 2)
-Ref: Kalyaanamoorthy et al. (2017) Nature Methods 14:587 (ModelFinder)"
-            ),
-
-            LessonItem::Question {
-                prompt: "What tool does myconote-cli use for phylogenetic inference?",
-                kind: QuestionKind::FreeText {
-                    answer: "IQ-TREE",
-                    accept_regex: Some(r"(?i)iq.?tree"),
-                },
-                hint: Some("It's the most-cited ML tree builder. Starts with 'IQ'."),
-                explanation: Some("IQ-TREE 2 (Minh et al. 2020) performs maximum-likelihood phylogenetic inference with automatic model selection and ultrafast bootstrapping."),
-            },
-
-            LessonItem::Text(
 "VISUALIZATION
 
   plot — Genome maps

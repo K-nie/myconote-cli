@@ -1,4 +1,3 @@
-pub mod align;
 pub mod annotate;
 pub mod batch;
 pub mod chat;
@@ -12,7 +11,6 @@ pub mod learn;
 pub mod mask;
 pub mod names;
 pub mod parser;
-pub mod phylogeny;
 pub mod predict;
 pub mod progress;
 pub mod remote;
@@ -24,4 +22,3 @@ pub mod submit;
 pub mod train;
 pub mod update;
 pub mod utils;
-pub mod y1000plus;

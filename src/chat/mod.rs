@@ -219,9 +219,8 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         }
     };
 
-    // ── Validate output (strip unresolvable citations) ──
-    let valid_ids = validator::build_valid_ids(&findings, &retrieved);
-    let validation = validator::validate_citations(&response, &valid_ids);
+    // ── Validate output (strip lines with hallucinated subcommands) ──
+    let validation = validator::validate_commands(&response);
 
     // ── Render ──
     render::render_findings(&findings, verbosity);
@@ -232,8 +231,8 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         render::render_trace(
             &system_prompt,
             retrieved.len(),
-            validation.citations_kept,
-            validation.citations_removed,
+            validation.commands_kept,
+            validation.commands_removed,
         );
     }
 
@@ -249,8 +248,8 @@ pub fn run_explain(args: &[String]) -> Result<()> {
         &recs,
         Some(&system_prompt),
         Some(&validation.text),
-        validation.citations_kept,
-        validation.citations_removed,
+        validation.commands_kept,
+        validation.commands_removed,
     )?;
 
     // ── Record history ──
@@ -345,8 +344,8 @@ fn write_bundle(
     recs: &[commands::CommandRecommendation],
     prompt: Option<&str>,
     response: Option<&str>,
-    citations_kept: usize,
-    citations_removed: usize,
+    commands_kept: usize,
+    commands_removed: usize,
 ) -> Result<()> {
     let b = bundle::ExplainBundle {
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -368,8 +367,8 @@ fn write_bundle(
         retrieved: retrieved.to_vec(),
         commands: recs.to_vec(),
         response: response.map(|s| s.to_string()),
-        citations_kept,
-        citations_removed,
+        commands_kept,
+        commands_removed,
     };
     match b.write() {
         Ok(dir) => {

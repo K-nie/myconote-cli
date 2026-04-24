@@ -21,19 +21,26 @@ pub fn render(
         stage
     ));
 
-    // Citation rules
+    // Output rules
     prompt.push_str("RULES:\n");
-    prompt.push_str("- Every factual claim must cite a source: [knowledge:<id>], [paper:<doi>], [data:<file>:<line>], or [rule:<id>].\n");
-    prompt.push_str("- If a claim cannot be cited, omit it.\n");
     prompt.push_str("- Do not invent numbers. Use only values from the context below.\n");
     prompt.push_str("- If a critical file is missing, recommend rerunning the stage.\n");
     prompt.push_str(
-        "- End your response with 1-3 recommended next commands from the tool catalog.\n",
+        "- End your response with 1-3 recommended next commands chosen ONLY from the subcommand catalogue below. Commands outside this list will be stripped from your answer.\n",
     );
     prompt.push_str(
         "- Format commands as: `myconote-cli <command> [args]` with a one-sentence rationale.\n",
     );
     prompt.push_str("- Your interpretation is suggestive, not definitive. Remind the user to verify findings in the context of their specific organism, assembly, and research goals.\n\n");
+
+    // Authoritative subcommand catalogue — kept in sync with
+    // src/chat/validator.rs::VALID_SUBCOMMANDS.
+    prompt.push_str("VALID SUBCOMMANDS (use ONLY these):\n");
+    prompt.push_str(
+        "sort, mask, train, predict, update, annotate, submit, batch, remote, \
+         stats, compare, convert, clean, fix, \
+         install, check, setup, species, learn, explain, help.\n\n",
+    );
 
     // Stage-specific reference ranges
     prompt.push_str("REFERENCE RANGES:\n");

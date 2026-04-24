@@ -1,6 +1,6 @@
 # Quick Start
 
-Annotate a eukaryotic genome from start to finish. Estimated time: 30-60 minutes (excluding database downloads).
+Annotate a fungal genome from start to finish. Estimated time: 30-60 minutes (excluding database downloads).
 
 **New to myconote-cli?** Run `myconote-cli learn` for an interactive tutorial that teaches each concept step by step.
 
@@ -198,7 +198,6 @@ myconote-cli batch genomes/ --condor --condor-mem 64G
 - Learn interactively: `myconote-cli learn`
 - Interpret results: `myconote-cli explain <stage>` ([docs](analysis/explain.md))
 - Annotate many genomes: `myconote-cli batch genomes/` ([docs](analysis/batch.md))
-- Build a phylogenetic tree: [phylogeny](analysis/phylogeny.md)
-- Place your genome in the Y1000+ reference: `myconote-cli place --annotated annotate_out/annotations.tsv`
+- Compare orthologs across genomes: [compare](analysis/compare.md)
 - Pairwise synteny of two genomes: convert both to GenBank with `convert --to genbank` and load into clinker
 - Full workshop tutorial: [Workshop Lesson](lesson.md)

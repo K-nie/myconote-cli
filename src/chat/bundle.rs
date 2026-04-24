@@ -21,8 +21,8 @@ pub struct ExplainBundle {
     pub retrieved: Vec<Citation>,
     pub commands: Vec<CommandRecommendation>,
     pub response: Option<String>,
-    pub citations_kept: usize,
-    pub citations_removed: usize,
+    pub commands_kept: usize,
+    pub commands_removed: usize,
 }
 
 impl ExplainBundle {
@@ -177,8 +177,8 @@ mod tests {
             retrieved: vec![],
             commands: vec![],
             response: Some("test response".to_string()),
-            citations_kept: 0,
-            citations_removed: 0,
+            commands_kept: 0,
+            commands_removed: 0,
         };
 
         let result = bundle.write();

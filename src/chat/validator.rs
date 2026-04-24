@@ -1,67 +1,76 @@
-use super::retrieval::Citation;
+//! Output validator for LLM-generated interpretations.
+//!
+//! Catches a real failure mode observed in production: the LLM confidently
+//! suggests `myconote-cli <subcommand>` invocations that do not exist
+//! (e.g. `myconote-cli repeatmasker`, `myconote-cli gff3stats`). Lines that
+//! reference any unknown subcommand are stripped from the response before
+//! it reaches the user.
+//!
+//! The previous citation-validator (which tried to strip fabricated
+//! `[knowledge:…]` / `[paper:…]` tags) has been removed — it rarely fired
+//! because the model almost never emitted citation tags, and it gave a
+//! false sense of rigour.
 
-/// Validate LLM output: strip unresolvable citations.
-///
-/// Every `[knowledge:...]`, `[paper:...]`, `[data:...]`, or `[rule:...]` tag
-/// in the response must match an entry in the retrieval set or findings list.
-/// Unresolvable tags are removed from the text.
-pub fn validate_citations(response: &str, valid_ids: &[String]) -> ValidationResult {
-    let re = regex::Regex::new(r"\[(knowledge|paper|data|rule):([^\]]+)\]").unwrap();
+/// Authoritative list of myconote-cli subcommands as exposed by the CLI
+/// router in `src/main.rs`. Any `myconote-cli <word>` reference in LLM
+/// output whose word is not in this list is considered hallucinated and
+/// the whole line is stripped.
+pub const VALID_SUBCOMMANDS: &[&str] = &[
+    // Pipeline
+    "sort", "mask", "train", "predict", "update", "annotate", "submit",
+    "batch", "remote",
+    // Analysis
+    "stats", "compare", "convert", "clean", "fix",
+    // Utility
+    "install", "check", "setup", "species", "learn", "explain",
+    // Meta
+    "help",
+];
 
-    let mut cleaned = response.to_string();
-    let mut removed_count = 0;
-    let mut kept_count = 0;
+/// Validate LLM output: strip any line that invokes a non-existent
+/// `myconote-cli <subcommand>`. Returns the cleaned text plus counts.
+pub fn validate_commands(response: &str) -> ValidationResult {
+    let re = regex::Regex::new(r"myconote-cli\s+([A-Za-z][A-Za-z0-9_-]*)").unwrap();
 
-    // Collect all matches first, then process in reverse to preserve positions
-    let matches: Vec<_> = re.find_iter(response).collect();
+    let mut kept = 0;
+    let mut removed = 0;
+    let mut out_lines: Vec<String> = Vec::new();
 
-    for m in matches.iter().rev() {
-        let tag = m.as_str();
-        // Extract the full ID (e.g., "knowledge:predict.gene_count_ranges")
-        let id = &tag[1..tag.len() - 1]; // strip [ and ]
+    for line in response.lines() {
+        let mentions: Vec<&str> = re
+            .captures_iter(line)
+            .map(|c| c.get(1).unwrap().as_str())
+            .collect();
 
-        if valid_ids
+        if mentions.is_empty() {
+            out_lines.push(line.to_string());
+            continue;
+        }
+
+        let any_bad = mentions
             .iter()
-            .any(|vid| vid == id || tag.contains(vid.as_str()))
-        {
-            kept_count += 1;
+            .any(|m| !VALID_SUBCOMMANDS.contains(&m.to_ascii_lowercase().as_str()));
+
+        if any_bad {
+            removed += 1;
         } else {
-            // Remove the unresolvable citation
-            cleaned.replace_range(m.range(), "");
-            removed_count += 1;
+            kept += mentions.len();
+            out_lines.push(line.to_string());
         }
     }
 
     ValidationResult {
-        text: cleaned.trim().to_string(),
-        citations_kept: kept_count,
-        citations_removed: removed_count,
-        is_valid: removed_count == 0,
+        text: out_lines.join("\n").trim().to_string(),
+        commands_kept: kept,
+        commands_removed: removed,
+        is_valid: removed == 0,
     }
-}
-
-/// Build the list of valid citation IDs from findings and retrieved knowledge.
-pub fn build_valid_ids(findings: &[super::rules::Finding], retrieved: &[Citation]) -> Vec<String> {
-    let mut ids = Vec::new();
-
-    for f in findings {
-        ids.push(format!("rule:{}", f.rule_id));
-        if let Some(ref cite) = f.citation {
-            ids.push(cite.clone());
-        }
-    }
-
-    for c in retrieved {
-        ids.push(c.id.clone());
-    }
-
-    ids
 }
 
 pub struct ValidationResult {
     pub text: String,
-    pub citations_kept: usize,
-    pub citations_removed: usize,
+    pub commands_kept: usize,
+    pub commands_removed: usize,
     pub is_valid: bool,
 }
 
@@ -70,75 +79,76 @@ mod tests {
     use super::*;
 
     #[test]
-    fn valid_citations_kept() {
-        let response = "Gene count is high [knowledge:predict.gene_count_ranges]. This is typical.";
-        let valid = vec!["knowledge:predict.gene_count_ranges".to_string()];
-        let result = validate_citations(response, &valid);
-        assert!(result.is_valid);
-        assert_eq!(result.citations_kept, 1);
-        assert_eq!(result.citations_removed, 0);
-        assert!(result
-            .text
-            .contains("[knowledge:predict.gene_count_ranges]"));
+    fn real_subcommand_line_is_kept() {
+        let r = validate_commands("Next: run `myconote-cli stats predict/consensus.gff3`.");
+        assert!(r.is_valid);
+        assert_eq!(r.commands_kept, 1);
+        assert_eq!(r.commands_removed, 0);
+        assert!(r.text.contains("myconote-cli stats"));
     }
 
     #[test]
-    fn invalid_citations_removed() {
-        let response = "Gene count is 25000 [knowledge:predict.gene_count_ranges]. \
-                        Also see [paper:10.1234/fake] for details.";
-        let valid = vec!["knowledge:predict.gene_count_ranges".to_string()];
-        let result = validate_citations(response, &valid);
-        assert!(!result.is_valid);
-        assert_eq!(result.citations_kept, 1);
-        assert_eq!(result.citations_removed, 1);
-        assert!(result
-            .text
-            .contains("[knowledge:predict.gene_count_ranges]"));
-        assert!(!result.text.contains("[paper:10.1234/fake]"));
+    fn hallucinated_subcommand_is_stripped() {
+        // Exactly the failure mode observed in production: the LLM
+        // invented `repeatmasker` and `gff3stats`.
+        let response = "\
+You should run `myconote-cli repeatmasker -n 5 ...` to mask repeats.
+Also run `myconote-cli gff3stats -i consensus.gff3` for summaries.
+For real annotation, `myconote-cli annotate predict/consensus.gff3 --fasta genome.fa`.
+Finally, `myconote-cli stats predict/consensus.gff3 --taxon fungi`.";
+        let r = validate_commands(response);
+        assert!(!r.is_valid);
+        assert_eq!(r.commands_removed, 2);
+        assert!(!r.text.contains("repeatmasker"));
+        assert!(!r.text.contains("gff3stats"));
+        assert!(r.text.contains("myconote-cli annotate"));
+        assert!(r.text.contains("myconote-cli stats"));
     }
 
     #[test]
-    fn no_citations_is_valid() {
-        let response = "Everything looks normal. Run stats next.";
-        let valid = vec![];
-        let result = validate_citations(response, &valid);
-        assert!(result.is_valid);
-        assert_eq!(result.citations_kept, 0);
-        assert_eq!(result.citations_removed, 0);
+    fn prose_without_commands_passes_through() {
+        let r = validate_commands("Gene count is within the fungal norm.");
+        assert!(r.is_valid);
+        assert_eq!(r.commands_kept, 0);
+        assert_eq!(r.commands_removed, 0);
+        assert_eq!(r.text, "Gene count is within the fungal norm.");
     }
 
     #[test]
-    fn rule_citations_valid() {
-        let response = "Low masking detected [rule:mask.very_low_masking].";
-        let valid = vec!["rule:mask.very_low_masking".to_string()];
-        let result = validate_citations(response, &valid);
-        assert!(result.is_valid);
-        assert_eq!(result.citations_kept, 1);
+    fn multiple_commands_on_one_line_all_valid() {
+        let r = validate_commands(
+            "First `myconote-cli predict ...`, then `myconote-cli annotate ...`.",
+        );
+        assert!(r.is_valid);
+        assert_eq!(r.commands_kept, 2);
     }
 
     #[test]
-    fn build_valid_ids_from_findings() {
-        use crate::chat::retrieval::{Citation, SourceType};
-        use crate::chat::rules::{Finding, Severity};
+    fn case_insensitive_command_match() {
+        let r = validate_commands("Try `myconote-cli Stats file.gff3`.");
+        assert!(r.is_valid);
+        assert_eq!(r.commands_kept, 1);
+    }
 
-        let findings = vec![Finding {
-            rule_id: "predict.high".to_string(),
-            severity: Severity::Warning,
-            message: "high".to_string(),
-            evidence: "25000".to_string(),
-            citation: Some("knowledge:predict.gene_count_ranges".to_string()),
-        }];
-
-        let retrieved = vec![Citation {
-            source_type: SourceType::Knowledge,
-            id: "knowledge:predict.overprediction_causes".to_string(),
-            snippet: "text".to_string(),
-            score: 1.5,
-        }];
-
-        let ids = build_valid_ids(&findings, &retrieved);
-        assert!(ids.contains(&"rule:predict.high".to_string()));
-        assert!(ids.contains(&"knowledge:predict.gene_count_ranges".to_string()));
-        assert!(ids.contains(&"knowledge:predict.overprediction_causes".to_string()));
+    #[test]
+    fn removed_subcommands_are_stripped() {
+        // phylogeny and place were real subcommands in v0.2.0 but were
+        // removed when the tool's scope narrowed to fungal annotation.
+        // If someone re-adds either to VALID_SUBCOMMANDS without wiring up
+        // the module, this test fails and flags the inconsistency.
+        for removed in ["phylogeny", "place"] {
+            assert!(
+                !VALID_SUBCOMMANDS.contains(&removed),
+                "'{removed}' should no longer be in VALID_SUBCOMMANDS",
+            );
+            let line = format!("Run `myconote-cli {removed} input.fa` to continue.");
+            let r = validate_commands(&line);
+            assert!(
+                !r.is_valid,
+                "line invoking removed subcommand '{removed}' should be invalid",
+            );
+            assert_eq!(r.commands_removed, 1);
+            assert!(!r.text.contains(removed));
+        }
     }
 }

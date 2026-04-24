@@ -49,12 +49,12 @@ fn test_annotate_help_shows_trnascan() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn test_version_shows_020() {
+fn test_version_matches_cargo_pkg_version() {
     bin()
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("0.1.0"));
+        .stdout(predicate::str::contains(env!("CARGO_PKG_VERSION")));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

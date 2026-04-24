@@ -291,110 +291,7 @@ fn test_clean_remove_orphans() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. plot command (PNG output — no external tools needed)
-// ─────────────────────────────────────────────────────────────────────────────
-
-#[test]
-fn test_plot_linear_png() {
-    let tmp = TempDir::new().unwrap();
-    let out = tmp.path().join("linear.png");
-
-    bin()
-        .arg("plot")
-        .arg(gff3())
-        .args(["--output"])
-        .arg(&out)
-        .args(["--type", "linear"])
-        .assert()
-        .success();
-
-    assert!(out.exists(), "Linear PNG not created");
-    // PNG magic bytes: 89 50 4E 47
-    let bytes = std::fs::read(&out).unwrap();
-    assert_eq!(&bytes[0..4], b"\x89PNG", "Output is not a valid PNG");
-}
-
-#[test]
-fn test_plot_circular_png() {
-    let tmp = TempDir::new().unwrap();
-    let out = tmp.path().join("circular.png");
-
-    bin()
-        .arg("plot")
-        .arg(gff3())
-        .args(["--output"])
-        .arg(&out)
-        .args(["--type", "circular"])
-        .assert()
-        .success();
-
-    assert!(out.exists(), "Circular PNG not created");
-    let bytes = std::fs::read(&out).unwrap();
-    assert_eq!(&bytes[0..4], b"\x89PNG", "Output is not a valid PNG");
-}
-
-#[test]
-fn test_plot_custom_dimensions() {
-    let tmp = TempDir::new().unwrap();
-    let out = tmp.path().join("custom.png");
-
-    bin()
-        .arg("plot")
-        .arg(gff3())
-        .args(["--output"])
-        .arg(&out)
-        .args(["--width", "800", "--height", "600"])
-        .assert()
-        .success();
-
-    assert!(out.exists());
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. view command — JBrowse2 / UCSC HTML (no external tools needed)
-// ─────────────────────────────────────────────────────────────────────────────
-
-#[test]
-fn test_view_jbrowse2() {
-    let tmp = TempDir::new().unwrap();
-    let out = tmp.path().join("genome_view.html");
-
-    bin()
-        .arg("view")
-        .arg(gff3())
-        .args(["-o"])
-        .arg(&out)
-        .assert()
-        .success();
-
-    assert!(out.exists(), "JBrowse2 HTML not created");
-    let content = std::fs::read_to_string(&out).unwrap();
-    assert!(
-        content.contains("jbrowse") || content.contains("JBrowse"),
-        "HTML doesn't look like JBrowse2 output"
-    );
-    assert!(content.contains("<html"), "Not a valid HTML file");
-}
-
-#[test]
-#[ignore = "UCSC view output path differs across platforms"]
-fn test_view_ucsc() {
-    let tmp = TempDir::new().unwrap();
-    let out = tmp.path().join("ucsc.html");
-
-    bin()
-        .arg("view")
-        .arg(gff3())
-        .args(["--browser", "ucsc", "-o"])
-        .arg(&out)
-        .assert()
-        .success();
-
-    assert!(out.exists());
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 7. sort command (pure Rust, no external tools)
+// 5. sort command (pure Rust, no external tools)
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
@@ -654,10 +551,8 @@ help_test!(test_help_update, "update", "Usage");
 help_test!(test_help_annotate, "annotate", "Usage");
 help_test!(test_help_remote, "remote", "Usage");
 help_test!(test_help_fix, "fix", "Usage");
-help_test!(test_help_view, "view", "Usage");
 help_test!(test_help_convert, "convert", "Usage");
 help_test!(test_help_clean, "clean", "Usage");
-help_test!(test_help_synteny, "synteny", "Usage");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Explain command integration tests

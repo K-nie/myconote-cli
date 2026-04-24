@@ -4,6 +4,40 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Scope narrowed to fungi.** Tool description, README, mkdocs, and
+  `learn` tutorial now lead with fungal genome annotation. Non-fungal
+  eukaryotes still work but are no longer a first-class target.
+
+### Removed
+- **`phylogeny` subcommand** — IQ-TREE wrapper has been dropped. Users
+  who need an ML tree should align compare's
+  `Single_Copy_Orthologue_Sequences/` with MAFFT and run IQ-TREE or
+  RAxML-NG externally. This also drops the internal `align` module
+  (MAFFT driver + supermatrix builder) and `compare --species-tree`.
+- **`place` subcommand** and the entire **Y1000+ reference bundle**
+  (`setup --y1000plus`, `stats --benchmark y1000plus`,
+  `--annotated` KEGG-KO percentile rank). The 1,154-yeast Y1000+ work
+  is reference data; hosting the downloader, Excel/TSV parsers, KO
+  Jaccard, codon-table/phenotype/niche predictors, and tarball
+  extractors inside an annotation tool was scope creep. The Opulente
+  et al. (2024) dataset remains publicly accessible for external use.
+- Dependencies dropped now that the above modules are gone: `ndarray`,
+  `ndarray-stats`, `tar`, `zip`, `sha2`, `calamine`.
+- External-tool registrations removed from `install` / `check`:
+  `iqtree`, `mafft`, `muscle`.
+
+### Chat / `explain` validator
+- Replaced the citation-tag validator (rarely fired) with a
+  subcommand validator: lines that invoke a non-existent
+  `myconote-cli <subcommand>` (e.g. `myconote-cli repeatmasker`) are
+  stripped from LLM output before the user sees them. The
+  authoritative subcommand list lives in
+  `src/chat/validator.rs::VALID_SUBCOMMANDS` and is mirrored into
+  the system prompt in `src/chat/prompts.rs`.
+
 ## [0.2.0] — 2026-04-18
 
 Major release: AI-assisted interpretation, multi-genome batch orchestration,

@@ -1,8 +1,7 @@
 use anyhow::Result;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-pub mod align;
 pub mod annotate;
 pub mod batch;
 pub mod chat;
@@ -16,7 +15,6 @@ pub mod learn;
 pub mod mask;
 pub mod names;
 pub mod parser;
-pub mod phylogeny;
 pub mod predict;
 pub mod progress;
 pub mod remote;
@@ -28,7 +26,6 @@ pub mod submit;
 pub mod train;
 pub mod update;
 pub mod utils;
-pub mod y1000plus;
 
 use parser::region::RegionSelector;
 
@@ -97,9 +94,7 @@ fn print_main_help() {
     println!("  batch    Annotate multiple genomes (directory or sample sheet, HTCondor support)");
     println!("\nAnalysis commands:");
     println!("  stats    Calculate statistics from annotation files");
-    println!("  phylogeny Build a maximum-likelihood tree with IQ-TREE (from an alignment)");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
-    println!("  place    Place your genome in the Y1000+ 1,154-yeast reference (functional)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
     println!("  fix      Repair errors in GenBank (.gbk) files");
@@ -320,11 +315,6 @@ fn main() -> Result<()> {
                 println!("  --region <chr:start-end>      Focus on a specific genomic region");
                 println!("  --exclude <chr>               Exclude a sequence from stats");
                 println!("  --primary-only                Collapse isoforms to primary transcript only");
-                println!("  --benchmark y1000plus         Append the Y1000+ reference distributions");
-                println!("                                (requires `setup --y1000plus --preset starter`)");
-                println!("  --annotated <path.tsv>        Combined with --benchmark: place the user's");
-                println!("                                KEGG-KO count on the 1,154-yeast percentile.");
-                println!("                                Accepts the TSV emitted by `myconote-cli annotate`.");
                 println!("\nTaxonomic groups: fungi, ascomycota, basidiomycota, plants, animals, mammals");
                 println!("\nOutputs (human format):");
                 println!("  Total features, genes, transcripts, CDS, exons");
@@ -341,79 +331,25 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_stats(path, &args[3..])?;
         }
-        "phylogeny" => {
-            if args.len() < 3 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli phylogeny <alignment.fa> [options]");
-                println!("\nInfers a maximum-likelihood phylogenetic tree using IQ-TREE 2.");
-                println!("\nOptions:");
-                println!("  --model <model>       Substitution model, or MFP for auto-select (default: MFP)");
-                println!("  --bootstrap <n>       Ultrafast bootstrap replicates (default: 1000, 0 to skip)");
-                println!("  --partition <file>    Partition file for multi-gene/multi-locus analysis");
-                println!("  --threads <n>         Threads (default: 4)");
-                println!("  --prefix <name>       Output prefix (default: alignment filename stem)");
-                println!("  --force               Overwrite an existing <prefix>.treefile (default: skip)");
-                println!("\nOutput:");
-                println!("  <prefix>.treefile     Best-fit ML tree in Newick format");
-                println!("  <prefix>.iqtree       Full IQ-TREE run report");
-                println!("  <prefix>.log          Console log");
-                println!("\nExamples:");
-                println!("  myconote-cli phylogeny aligned_cds.fa");
-                println!("  myconote-cli phylogeny aligned_cds.fa --model GTR+G --bootstrap 1000");
-                println!("  myconote-cli phylogeny multilocus.fa --partition parts.txt --threads 8");
-                return Ok(());
-            }
-            let input = &args[2];
-            let mut config = phylogeny::PhylogenyConfig::default();
-            let mut i = 3usize;
-            while i < args.len() {
-                match args[i].as_str() {
-                    "--model" | "-m" if i + 1 < args.len() => {
-                        config.model = args[i + 1].clone(); i += 2;
-                    }
-                    "--bootstrap" | "-b" if i + 1 < args.len() => {
-                        if let Ok(n) = args[i + 1].parse::<usize>() { config.bootstrap = n; }
-                        i += 2;
-                    }
-                    "--partition" if i + 1 < args.len() => {
-                        config.partition = Some(std::path::PathBuf::from(&args[i + 1])); i += 2;
-                    }
-                    "--threads" | "-T" if i + 1 < args.len() => {
-                        if let Ok(n) = args[i + 1].parse::<usize>() { config.threads = n; }
-                        i += 2;
-                    }
-                    "--prefix" if i + 1 < args.len() => {
-                        config.prefix = Some(args[i + 1].clone()); i += 2;
-                    }
-                    "--force" => {
-                        config.force = true; i += 1;
-                    }
-                    _ => { i += 1; }
-                }
-            }
-            phylogeny::build_tree(input, &config)
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
-        }
         "compare" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {
                 println!("Usage: myconote-cli compare <g1.gff3> <g1.fa> <g2.gff3> <g2.fa> [...] [options]");
                 println!("\nN-genome ortholog inference via OrthoFinder (Emms & Kelly 2019).");
-                println!("Produces an ortholog table, pan-genome summary (core / soft-core / shell / cloud),");
-                println!("rooted species tree, and a set of single-copy orthogroups ready for `phylogeny`.");
+                println!("Produces an ortholog table and pan-genome summary (core / soft-core / shell / cloud),");
+                println!("plus OrthoFinder's rooted species tree when enough genomes are supplied.");
                 println!("\nOptions:");
                 println!("  --output <dir>         Output directory (default: compare_out)");
                 println!("  --threads <n>          Threads for OrthoFinder (default: all cores)");
                 println!("  --sensitive            Use diamond_ultra_sens search (default: on)");
                 println!("  --fast                 Use default diamond search (faster, less accurate)");
                 println!("  --msa                  MSA-based tree refinement (2–3× slower)");
-                println!("  --species-tree         Also build a concatenated supermatrix alignment");
-                println!("                         for downstream `phylogeny` (MAFFT + NEXUS partitions)");
                 println!("  --genetic-code <n>     NCBI translation table (default: 1)");
                 println!("  --soft-core <frac>     Soft-core threshold fraction (default: 0.95)");
                 println!("  --cloud <frac>         Cloud upper bound fraction (default: 0.15)");
                 println!("\nGenome-count caps (auto-detected from protein count):");
-                println!("  Small  (≤15 000 proteins/genome, e.g. fungi): cap = 5");
-                println!("  Medium (15–30 k, e.g. small plants):          cap = 3");
-                println!("  Large  (>30 k, e.g. crops):                    cap = 2");
+                println!("  Fungi   (≤15 000 proteins/genome):  cap = 5");
+                println!("  Medium  (15–30 k):                   cap = 3");
+                println!("  Large   (>30 k):                     cap = 2");
                 println!("\nRequires `orthofinder` on PATH:");
                 println!("  conda install -c bioconda orthofinder");
                 println!("\nExamples:");
@@ -422,26 +358,6 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             handle_compare(&args[2..])?;
-        }
-        "place" => {
-            if args.len() < 3 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli place --annotated <annotated.tsv> [options]");
-                println!("\nPlaces your genome against the Y1000+ bundle of 1,154 yeasts by");
-                println!("comparing functional profiles (KEGG-KO Jaccard similarity).");
-                println!("\nOptions:");
-                println!("  --annotated <file.tsv>   myconote `annotate` output (required)");
-                println!("  --top <n>                How many closest species to report (default: 10)");
-                println!("  --format <human|tsv>     Output format (default: human)");
-                println!("\nDependencies:");
-                println!("  Requires the `kegg` subset of the Y1000+ bundle:");
-                println!("    myconote-cli setup --y1000plus --include kegg");
-                println!("\nExamples:");
-                println!("  myconote-cli place --annotated annotated.tsv");
-                println!("  myconote-cli place --annotated annotated.tsv --top 20 --format tsv");
-                println!("\nCitation: Opulente DA et al. (2024). Science 384(6694): eadj4503.");
-                return Ok(());
-            }
-            handle_place(&args[2..])?;
         }
         "convert" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -606,19 +522,11 @@ fn main() -> Result<()> {
                 println!("  busco        BUSCO fungi lineage data — used by annotate");
                 println!("  chat-corpus  Q1 open-access paper corpus — used by explain");
                 println!("  ollama       Ollama LLM runtime + model — used by explain");
-                println!("\nY1000+ yeast reference bundle (Opulente et al. 2024, Science):");
-                println!("  --y1000plus                  Enter the Y1000+ subsystem");
-                println!("  --y1000plus --list           Show all subsets + what's installed");
-                println!("  --y1000plus --dry-run --preset starter   Preview the ~175 MB starter bundle");
-                println!("  --y1000plus --include kegg,busco         Install just these subsets");
-                println!("  --y1000plus --preset phylogeny           Enables phylogenetic placement");
-                println!("  --y1000plus --uninstall <subsets>        Remove specific subsets");
                 println!("\nExamples:");
                 println!("  myconote-cli setup --list");
                 println!("  myconote-cli setup                     # download everything");
                 println!("  myconote-cli setup --db swiss-prot pfam");
                 println!("  myconote-cli setup --check");
-                println!("  myconote-cli setup --y1000plus --list");
                 return Ok(());
             }
             handle_setup(&args[2..])?;
@@ -794,7 +702,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | phylogeny | compare | place | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())
@@ -808,8 +716,6 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
     let mut regions = Vec::new();
     let mut exclude = Vec::new();
     let mut primary_only = false;
-    let mut benchmark_y1000plus = false;
-    let mut annotated_path: Option<PathBuf> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -837,21 +743,6 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
             "--primary-only" => {
                 primary_only = true;
                 i += 1;
-            }
-            "--benchmark" if i + 1 < args.len() => {
-                if args[i + 1].eq_ignore_ascii_case("y1000plus") {
-                    benchmark_y1000plus = true;
-                } else {
-                    eprintln!(
-                        "Unknown --benchmark target '{}'. Only 'y1000plus' is supported.",
-                        args[i + 1]
-                    );
-                }
-                i += 2;
-            }
-            "--annotated" if i + 1 < args.len() => {
-                annotated_path = Some(PathBuf::from(&args[i + 1]));
-                i += 2;
             }
             _ => i += 1,
         }
@@ -922,149 +813,9 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
                     println!("\n{}", warning);
                 }
             }
-
-            if benchmark_y1000plus {
-                print_y1000plus_benchmark(&stats, Path::new(path), annotated_path.as_deref())?;
-            }
         }
     }
 
-    Ok(())
-}
-
-/// Append a Y1000+ reference-distribution block to the human-format stats
-/// output. Pulls from the installed bundle; silently skips distributions
-/// whose subset isn't on disk. If `annotated_tsv` is provided, reads the
-/// user's distinct KEGG KO count from it and places them on the percentile.
-fn print_y1000plus_benchmark(
-    stats: &stats::GenomeStatistics,
-    gff_path: &Path,
-    annotated_tsv: Option<&Path>,
-) -> Result<()> {
-    use y1000plus::benchmark::{count_user_kos, count_user_trnas, load_reference, DistStats};
-
-    let reference = match load_reference() {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("\n⚠  --benchmark y1000plus skipped: {e}");
-            return Ok(());
-        }
-    };
-
-    // Optional: count user KOs from their annotated TSV for percentile rank.
-    let user_ko_count: Option<f64> = annotated_tsv.and_then(|p| match count_user_kos(p) {
-        Ok((kos, rows)) => {
-            println!(
-                "   ↪ scanned {} gene rows from {}; {} distinct KEGG KOs",
-                rows,
-                p.display(),
-                kos
-            );
-            Some(kos as f64)
-        }
-        Err(e) => {
-            eprintln!("   ⚠  couldn't parse --annotated: {e}");
-            None
-        }
-    });
-
-    // User tRNA count from the input GFF3 — only meaningful if the file has
-    // any tRNA features at all (which requires having run `annotate --trnascan`
-    // or an equivalent pipeline step).
-    let user_trna_count: Option<f64> = match count_user_trnas(gff_path) {
-        Ok(n) if n > 0 => Some(n as f64),
-        _ => None,
-    };
-
-    println!("\n══════════════════════════════════════════════════════════════════");
-    println!(
-        "📊 Y1000+ benchmark  ({} species · Opulente et al. 2024, Science)",
-        reference.species_count
-    );
-    println!("══════════════════════════════════════════════════════════════════");
-
-    let row = |label: &str, d: &DistStats, user: Option<f64>, fmt: &str| {
-        let user_col = match user {
-            Some(u) => {
-                let pct = d.percentile_of(u);
-                let marker = if pct < 25.0 {
-                    "below p25 — lean"
-                } else if pct < 75.0 {
-                    "typical range"
-                } else {
-                    "above p75 — rich"
-                };
-                if fmt == "int" {
-                    format!("{:>7} ({:>5.1} pct · {})", u as u64, pct, marker)
-                } else {
-                    format!("{:>7.1}% ({:>5.1} pct · {})", u, pct, marker)
-                }
-            }
-            None => "(not measured)".to_string(),
-        };
-        let pretty = if fmt == "int" {
-            format!(
-                "{:<22} min {:>6.0}   p25 {:>6.0}   median {:>6.0}   p75 {:>6.0}   max {:>6.0}",
-                label, d.min, d.p25, d.median, d.p75, d.max
-            )
-        } else {
-            format!(
-                "{:<22} min {:>5.1}%  p25 {:>5.1}%  median {:>5.1}%  p75 {:>5.1}%  max {:>5.1}%",
-                label, d.min, d.p25, d.median, d.p75, d.max
-            )
-        };
-        println!("{pretty}\n  your genome: {user_col}");
-    };
-
-    if let Some(ref d) = reference.busco_completeness {
-        row("BUSCO completeness", d, None, "pct");
-        println!(
-            "  (run BUSCO on your genome to see where you land; we surface \
-             the Y1000+ distribution so you can interpret it in context.)"
-        );
-    }
-    if let Some(ref d) = reference.kegg_ko_count {
-        row("Distinct KEGG KOs", d, user_ko_count, "int");
-        if user_ko_count.is_none() {
-            println!(
-                "  (pass --annotated <path.tsv> pointing at the output of \
-                 `myconote-cli annotate` to see your percentile.)"
-            );
-        }
-    }
-    if let Some(ref d) = reference.trna_count {
-        row("tRNA gene count", d, user_trna_count, "int");
-        if user_trna_count.is_none() {
-            println!(
-                "  (no tRNA features in {} — run `annotate --trnascan` first to \
-                 see your percentile.)",
-                gff_path.display()
-            );
-        }
-    }
-    if let Some(ref d) = reference.gene_count {
-        // The user's gene count is already sitting on the stats struct the
-        // caller built from the input GFF3.
-        let user_genes = Some(stats.total_genes as f64).filter(|v| *v > 0.0);
-        row("Protein-coding genes", d, user_genes, "int");
-    }
-
-    if reference.busco_completeness.is_none()
-        && reference.kegg_ko_count.is_none()
-        && reference.trna_count.is_none()
-        && reference.gene_count.is_none()
-    {
-        println!(
-            "No usable reference subsets installed. Install with:\n  \
-             myconote-cli setup --y1000plus --include busco,kegg,trna,annotations"
-        );
-    }
-
-    println!();
-    println!(
-        "Reference cache: {}\nCitation: Opulente DA et al. (2024). Science 384(6694): eadj4503.",
-        reference.source_root.display()
-    );
     Ok(())
 }
 
@@ -1109,10 +860,6 @@ fn handle_compare(args: &[String]) -> Result<()> {
                 config.msa = true;
                 i += 1;
             }
-            "--species-tree" => {
-                config.species_tree = true;
-                i += 1;
-            }
             "--no-primary-only" => {
                 config.primary_only = false;
                 i += 1;
@@ -1155,269 +902,6 @@ fn handle_compare(args: &[String]) -> Result<()> {
     config.inputs = parse_positional_inputs(&positional)?;
     run_compare(&config)?;
     Ok(())
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// place command: species placement against the Y1000+ bundle
-// ─────────────────────────────────────────────────────────────────────────────
-
-fn handle_place(args: &[String]) -> Result<()> {
-    use y1000plus::place::{place_functional, PlaceOptions};
-
-    let mut annotated: Option<PathBuf> = None;
-    let mut top_n: usize = 10;
-    let mut format = "human".to_string();
-    let mut i = 0usize;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--annotated" if i + 1 < args.len() => {
-                annotated = Some(PathBuf::from(&args[i + 1]));
-                i += 2;
-            }
-            "--top" if i + 1 < args.len() => {
-                if let Ok(n) = args[i + 1].parse::<usize>() {
-                    top_n = n;
-                }
-                i += 2;
-            }
-            "--format" if i + 1 < args.len() => {
-                format = args[i + 1].clone();
-                i += 2;
-            }
-            _ => i += 1,
-        }
-    }
-
-    let annotated = annotated.ok_or_else(|| {
-        anyhow::anyhow!(
-            "--annotated <annotated.tsv> is required. Run `myconote-cli annotate` first."
-        )
-    })?;
-
-    println!(
-        "🧬 Placing your genome against Y1000+ (1,154 yeasts, Opulente et al. 2024, Science)…"
-    );
-    let report = place_functional(&PlaceOptions {
-        annotated_tsv: &annotated,
-        top_n: top_n.max(1),
-    })?;
-
-    match format.as_str() {
-        "tsv" => {
-            println!("species\tjaccard\tshared_kos\tref_kos\tuser_kos");
-            for p in &report.top {
-                println!(
-                    "{}\t{:.4}\t{}\t{}\t{}",
-                    p.species, p.jaccard, p.shared, p.ref_kos, report.user_kos,
-                );
-            }
-            if let Some(ref c) = report.top_codon_table {
-                println!(
-                    "# top_codon_table\tspecies={}\tctg_is_ser={}\tdeviations={}",
-                    c.top_species,
-                    c.ctg_is_ser,
-                    c.deviations.len()
-                );
-            }
-            if let Some(ref m) = report.metabolic_prediction {
-                println!(
-                    "# metabolic_prediction\tcarbon={}\tcarbon_conf={:.3}\tnitrogen={}\tnitrogen_conf={:.3}\tn_neighbours={}",
-                    m.carbon_vote.label,
-                    m.carbon_vote.confidence,
-                    m.nitrogen_vote.label,
-                    m.nitrogen_vote.confidence,
-                    m.neighbours.len(),
-                );
-            }
-            if let Some(ref t) = report.thermotolerance {
-                println!(
-                    "# thermotolerance_37C\tlabel={}\tconfidence={:.3}\tn_neighbours={}",
-                    t.vote.label,
-                    t.vote.confidence,
-                    t.neighbours.len(),
-                );
-            }
-            if let Some(ref n) = report.niche {
-                println!(
-                    "# niche\tlabel={}\tconfidence={:.3}\tn_neighbours={}",
-                    n.vote.label,
-                    n.vote.confidence,
-                    n.neighbours.len(),
-                );
-            }
-        }
-        _ => {
-            println!();
-            println!(
-                "  user KEGG-KO set : {} distinct KOs across {} gene rows",
-                report.user_kos, report.user_gene_rows
-            );
-            println!(
-                "  reference space  : {} species with KEGG annotations",
-                report.species_total
-            );
-            println!();
-            println!(
-                "{:<45}  {:>8}  {:>8}  {:>8}",
-                "Closest Y1000+ species", "Jaccard", "shared", "ref KOs"
-            );
-            println!("{}", "─".repeat(80));
-            for (i, p) in report.top.iter().enumerate() {
-                let badge = if i == 0 { " ⭐" } else { "   " };
-                println!(
-                    "{badge}{:<42}  {:>8.4}  {:>8}  {:>8}",
-                    prettify_species(&p.species),
-                    p.jaccard,
-                    p.shared,
-                    p.ref_kos,
-                );
-            }
-            // Metabolic lifestyle prediction — rendered when the `metabolism`
-            // subset is installed and at least one neighbour was classified.
-            if let Some(ref m) = report.metabolic_prediction {
-                println!();
-                println!("── Predicted metabolic lifestyle ──");
-                println!(
-                    "  carbon  : {:<12}  confidence {:.0}%  (weighted vote across {} neighbours)",
-                    m.carbon_vote.label,
-                    m.carbon_vote.confidence * 100.0,
-                    m.neighbours.len()
-                );
-                println!(
-                    "  nitrogen: {:<12}  confidence {:.0}%",
-                    m.nitrogen_vote.label,
-                    m.nitrogen_vote.confidence * 100.0
-                );
-                if m.carbon_vote.tallies.len() > 1 || m.nitrogen_vote.tallies.len() > 1 {
-                    println!("  neighbour classifications:");
-                    for n in &m.neighbours {
-                        println!(
-                            "    {:<36}  J={:.4}  C={:<10} N={}",
-                            n.species, n.jaccard, n.carbon_class, n.nitrogen_class
-                        );
-                    }
-                }
-            }
-
-            // Ecological niche prediction — rendered when the `environment`
-            // subset is installed and at least one neighbour had an
-            // isolation-source entry in the ontology.
-            if let Some(ref n) = report.niche {
-                println!();
-                println!("── Predicted ecological niche (isolation source) ──");
-                println!(
-                    "  prediction : {}  (confidence {:.0}%)",
-                    n.vote.label,
-                    n.vote.confidence * 100.0
-                );
-                if n.vote.tallies.len() > 1 {
-                    println!("  vote tallies:");
-                    for (label, w) in n.vote.tallies.iter().take(5) {
-                        println!("    {:<32} weight {:.4}", label, w);
-                    }
-                    if n.vote.tallies.len() > 5 {
-                        println!("    … and {} more niche labels", n.vote.tallies.len() - 5);
-                    }
-                }
-                println!(
-                    "  neighbours consulted: {}/{} of top-N had ontology data",
-                    n.neighbours.len(),
-                    report.top.len()
-                );
-            }
-
-            // Thermotolerance prediction — rendered when the `phenotypes`
-            // subset is installed and at least one neighbour had a growth-at-37 label.
-            if let Some(ref t) = report.thermotolerance {
-                use y1000plus::place::thermo_label_description;
-                println!();
-                println!("── Predicted thermotolerance (growth at 37 °C) ──");
-                println!(
-                    "  prediction : {}  ({})  confidence {:.0}%",
-                    t.vote.label,
-                    thermo_label_description(&t.vote.label),
-                    t.vote.confidence * 100.0
-                );
-                if t.vote.tallies.len() > 1 {
-                    println!("  vote tallies:");
-                    for (label, w) in &t.vote.tallies {
-                        println!(
-                            "    {:<2} ({}): weight {:.4}",
-                            label,
-                            thermo_label_description(label),
-                            w
-                        );
-                    }
-                }
-                println!(
-                    "  neighbours consulted: {}/{} of top-N had phenotype data",
-                    t.neighbours.len(),
-                    report.top.len()
-                );
-            }
-
-            // Codon-table advice — only rendered when the `codontable` subset
-            // is installed. Warns about CTG-Ser and other non-standard codes.
-            if let Some(ref c) = report.top_codon_table {
-                println!();
-                println!("── Inferred genetic code (codetta, top hit) ──");
-                println!(
-                    "  {:<42}  {} chars",
-                    prettify_species(&c.top_species),
-                    c.code.len()
-                );
-                if c.deviations.is_empty() {
-                    println!("  Standard NCBI genetic code — no reassignments detected.");
-                } else {
-                    println!(
-                        "  {} codon reassignment(s) vs NCBI standard:",
-                        c.deviations.len()
-                    );
-                    for (codon, std, inferred) in c.deviations.iter().take(8) {
-                        println!("    {codon}: {std} → {inferred}");
-                    }
-                    if c.deviations.len() > 8 {
-                        println!("    … and {} more", c.deviations.len() - 8);
-                    }
-                }
-                if c.ctg_is_ser {
-                    println!(
-                        "  ⚠  CTG-Ser clade detected — your closest yeast translates CTG as Serine,"
-                    );
-                    println!(
-                        "     not Leucine. Re-run `predict` / `convert --to protein` with the"
-                    );
-                    println!("     alternative yeast mitochondrial code (NCBI transl_table=12).");
-                }
-            }
-            println!();
-            println!(
-                "Note: functional placement via KEGG-KO Jaccard. True phylogenetic placement\n\
-                 (1,403 marker genes + EPA-ng) will land once the `phylogeny-place` subset\n\
-                 and EPA-ng integration are wired."
-            );
-            println!("Cite: Opulente DA et al. (2024). Science 384(6694): eadj4503.");
-        }
-    }
-
-    Ok(())
-}
-
-fn prettify_species(raw: &str) -> String {
-    // Per-species filenames in the Y1000+ kegg subset look like
-    // `candida_tropicalis.txt` after our walk yields `candida_tropicalis`.
-    // Render `Candida tropicalis` for humans, but leave underscores in the
-    // stem alone for readability (some names contain strain suffixes).
-    let mut parts = raw.splitn(2, '_');
-    match (parts.next(), parts.next()) {
-        (Some(genus), Some(rest)) if !genus.is_empty() => {
-            let mut g = genus.chars();
-            let upper = g.next().map(|c| c.to_ascii_uppercase()).unwrap_or_default();
-            let tail: String = g.collect();
-            format!("{upper}{tail} {rest}")
-        }
-        _ => raw.to_string(),
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2559,31 +2043,6 @@ fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
 
 fn handle_setup(args: &[String]) -> Result<()> {
     use setup::{check_databases, download_databases, list_databases};
-    use y1000plus::commands as y1000_cmds;
-
-    // ── Y1000+ branch ─────────────────────────────────────────────────────
-    // Any `--y1000plus` flag (alone, or with --list/--dry-run/--include/...)
-    // routes to the Y1000+ bundle subsystem and skips the regular DB flow.
-    if args.iter().any(|a| a == "--y1000plus") {
-        let filtered: Vec<String> = args
-            .iter()
-            .filter(|a| a.as_str() != "--y1000plus")
-            .cloned()
-            .collect();
-        let (y_args, _unused) = y1000_cmds::parse_args(&filtered)?;
-        // Default to --list when nothing else is asked for.
-        if !y_args.list
-            && !y_args.dry_run
-            && y_args.preset.is_none()
-            && y_args.include.is_empty()
-            && y_args.uninstall.is_empty()
-        {
-            y1000_cmds::run_list()?;
-            return Ok(());
-        }
-        y1000_cmds::dispatch(&y_args)?;
-        return Ok(());
-    }
 
     let db_dir_default = {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());

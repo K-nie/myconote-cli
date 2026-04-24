@@ -83,11 +83,6 @@ pub struct CompareConfig {
     pub soft_core_frac: f64,
     /// Cloud threshold (fraction at or below which a cluster is "cloud").
     pub cloud_frac: f64,
-    /// When true, chain MAFFT + supermatrix concatenation onto the
-    /// OrthoFinder run so `phylogeny` can consume the output directly.
-    /// Cost scales with the number of single-copy orthogroups; typical
-    /// fungal clade runs add a few minutes. Off by default.
-    pub species_tree: bool,
 }
 
 impl Default for CompareConfig {
@@ -103,7 +98,6 @@ impl Default for CompareConfig {
             genetic_code: 1,
             soft_core_frac: 0.95,
             cloud_frac: 0.15,
-            species_tree: false,
         }
     }
 }
@@ -337,34 +331,7 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
         0
     };
 
-    // ── 6. Optional: chain alignment + concatenation for species tree ────
-    // OrthoFinder emits one unaligned FASTA per single-copy orthogroup, but
-    // `phylogeny` wants ONE aligned supermatrix. This step aligns each
-    // orthogroup with MAFFT and writes a concatenated supermatrix +
-    // partition file ready to feed `phylogeny --partition`.
-    let species_tree_alignment = if config.species_tree && sco_count > 0 {
-        println!();
-        println!("  Step 4: building species-tree alignment (MAFFT + concat)…");
-        let taxon_names: Vec<String> = config.inputs.iter().map(|g| g.name.clone()).collect();
-        let align_out = config.output_dir.join("species_tree_alignment");
-        match crate::align::build_species_tree_alignment(
-            &sco_dir,
-            &taxon_names,
-            &orthogroups,
-            &align_out,
-            config.threads,
-        ) {
-            Ok(result) => Some(result),
-            Err(e) => {
-                eprintln!("  ⚠  Species-tree alignment failed (non-fatal): {}", e);
-                None
-            }
-        }
-    } else {
-        None
-    };
-
-    // ── 7. Human-readable report ─────────────────────────────────────────
+    // ── 6. Human-readable report ─────────────────────────────────────────
     write_report(
         &config.output_dir.join("compare_report.txt"),
         &config.inputs,
@@ -394,29 +361,12 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
         "    Report:              {}/compare_report.txt",
         config.output_dir.display()
     );
-    if let Some(sta) = &species_tree_alignment {
+    if sco_count > 0 {
         println!();
         println!(
-            "    Species-tree alignment: {} ({} taxa × {} columns, {} partitions)",
-            sta.supermatrix.display(),
-            sta.n_taxa,
-            sta.total_columns,
-            sta.n_orthogroups
-        );
-        println!(
-            "    → Next: myconote-cli phylogeny {} --partition {} --threads {}",
-            sta.supermatrix.display(),
-            sta.partition.display(),
-            config.threads
-        );
-    } else if sco_count > 0 {
-        println!();
-        println!(
-            "  {} single-copy orthogroups available (unaligned).",
-            sco_count
-        );
-        println!(
-            "    → Re-run with --species-tree to produce a supermatrix ready for `myconote-cli phylogeny`."
+            "  {} single-copy orthogroups available at {}/",
+            sco_count,
+            sco_dir.display()
         );
     }
 

@@ -47,9 +47,9 @@ myconote-cli compare \
   cvi.gff3 cvi.fa \
   --threads 16 --msa
 
-# Chain directly into phylogeny on the single-copy orthologs
-myconote-cli compare sc.gff3 sc.fa sp.gff3 sp.fa cg.gff3 cg.fa
-myconote-cli phylogeny compare_out/proteins/OrthoFinder/Results_*/Single_Copy_Orthologue_Sequences/
+# Single-copy orthologs are emitted to compare_out/proteins/OrthoFinder/Results_*/
+# Single_Copy_Orthologue_Sequences/ — ready to feed into external ML-tree
+# builders (IQ-TREE, RAxML-NG) after alignment with MAFFT.
 ```
 
 ## Options
@@ -107,6 +107,6 @@ HPC nodes with 32+ cores scale roughly linearly for the DIAMOND step.
 
 ## Related commands
 
-- [`phylogeny`](phylogeny.md) — ML tree from a single alignment via IQ-TREE. Feeds naturally from compare's single-copy-ortholog output.
 - For visual pairwise or multi-way synteny, convert each genome to GenBank (`convert --to genbank`) and load the `.gbk` files into **clinker** (`pip install clinker`).
+- For a species tree from compare's `Single_Copy_Orthologue_Sequences/`, align with MAFFT and run IQ-TREE or RAxML-NG externally.
 - [`annotate`](../pipeline/annotate.md) — produces the GFF3 + FASTA pairs that compare consumes.

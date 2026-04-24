@@ -3,7 +3,7 @@ name = "myconote-cli"
 version = "0.2.0"
 edition = "2021"
 authors = ["Benjamin Narh-Madey <narhmadey@wisc.edu>"]
-description = "High-performance eukaryotic genome annotation pipeline — from raw assembly to NCBI-ready submission"
+description = "High-performance fungal genome annotation pipeline — from raw assembly to NCBI-ready submission"
 license = "MIT"
 repository = "https://github.com/K-nie/myconote-cli"
 
@@ -43,8 +43,6 @@ bio = "2.0"
 # Statistics
 statrs = "0.17"
 rand = "0.8"
-ndarray = "0.15"
-ndarray-stats = "0.5"
 
 # Plotting
 plotters = "0.3.6"
@@ -62,12 +60,6 @@ indicatif = "0.17"
 # Binary execution (for external tools)
 duct = "0.13"
 which = "6.0"
-
-# Archive extraction for the Y1000+ bundle
-tar = "0.4"
-zip = { version = "2.1", default-features = false, features = ["deflate"] }
-sha2 = "0.10"
-calamine = "0.26"
 
 [dev-dependencies]
 tempfile = "3.10"

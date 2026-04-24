@@ -1,6 +1,6 @@
 # Myconote_CLI
 
-**Blazing-fast genome annotation pipeline** — as genome sequencing becomes cheaper and long-read assemblies become routine, the bottleneck in genomics has shifted from sequencing to annotation. Existing pipelines are slow, narrowly scoped, and produce outputs that require extensive manual cleanup before submission. myconote-cli addresses this gap: a high-performance Rust CLI that takes a eukaryotic genome assembly from raw contigs to NCBI-ready submission, integrating 11 annotation sources across 5 kingdoms with built-in validation and reproducibility tracking.
+**Blazing-fast fungal genome annotation pipeline** — as genome sequencing becomes cheaper and long-read assemblies become routine, the bottleneck in fungal genomics has shifted from sequencing to annotation. Existing pipelines are slow, narrowly scoped, and produce outputs that require extensive manual cleanup before submission. myconote-cli addresses this gap: a high-performance Rust CLI that takes a fungal genome assembly from raw contigs to NCBI-ready submission, integrating 11 annotation sources with built-in validation and reproducibility tracking. It runs on other eukaryotes too — the defaults and benchmarks are tuned for fungi.
 
 > Developed by **Benjamin Narh-Madey** · Hittinger Lab, Laboratory of Genetics · UW-Madison
 > narhmadey@wisc.edu
@@ -17,7 +17,7 @@ Sort → Mask → Train → Predict → Update → Annotate → Submit
 
 Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) that hand off cleanly to **Proksee** (web circular maps), **IGV** (desktop browser), and **clinker** (cross-species synteny).
 
-**New in v0.2.0** — `explain` (local-LLM result interpreter), `batch` (multi-genome + HTCondor), `place` (Y1000+ 1,154-yeast placement), and `stats --benchmark y1000plus` percentile context. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+**New in v0.2.0** — `explain` (local-LLM result interpreter) and `batch` (multi-genome + HTCondor). See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 **New to myconote?** Run `myconote-cli learn` for an interactive, swirl-style tutorial right in your terminal.
 
@@ -119,10 +119,8 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 
 | Command | Description |
 |---------|-------------|
-| `stats` | Gene counts, lengths, GC content, N50, isoform stats; `--benchmark y1000plus --annotated` places your gene and tRNA counts on the 1,154-yeast percentile distribution |
-| `phylogeny` | Maximum-likelihood tree with IQ-TREE 2 (ModelFinder + UFBoot) |
-| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large plants); optional MAFFT supermatrix bridge into `phylogeny` |
-| `place` | Place a genome into the Y1000+ 1,154-yeast functional reference via KEGG-KO Jaccard. Auto-predicts codon table, C/N lifestyle, growth-at-37 °C, and ecological niche when the relevant Y1000+ subsets are installed |
+| `stats` | Gene counts, lengths, GC content, N50, isoform stats, with taxon-aware expected-range warnings |
+| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large) |
 | `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |
 | `fix` | Repair errors in GenBank (.gbk) files |
@@ -364,7 +362,7 @@ tail -f batch_out/condor_logs/job_0.out
 
 Generates `condor.sub`, `run_genome.sh` (per-job wrapper), and `condor_genomes.txt` (argument list). Each genome runs as a separate job. Works with shared filesystems.
 
-**Next steps hint:** When 2+ genomes succeed, prints a concrete `compare` and `phylogeny` command recipe for downstream comparative analysis.
+**Next steps hint:** When 2+ genomes succeed, prints a concrete `compare` command recipe for downstream ortholog inference.
 
 ---
 

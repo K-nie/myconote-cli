@@ -479,17 +479,16 @@ fn run_local_mode(config: &BatchConfig, genomes: &[GenomeEntry]) -> Result<()> {
     // Final summary
     dash.print_summary(&batch_state);
 
-    // Point users at real downstream commands (the old auto-compare hint
-    // pointed at the fake `compare` subcommand that has been removed).
+    // Point users at real downstream commands once at least two genomes
+    // finished annotation.
     let (done, _, _) = batch_state.summary();
     if done >= 2 {
-        println!("  \x1b[2mNext steps:\x1b[0m");
+        println!("  \x1b[2mNext step:\x1b[0m");
         println!(
-            "  \x1b[33mmyconote-cli synteny {}/<A>/annotate_out/annotated.gff3 {}/<B>/annotate_out/annotated.gff3 \\\n    --fasta1 <A.fa> --fasta2 <B.fa>\x1b[0m",
+            "  \x1b[33mmyconote-cli compare {}/<A>/annotate_out/annotated.gff3 <A.fa> \\\n                       {}/<B>/annotate_out/annotated.gff3 <B.fa>\x1b[0m\n",
             config.output_dir.display(),
             config.output_dir.display()
         );
-        println!("  \x1b[33mmyconote-cli phylogeny <aligned_proteins.fa>\x1b[0m\n");
     }
 
     Ok(())

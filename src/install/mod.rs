@@ -277,34 +277,6 @@ const TOOLS: &[Tool] = &[
         manual_note: "https://blast.ncbi.nlm.nih.gov/",
         version_arg: "-version",
     },
-    Tool {
-        name: "mafft",
-        used_by: "align",
-        conda_pkg: Some("mafft"),
-        conda_chan: "bioconda",
-        pip_pkg: None,
-        manual_note: "https://mafft.cbrc.jp/alignment/software/",
-        version_arg: "--version",
-    },
-    Tool {
-        name: "muscle",
-        used_by: "align",
-        conda_pkg: Some("muscle"),
-        conda_chan: "bioconda",
-        pip_pkg: None,
-        manual_note: "https://www.drive5.com/muscle/",
-        version_arg: "-version",
-    },
-    // ── Phylogenetics ────────────────────────────────────────────────────────
-    Tool {
-        name: "iqtree",
-        used_by: "phylogeny",
-        conda_pkg: Some("iqtree"),
-        conda_chan: "bioconda",
-        pip_pkg: None,
-        manual_note: "http://www.iqtree.org/",
-        version_arg: "--version",
-    },
     // ── Comparative genomics ─────────────────────────────────────────────────
     Tool {
         name: "orthofinder",

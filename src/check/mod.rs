@@ -180,24 +180,6 @@ const TOOLS: &[Tool] = &[
         version_arg: "-h",
         install_cmd: "conda install -c bioconda orthofinder",
     },
-    Tool {
-        name: "mafft",
-        used_by: "align",
-        version_arg: "--version",
-        install_cmd: "conda install -c bioconda mafft",
-    },
-    Tool {
-        name: "muscle",
-        used_by: "align",
-        version_arg: "-version",
-        install_cmd: "conda install -c bioconda muscle",
-    },
-    Tool {
-        name: "iqtree",
-        used_by: "phylogeny",
-        version_arg: "--version",
-        install_cmd: "conda install -c bioconda iqtree",
-    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

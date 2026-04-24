@@ -78,15 +78,15 @@ pub fn render_llm_response(response: &str) {
 pub fn render_trace(
     prompt: &str,
     retrieved_count: usize,
-    citations_kept: usize,
-    citations_removed: usize,
+    commands_kept: usize,
+    commands_removed: usize,
 ) {
     println!("\n  {}{}Trace{}", C_BOLD, C_YELLOW, C_RESET);
     println!("  {}{}{}", C_DIM, "─".repeat(60), C_RESET);
     println!("  Prompt length: {} chars", prompt.len());
     println!("  Retrieved snippets: {}", retrieved_count);
-    println!("  Citations kept: {}", citations_kept);
-    println!("  Citations removed: {}", citations_removed);
+    println!("  Commands validated: {}", commands_kept);
+    println!("  Hallucinated commands stripped: {}", commands_removed);
     println!("\n  {}Full prompt:{}", C_DIM, C_RESET);
     for line in prompt.lines() {
         println!("  {}{}{}", C_DIM, line, C_RESET);

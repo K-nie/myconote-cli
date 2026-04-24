@@ -12,6 +12,7 @@
 //! were locked on 2026-04-24 before code started.
 
 pub mod personalize;
+pub mod quant;
 pub mod vcf;
 
 use crate::utils::error::{MycoNoteError, Result};

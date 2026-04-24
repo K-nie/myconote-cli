@@ -137,7 +137,7 @@ pub fn sha256_file(path: &Path) -> Result<String> {
 /// The summary fields we lift out of a fastp `--json` report. Kept
 /// separate from `SampleSummary` because mapping_rate + library_size
 /// come from salmon, not fastp — the dispatcher combines them.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FastpSummary {
     pub reads_before_filtering: u64,
     pub reads_after_filtering: u64,

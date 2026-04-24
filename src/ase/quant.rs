@@ -21,7 +21,7 @@ use crate::quant::fastp::{run_fastp, FastpOutput, FastpSpec};
 use crate::quant::index::{build_or_reuse_index, IndexResult, IndexSpec};
 use crate::quant::salmon::{run_salmon_quant, SalmonQuantOutput, SalmonQuantSpec};
 use crate::quant::sample_sheet::Sample;
-use crate::utils::error::{MycoNoteError, Result};
+use crate::utils::error::Result;
 use std::path::{Path, PathBuf};
 
 // ─────────────────────────────────────────────────────────────────────────────

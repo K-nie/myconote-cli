@@ -24,7 +24,7 @@
 use crate::utils::error::{MycoNoteError, Result};
 use flate2::read::GzDecoder;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 /// One variant with its phased diploid genotype extracted. We store

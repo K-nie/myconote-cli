@@ -11,6 +11,7 @@
 //! `scratch/ase_spec.md` for the full design; all 10 open decisions
 //! were locked on 2026-04-24 before code started.
 
+pub mod personalize;
 pub mod vcf;
 
 use crate::utils::error::{MycoNoteError, Result};

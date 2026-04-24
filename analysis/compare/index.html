@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="High-performance eukaryotic genome annotation pipeline — from raw assembly to NCBI-ready submission">
+        <meta name="description" content="High-performance fungal genome annotation pipeline — from raw assembly to NCBI-ready submission">
       
       
         <meta name="author" content="Benjamin Narh-Madey">
@@ -15,10 +15,10 @@
         <link rel="canonical" href="https://k-nie.github.io/myconote-cli/analysis/compare/">
       
       
-        <link rel="prev" href="../phylogeny/">
+        <link rel="prev" href="../stats/">
       
       
-        <link rel="next" href="../place/">
+        <link rel="next" href="../explain/">
       
       
         
@@ -952,34 +952,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../phylogeny/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    phylogeny
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -1145,34 +1117,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../place/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    place
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1712,9 +1656,9 @@
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>cvi.gff3<span class="w"> </span>cvi.fa<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">16</span><span class="w"> </span>--msa
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Chain directly into phylogeny on the single-copy orthologs</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span>sc.gff3<span class="w"> </span>sc.fa<span class="w"> </span>sp.gff3<span class="w"> </span>sp.fa<span class="w"> </span>cg.gff3<span class="w"> </span>cg.fa
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>myconote-cli<span class="w"> </span>phylogeny<span class="w"> </span>compare_out/proteins/OrthoFinder/Results_*/Single_Copy_Orthologue_Sequences/
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Single-copy orthologs are emitted to compare_out/proteins/OrthoFinder/Results_*/</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Single_Copy_Orthologue_Sequences/ — ready to feed into external ML-tree</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># builders (IQ-TREE, RAxML-NG) after alignment with MAFFT.</span>
 </code></pre></div>
 <h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
@@ -1835,8 +1779,8 @@
 <p>HPC nodes with 32+ cores scale roughly linearly for the DIAMOND step.</p>
 <h2 id="related-commands">Related commands<a class="headerlink" href="#related-commands" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../phylogeny/"><code>phylogeny</code></a> — ML tree from a single alignment via IQ-TREE. Feeds naturally from compare's single-copy-ortholog output.</li>
 <li>For visual pairwise or multi-way synteny, convert each genome to GenBank (<code>convert --to genbank</code>) and load the <code>.gbk</code> files into <strong>clinker</strong> (<code>pip install clinker</code>).</li>
+<li>For a species tree from compare's <code>Single_Copy_Orthologue_Sequences/</code>, align with MAFFT and run IQ-TREE or RAxML-NG externally.</li>
 <li><a href="../../pipeline/annotate/"><code>annotate</code></a> — produces the GFF3 + FASTA pairs that compare consumes.</li>
 </ul>
 

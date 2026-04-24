@@ -125,6 +125,8 @@ res <- results(dds)
 
 ## What this does not do
 
-- Differential expression (DE) analysis — done in R.
-- SRA/ENA read ingestion — planned for a follow-up release (`fetch-rna` in the 0.3.x series).
-- HISAT2-backed alignment for BAM output — not in scope; users who need a BAM for IGV review should run HISAT2 / STAR externally.
+- **DE analysis** (intentional — 10 lines of R with DESeq2 is the standard, and wrapping it in the tool would drag in R as a runtime dependency).
+- **scRNA-seq** (different tool — single-cell needs Cell Ranger / STARsolo / kallisto|bustools and downstream Scanpy / Seurat; bulk and single-cell are different data shapes, not just different scales).
+- **Variant-aware / allele-specific quant** (salmon ReefClusters or a phased-alignment pipeline — specialized enough that the right answer is almost always a dedicated tool, not a shoe-horn into bulk quant).
+- **HISAT2-backed alignment for BAM output** — not in scope; users who need a BAM for IGV review should run HISAT2 / STAR externally on the same FASTQs.
+- **Read ingestion** was in this list until 0.3.1; `myconote-cli fetch-rna` now covers SRA / ENA accession download.

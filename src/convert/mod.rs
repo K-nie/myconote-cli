@@ -2,12 +2,15 @@
 ///
 /// Sub-modules:
 ///   gff3     — GFF3 → GTF / BED6 / BED12 / BEDGraph / TSV / Protein (.faa)
+///   cds      — GFF3 → spliced CDS FASTA (transcript-oriented nucleotide)
 ///   sequence — FASTA ↔ FASTQ, FASTA+QUAL, FASTA table, alignment formats
 ///   vcf      — VCF → BED / TSV / consensus FASTA / ANNOVAR / MAF
+pub mod cds;
 pub mod gff3;
 pub mod sequence;
 pub mod vcf;
 
+pub use cds::extract_spliced_cds;
 pub use gff3::{
     gff3_to_bed, gff3_to_bed12, gff3_to_bedgraph, gff3_to_gtf, gff3_to_protein, gff3_to_table,
 };

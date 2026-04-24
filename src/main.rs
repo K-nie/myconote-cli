@@ -367,6 +367,7 @@ fn main() -> Result<()> {
                 println!("  --to bed          → BED6 (simple browser track)");
                 println!("  --to bed12        → BED12 (exon-block structure per transcript)");
                 println!("  --to bedgraph     → BEDGraph (per-feature coverage depth)");
+                println!("  --to cds          → Spliced CDS FASTA (.fna)  [requires --fasta]");
                 println!("  --to table        → TSV feature table (attributes expanded)");
                 println!("  --to protein      → Protein FASTA (.faa)  [requires --fasta]");
                 println!("  --to genbank      → GenBank (.gbk)        [requires --fasta]");
@@ -392,6 +393,7 @@ fn main() -> Result<()> {
                 println!("  --qual <char>           Default quality character for FASTQ (default: I)");
                 println!("\nExamples:");
                 println!("  myconote-cli convert genes.gff3 --to gtf");
+                println!("  myconote-cli convert annotated.gff3 --to cds --fasta genome.fa");
                 println!("  myconote-cli convert genes.gff3 --to protein --fasta genome.fa");
                 println!("  myconote-cli convert reads.fastq --to fasta -o reads.fa");
                 println!("  myconote-cli convert align.aln --to phylip");
@@ -974,6 +976,7 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
                 "gtf" => "gtf",
                 "bed" | "bed6" | "bed12" | "bedgraph" => "bed",
                 "table" => "tsv",
+                "cds" => "fna",
                 "protein" => "faa",
                 "genbank" => "gbk",
                 "fastq" => "fastq",
@@ -1002,6 +1005,10 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
             "bed12" => convert::gff3_to_bed12(input_path, &out_path)?,
             "bedgraph" => convert::gff3_to_bedgraph(input_path, &out_path, "gene")?,
             "table" | "tsv" => convert::gff3_to_table(input_path, &out_path)?,
+            "cds" | "fna" => {
+                let fa = require_fasta(&fasta_path, to)?;
+                convert::extract_spliced_cds(input_path, Path::new(&fa), &out_path)?
+            }
             "protein" | "faa" => {
                 let fa = require_fasta(&fasta_path, to)?;
                 convert::gff3_to_protein(input_path, Path::new(&fa), &out_path)?
@@ -1020,7 +1027,7 @@ fn handle_convert(input: &str, args: &[String]) -> Result<()> {
                     "Error: unsupported target format '{}' for GFF3 input.",
                     other
                 );
-                eprintln!("Supported: gtf, bed, bed12, bedgraph, table, protein, genbank");
+                eprintln!("Supported: gtf, bed, bed12, bedgraph, table, cds, protein, genbank");
                 return Ok(());
             }
         };

@@ -237,6 +237,116 @@ fn test_convert_gff3_to_protein() {
 }
 
 #[test]
+fn test_convert_gff3_to_cds() {
+    // Extracts spliced CDS nucleotide sequences.
+    // Asserts: (a) at least one record written;
+    //          (b) g001568.m1 length == sum of its two CDS segment lengths
+    //              (133 bp + 500 bp = 633 bp, phase 0 on transcript-first CDS);
+    //          (c) g001559.m1 (minus strand, single CDS 31–1398, phase 0)
+    //              is the reverse-complement of the raw forward-strand slice.
+    let tmp = TempDir::new().unwrap();
+    let out = tmp.path().join("cds.fna");
+
+    bin()
+        .arg("convert")
+        .arg(gff3())
+        .args(["--to", "cds", "--fasta"])
+        .arg(fasta())
+        .arg("-o")
+        .arg(&out)
+        .assert()
+        .success();
+
+    assert!(out.exists(), "CDS FASTA not created");
+    let content = std::fs::read_to_string(&out).unwrap();
+    let n_records = content.lines().filter(|l| l.starts_with('>')).count();
+    assert!(n_records > 100, "Too few CDS extracted: {}", n_records);
+
+    // Parse the emitted FASTA into (id -> sequence). Simple inline parse —
+    // the test has no need to depend on the internal FastaReader.
+    let mut records: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    let mut cur_id = String::new();
+    let mut cur_seq = String::new();
+    for line in content.lines() {
+        if let Some(rest) = line.strip_prefix('>') {
+            if !cur_id.is_empty() {
+                records.insert(cur_id.clone(), cur_seq.clone());
+            }
+            cur_id = rest
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .to_string();
+            cur_seq.clear();
+        } else {
+            cur_seq.push_str(line.trim());
+        }
+    }
+    if !cur_id.is_empty() {
+        records.insert(cur_id, cur_seq);
+    }
+
+    // (b) Multi-CDS positive-strand length check.
+    // g001568.m1: CDS 11031–11163 (133 bp) + CDS 11246–11745 (500 bp) = 633 bp.
+    let g568 = records
+        .get("g001568.m1")
+        .expect("g001568.m1 should be present");
+    assert_eq!(
+        g568.len(),
+        633,
+        "g001568.m1 spliced CDS length should be 633 bp (133 + 500), got {}",
+        g568.len()
+    );
+
+    // (c) Negative-strand reverse-complement check.
+    // g001559.m1: single CDS on NW_003020049.1, 31–1398, strand '-', phase 0.
+    // The emitted sequence must equal RC of the forward-strand slice.
+    let g559 = records
+        .get("g001559.m1")
+        .expect("g001559.m1 should be present");
+    assert_eq!(
+        g559.len(),
+        1398 - 31 + 1,
+        "g001559.m1 length should equal CDS span (1368 bp)"
+    );
+
+    // Pull the forward-strand slice directly from the fixture FASTA
+    // and reverse-complement it; must match what the tool emitted.
+    let genome_text = std::fs::read_to_string(fasta()).unwrap();
+    let mut target_seq = String::new();
+    let mut in_target = false;
+    for line in genome_text.lines() {
+        if let Some(rest) = line.strip_prefix('>') {
+            let id = rest.split_whitespace().next().unwrap_or("");
+            in_target = id == "NW_003020049.1";
+            continue;
+        }
+        if in_target {
+            target_seq.push_str(line.trim());
+        }
+    }
+    // 1-based inclusive [31, 1398] → 0-based Rust slice [30, 1398]
+    let forward = target_seq[30..1398].to_ascii_uppercase();
+    let rc: String = forward
+        .chars()
+        .rev()
+        .map(|c| match c {
+            'A' => 'T',
+            'T' => 'A',
+            'G' => 'C',
+            'C' => 'G',
+            'N' => 'N',
+            other => other,
+        })
+        .collect();
+    assert_eq!(
+        g559, &rc,
+        "g001559.m1 emitted sequence is not the reverse-complement of the forward slice"
+    );
+}
+
+#[test]
 #[ignore = "error message format differs across platforms"]
 fn test_convert_missing_fasta_for_protein() {
     // Should fail gracefully with a message, not panic

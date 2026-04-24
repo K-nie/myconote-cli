@@ -13,8 +13,10 @@
 //! for the design that drives this module.
 
 pub mod bundle;
+pub mod fastp;
 pub mod index;
 pub mod merge;
+pub mod salmon;
 pub mod sample_sheet;
 
 use crate::utils::error::{MycoNoteError, Result};

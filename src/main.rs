@@ -283,7 +283,10 @@ fn main() -> Result<()> {
                 println!("  --merops-db <file>          MEROPS DIAMOND database (default: auto-detect from db-dir)");
                 println!("  --trnascan                  Run tRNAscan-SE for tRNA gene prediction");
                 println!("  --trnascan-mode <mode>      tRNAscan mode: eukaryotic|mitochondrial|general (default: eukaryotic)");
-                println!("  --genetic-code <n>          Translation table (1=standard, 12=Candida CTG, etc.)");
+                println!("  --genetic-code <n>          NCBI translation table (default: 1).");
+                println!("                              Supported: 1–6, 9–14, 16, 21–31, 33.");
+                println!("                              Common fungal choices: 1 (standard), 3 (yeast mito),");
+                println!("                              4 (mold mito / Candida mtDNA), 12 (Candida CTG clade).");
                 println!("  --threads <n>               Threads (default: 4)");
                 println!("  --download-dbs              Download Swiss-Prot and Pfam databases");
                 println!("\nOutputs:");

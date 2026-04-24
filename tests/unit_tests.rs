@@ -72,26 +72,26 @@ mod genetic_code_tests {
 
     #[test]
     fn test_standard_code() {
-        let gc = GeneticCode::Standard;
+        let gc = GeneticCode::STANDARD;
         assert_eq!(gc.translate("ATGAAATTTCCC"), "MKFP");
     }
 
     #[test]
     fn test_candida_ctg_ser() {
-        let gc = GeneticCode::AlternativeYeastNuclear;
+        let gc = GeneticCode::from_table_number(12).unwrap();
         // CTG = Ser in Candida, not Leu
         assert_eq!(gc.translate("ATGCTG"), "MS");
     }
 
     #[test]
     fn test_standard_ctg_leu() {
-        let gc = GeneticCode::Standard;
+        let gc = GeneticCode::STANDARD;
         assert_eq!(gc.translate("ATGCTG"), "ML");
     }
 
     #[test]
     fn test_vertebrate_mito_tga_trp() {
-        let gc = GeneticCode::VertebrateMitochondrial;
+        let gc = GeneticCode::from_table_number(2).unwrap();
         // TGA = Trp in vertebrate mito
         assert_eq!(gc.translate("ATGTGA"), "MW");
     }
@@ -99,31 +99,26 @@ mod genetic_code_tests {
     #[test]
     fn test_from_table_number() {
         assert_eq!(
-            GeneticCode::from_table_number(12),
-            Some(GeneticCode::AlternativeYeastNuclear)
+            GeneticCode::from_table_number(12).map(|g| g.table_number()),
+            Some(12)
         );
         assert_eq!(
-            GeneticCode::from_table_number(1),
-            Some(GeneticCode::Standard)
+            GeneticCode::from_table_number(1).map(|g| g.table_number()),
+            Some(1)
         );
-        assert_eq!(GeneticCode::from_table_number(99), None);
+        // 99 is not an NCBI table
+        assert!(GeneticCode::from_table_number(99).is_none());
+        // 7, 8, 15, 17-20, 32 are retired / withdrawn by NCBI
+        assert!(GeneticCode::from_table_number(7).is_none());
+        assert!(GeneticCode::from_table_number(15).is_none());
     }
 
     #[test]
     fn test_from_name() {
-        assert_eq!(
-            GeneticCode::from_name("candida"),
-            GeneticCode::AlternativeYeastNuclear
-        );
-        assert_eq!(
-            GeneticCode::from_name("12"),
-            GeneticCode::AlternativeYeastNuclear
-        );
-        assert_eq!(GeneticCode::from_name("standard"), GeneticCode::Standard);
-        assert_eq!(
-            GeneticCode::from_name("bacterial"),
-            GeneticCode::BacterialPlastid
-        );
+        assert_eq!(GeneticCode::from_name("candida").table_number(), 12);
+        assert_eq!(GeneticCode::from_name("12").table_number(), 12);
+        assert_eq!(GeneticCode::from_name("standard").table_number(), 1);
+        assert_eq!(GeneticCode::from_name("bacterial").table_number(), 11);
     }
 
     #[test]
@@ -142,11 +137,11 @@ mod genetic_code_tests {
 
     #[test]
     fn test_start_codons() {
-        let gc = GeneticCode::Standard;
+        let gc = GeneticCode::STANDARD;
         assert!(gc.is_start_codon(b"ATG"));
         assert!(!gc.is_start_codon(b"GTG"));
 
-        let bac = GeneticCode::BacterialPlastid;
+        let bac = GeneticCode::from_table_number(11).unwrap();
         assert!(bac.is_start_codon(b"ATG"));
         assert!(bac.is_start_codon(b"GTG"));
         assert!(bac.is_start_codon(b"TTG"));

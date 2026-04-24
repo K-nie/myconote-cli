@@ -891,7 +891,7 @@ fn extract_proteins(
 
         // Translate to protein (genetic code-aware)
         let gc = genetic_code::GeneticCode::from_table_number(genetic_code_table)
-            .unwrap_or(genetic_code::GeneticCode::Standard);
+            .unwrap_or(genetic_code::GeneticCode::STANDARD);
         let protein = gc.translate(&cds_seq);
         if protein.len() < 10 {
             continue;

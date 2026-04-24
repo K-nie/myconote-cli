@@ -78,7 +78,7 @@ pub fn extract_primary_proteins(
     }
 
     // 4. Translate each winning mRNA and write to the output FASTA.
-    let gc = GeneticCode::from_table_number(genetic_code_table).unwrap_or(GeneticCode::Standard);
+    let gc = GeneticCode::from_table_number(genetic_code_table).unwrap_or(GeneticCode::STANDARD);
     let mut out = std::fs::File::create(out_fa).map_err(MycoNoteError::Io)?;
     let mut written = 0usize;
 

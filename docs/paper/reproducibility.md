@@ -2,7 +2,7 @@
 
 This document provides the exact commands, software versions, and input files needed to reproduce all results in the MycoNote-CLI manuscript.
 
-**Manuscript:** Narh-Madey B et al. (2026). MycoNote-CLI: an integrated, validated, and reproducible eukaryotic genome annotation pipeline.
+**Manuscript:** Narh-Madey B et al. (2026). MycoNote-CLI: an integrated, validated, and reproducible fungal genome annotation pipeline.
 
 ---
 
@@ -219,18 +219,16 @@ wc -l hmmsearch_out.domtblout hmmscan_out.domtblout
 
 ### 6.1 Reference Genomes (Planned)
 
-We plan to benchmark on the following 8 reference genomes spanning four eukaryotic kingdoms, all with curated reference annotations:
+We plan to benchmark on the following 6 fungal reference genomes spanning ascomycete yeasts (Saccharomycotina), filamentous ascomycetes (Pezizomycotina), and basidiomycetes, all with curated reference annotations:
 
-| Organism | Kingdom | Source | Reference annotation |
-|----------|---------|--------|---------------------|
-| *Saccharomyces cerevisiae* S288C | Fungi | SGD | sacCer3 / R64-1-1 |
-| *Aspergillus nidulans* FGSC A4 | Fungi | AspGD | NCBI RefSeq |
-| *Cryptococcus neoformans* JEC21 | Fungi | NCBI RefSeq | NCBI RefSeq |
-| *Candida albicans* SC5314 | Fungi (CTG) | CGD | CGD curated |
-| *Arabidopsis thaliana* | Plant | TAIR | TAIR10 |
-| *Drosophila melanogaster* | Insect | FlyBase | FlyBase r6 |
-| *Caenorhabditis elegans* | Animal | WormBase | WormBase WS283 |
-| *Plasmodium falciparum* 3D7 | Protist | PlasmoDB | PlasmoDB-66 |
+| Organism | Clade | Source | Reference annotation |
+|----------|-------|--------|---------------------|
+| *Saccharomyces cerevisiae* S288C | Saccharomycotina | SGD | sacCer3 / R64-1-1 |
+| *Candida albicans* SC5314 | Saccharomycotina (CTG clade) | CGD | CGD curated |
+| *Yarrowia lipolytica* CLIB122 | Saccharomycotina | NCBI RefSeq | NCBI RefSeq |
+| *Aspergillus nidulans* FGSC A4 | Pezizomycotina | AspGD | NCBI RefSeq |
+| *Neurospora crassa* OR74A | Pezizomycotina | MycoCosm | NCBI RefSeq |
+| *Cryptococcus neoformans* JEC21 | Basidiomycota | NCBI RefSeq | NCBI RefSeq |
 
 ### 6.2 Comparison Tools (Planned)
 

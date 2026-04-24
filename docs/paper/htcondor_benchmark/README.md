@@ -1,6 +1,6 @@
 # MycoNote-CLI HTCondor Benchmark Suite
 
-A complete benchmarking package for comparing MycoNote-CLI against funannotate, MAKER, and BRAKER3 across 8 reference eukaryotic genomes on the GLBRC HTCondor pool.
+A complete benchmarking package for comparing MycoNote-CLI against funannotate, MAKER, and BRAKER3 across six fungal reference genomes on the GLBRC HTCondor pool.
 
 This package implements the comprehensive comparative benchmark requested by Reviewer #2 of the MycoNote-CLI manuscript.
 
@@ -10,11 +10,11 @@ This package implements the comprehensive comparative benchmark requested by Rev
 
 **Tools compared**: 4 (MycoNote-CLI v0.2.0, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
 
-**Genomes**: 8 reference genomes spanning fungi, plants, insects, animals, and protists (Table 1)
+**Genomes**: 6 fungal reference genomes spanning Saccharomycotina, Pezizomycotina, and Basidiomycota (Table 1). Non-fungal taxa are out of scope for this panel; the `--kingdom plant|animal|insect|protist` paths are experimental and not validated at this release.
 
 **Replicates**: 3 per tool per genome
 
-**Total jobs**: 96 (4 tools x 8 genomes x 3 replicates)
+**Total jobs**: 72 (4 tools × 6 genomes × 3 replicates)
 
 **Estimated total compute**: 500-1,000 CPU-hours
 
@@ -28,18 +28,18 @@ This package implements the comprehensive comparative benchmark requested by Rev
 
 ### Table 1. Reference genomes used in the benchmark.
 
-| ID | Organism | Size (Mb) | Kingdom | NCBI RefSeq assembly |
-|----|----------|-----------|---------|----------------------|
-| sce | *Saccharomyces cerevisiae* S288C | 12 | Fungi | GCF_000146045.2 (R64) |
-| cal | *Candida albicans* SC5314 | 14 | Fungi (CTG clade) | GCF_000182965.3 (ASM18296v3) |
-| ani | *Aspergillus nidulans* FGSC A4 | 30 | Fungi | GCF_000011425.1 (ASM1142v1) |
-| cne | *Cryptococcus neoformans* JEC21 | 19 | Fungi | GCF_000091045.1 (ASM9104v1) |
-| ath | *Arabidopsis thaliana* Col-0 | 135 | Plant | GCF_000001735.4 (TAIR10.1) |
-| dme | *Drosophila melanogaster* | 144 | Insect | GCF_000001215.4 (Release 6) |
-| cel | *Caenorhabditis elegans* | 100 | Animal | GCF_000002985.6 (WBcel235) |
-| pfa | *Plasmodium falciparum* 3D7 | 23 | Protist | GCF_000002765.6 |
+| ID | Organism | Size (Mb) | Clade | NCBI RefSeq assembly |
+|----|----------|-----------|-------|----------------------|
+| sce | *Saccharomyces cerevisiae* S288C | 12 | Saccharomycotina (budding yeast) | GCF_000146045.2 (R64) |
+| cal | *Candida albicans* SC5314 | 14 | Saccharomycotina (CTG clade) | GCF_000182965.3 (ASM18296v3) |
+| ylp | *Yarrowia lipolytica* CLIB122 | 21 | Saccharomycotina (dimorphic) | GCF_000002525.2 (ASM252v1) |
+| ani | *Aspergillus nidulans* FGSC A4 | 30 | Pezizomycotina (filamentous ascomycete) | GCF_000011425.1 (ASM1142v1) |
+| ncr | *Neurospora crassa* OR74A | 40 | Pezizomycotina (filamentous ascomycete) | GCF_000182925.2 (NC12) |
+| cne | *Cryptococcus neoformans* JEC21 | 19 | Basidiomycota (human pathogen) | GCF_000091045.1 (ASM9104v1) |
 
-All eight assemblies carry manually curated NCBI RefSeq annotations (which mirror the canonical community resources — SGD, CGD, FungiDB, TAIR, FlyBase, WormBase, PlasmoDB — but through a single stable download endpoint). These serve as gold standards for sensitivity/specificity calculations.
+All six assemblies carry manually curated NCBI RefSeq annotations (which mirror the canonical community resources — SGD, CGD, AspGD, FungiDB, JGI MycoCosm — but through a single stable download endpoint). These serve as gold standards for sensitivity/specificity calculations.
+
+The panel spans the three subphyla that contain almost all fungal-annotation targets: Saccharomycotina (budding yeasts), Pezizomycotina (filamentous ascomycetes), and Basidiomycota (mushrooms, pathogens). Non-fungal genomes are deliberately excluded — they're out of scope for the tool's current validated use case.
 
 ---
 
@@ -49,7 +49,7 @@ All eight assemblies carry manually curated NCBI RefSeq annotations (which mirro
 htcondor_benchmark/
   README.md                          # this file
   setup.sh                           # one-time setup: download genomes, install tools
-  submit_all.sh                      # submit all 96 jobs to HTCondor
+  submit_all.sh                      # submit all 72 jobs to HTCondor
   collect_results.sh                 # aggregate results into tables
   scripts/
     compare_annotations.py           # compute sens/spec from GFF3 vs reference
@@ -96,9 +96,9 @@ Edit `configs/htcondor.conf` to set:
 bash setup.sh
 ```
 
-This downloads all 8 reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, and verifies the setup.
+This downloads all six fungal reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, and verifies the setup.
 
-### 4. Submit all 96 jobs
+### 4. Submit all 72 jobs
 
 ```bash
 bash submit_all.sh
@@ -146,7 +146,7 @@ This aggregates per-job metrics into manuscript-ready tables in `results/`.
 - Fraction with high-confidence Swiss-Prot hit (>50% identity, e<1e-50)
 - Fraction with Pfam domain
 - Fraction with GO term assignment
-- BUSCO completeness against appropriate lineage (fungi_odb10, viridiplantae_odb10, etc.)
+- BUSCO completeness against the appropriate fungal lineage (saccharomycetes_odb10, eurotiomycetes_odb10, sordariomycetes_odb10, or tremellomycetes_odb10, chosen per genome)
 
 **Performance metrics** (from `/usr/bin/time -v`):
 - Wall-clock time (seconds)
@@ -185,7 +185,7 @@ This aggregates per-job metrics into manuscript-ready tables in `results/`.
 | MAKER | 8 | 32 GB | 20 GB | 2-12 hours |
 | BRAKER | 16 | 64 GB | 30 GB | 2-8 hours |
 
-For the largest genomes (Arabidopsis, Drosophila), runtimes can be substantially longer.
+Runtimes are dominated by `annotate` (functional annotation against MMseqs2 / Pfam / InterProScan), not by gene prediction. The largest genomes in the panel are *Aspergillus nidulans* (30 Mb) and *Neurospora crassa* (40 Mb); the full fungal panel fits comfortably inside the time budgets above.
 
 ---
 
@@ -206,7 +206,7 @@ Each submit file uses HTCondor's `getenv = true` to inherit the conda environmen
 
 ## Expected Outcomes
 
-**For the manuscript**: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across 8 genomes, with statistical significance markers. This is the central result the reviewer asked for.
+**For the manuscript**: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.
 
 **For users**: Confidence in MycoNote-CLI's accuracy relative to established tools. If the benchmarks show MycoNote-CLI achieves comparable accuracy to funannotate/MAKER/BRAKER while running faster, that justifies adoption. If it shows MycoNote-CLI is less accurate, that informs honest scoping of where it should be used.
 

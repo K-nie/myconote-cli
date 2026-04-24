@@ -76,10 +76,13 @@ The tutorial uses 5 question types:
 
 **True/False**
 ```
-  True or False: myconote-cli can only annotate fungal genomes.
+  True or False: myconote-cli is focused on fungal genomes.
 
-  > false
-  Correct! It supports fungi, plants, animals, insects, and protists.
+  > true
+  Correct! Fungi are the primary use case — defaults, benchmarks, and
+  the test fixtures are all tuned for fungal annotation. The `--kingdom`
+  flag accepts plant/animal/insect/protist too, but those paths are
+  experimental and not validated on large genomes.
 ```
 
 **Fill-in-the-blank** — complete a command template

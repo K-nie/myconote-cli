@@ -33,11 +33,12 @@ KINGDOM=$(awk -F'\t' -v id="$GENOME_ID" '$1==id {print $3}' "$CONFIG")
 
 case "$KINGDOM" in
     fungi)   PROTEIN_DB="/staging/braker/odb11/Fungi.fa" ;;
-    plant)   PROTEIN_DB="/staging/braker/odb11/Viridiplantae.fa" ;;
-    animal)  PROTEIN_DB="/staging/braker/odb11/Metazoa.fa" ;;
-    insect)  PROTEIN_DB="/staging/braker/odb11/Arthropoda.fa" ;;
-    protist) PROTEIN_DB="/staging/braker/odb11/Eukaryota.fa" ;;
-    *)       PROTEIN_DB="/staging/braker/odb11/Eukaryota.fa" ;;
+    # Non-fungal kingdoms intentionally omitted — the benchmark panel
+    # (configs/genomes.tsv) is fungi-only. If a future release validates
+    # the --kingdom plant|animal|insect|protist paths, restore these
+    # cases: Viridiplantae.fa, Metazoa.fa, Arthropoda.fa, Eukaryota.fa.
+    *)       echo "ERROR: unsupported kingdom '$KINGDOM' for this benchmark panel" >&2
+             exit 1 ;;
 esac
 
 /usr/bin/time -v -o "$OUT_DIR/time_braker.log" \

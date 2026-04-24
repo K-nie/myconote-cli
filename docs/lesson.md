@@ -19,7 +19,7 @@ date: "2026"
 
 By the end of this lesson you will be able to:
 
-1. Explain the stages of a eukaryotic genome annotation pipeline
+1. Explain the stages of a fungal genome annotation pipeline
 2. Install and verify Myconote_CLI and its external tool dependencies
 3. Run each pipeline step — sort, mask, predict, and annotate — on a real genome
 4. Interpret annotation statistics and quality metrics
@@ -41,7 +41,7 @@ By the end of this lesson you will be able to:
 
 ### Background
 
-Genome annotation is the process of identifying the locations and functions of genes in a DNA sequence. A typical eukaryotic annotation pipeline involves four core stages:
+Genome annotation is the process of identifying the locations and functions of genes in a DNA sequence. A typical fungal annotation pipeline involves four core stages:
 
 1. **Repeat masking** — identifying repetitive elements so they do not confuse gene predictors
 2. **Gene prediction** — using statistical models to find gene structures (exons, introns, UTRs)

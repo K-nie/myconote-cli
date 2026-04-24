@@ -58,7 +58,7 @@ Most pipeline commands accept:
 | `--genome` | Input genome FASTA |
 | `--out` | Output directory (created if absent) |
 | `--threads` | CPU threads (default: 4) |
-| `--kingdom` | `fungi` / `plant` / `animal` / `protist` (sets species defaults) |
+| `--kingdom` | `fungi` (default, primary use case). `plant` / `animal` / `insect` / `protist` accepted but experimental — see the multi-kingdom note on the home page. |
 | `--species` | Override Augustus species model |
 | `--config` | Path to a TOML config file |
 

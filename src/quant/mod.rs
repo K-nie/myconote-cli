@@ -13,6 +13,7 @@
 //! for the design that drives this module.
 
 pub mod bundle;
+pub mod index;
 pub mod merge;
 pub mod sample_sheet;
 

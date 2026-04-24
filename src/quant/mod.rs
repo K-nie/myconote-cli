@@ -12,6 +12,8 @@
 //! See `scratch/rnaseq_spec.md` and `scratch/rnaseq_spec_decisions.md`
 //! for the design that drives this module.
 
+pub mod bundle;
+pub mod merge;
 pub mod sample_sheet;
 
 use crate::utils::error::{MycoNoteError, Result};

@@ -180,6 +180,18 @@ const TOOLS: &[Tool] = &[
         version_arg: "-h",
         install_cmd: "conda install -c bioconda orthofinder",
     },
+    Tool {
+        name: "salmon",
+        used_by: "quant",
+        version_arg: "--version",
+        install_cmd: "conda install -c bioconda salmon",
+    },
+    Tool {
+        name: "fastp",
+        used_by: "quant",
+        version_arg: "--version",
+        install_cmd: "conda install -c bioconda fastp",
+    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -6,6 +6,33 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+- **`quant` subcommand** — RNA-seq expression quantification against
+  an annotated fungal genome using salmon with a decoy-aware index.
+  Reads → fastp (QC/trim) → salmon quant → wide `counts.tsv` +
+  `tpm.tsv` matrices + per-sample `quant.sf` (tximport-native) + a
+  fixed-schema `quant_bundle.json` reproducibility manifest. DE
+  analysis (DESeq2 / edgeR / limma) stays in R.
+  - Sample-sheet driven: TSV with sample_id, fastq_r1 (paired/SE),
+    optional fastq_r2, condition, strandedness, batch. Unknown
+    columns are preserved verbatim.
+  - SHA256-keyed salmon-index cache — reruns on the same inputs
+    skip the expensive rebuild. Cache dir follows precedence
+    `--index-cache` > `MYCONOTE_INDEX_CACHE` > `$XDG_CACHE_HOME` >
+    `~/.cache/myconote/` > `~/.myconote/`; no silent fallback to
+    `/tmp` (that would break bundle provenance).
+  - `salmon` 1.10+ and `fastp` 0.23+ registered in `install` / `check`
+    with `used_by = "quant"`.
+  - Parallelism: ships with serial `--jobs 1` in 0.3.0 pending an
+    A. niger 6-sample benchmark on two machine shapes (see
+    `scratch/rnaseq_spec_decisions.md` §5).
+  - `explain quant` integrates the new stage with thresholds for
+    mapping rate, fastp Q30, duplication rate, insert-size peak.
+- **`convert --to cds`** — extract spliced nucleotide CDS per mRNA
+  (concatenated child CDS, reverse-complemented on `-` strand, phase
+  offset honored). Feeds directly into `quant` as the salmon target
+  transcriptome.
+
 ### Changed
 - **Scope narrowed to fungi.** Tool description, README, mkdocs, and
   `learn` tutorial now lead with fungal genome annotation. Non-fungal
@@ -25,7 +52,8 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   extractors inside an annotation tool was scope creep. The Opulente
   et al. (2024) dataset remains publicly accessible for external use.
 - Dependencies dropped now that the above modules are gone: `ndarray`,
-  `ndarray-stats`, `tar`, `zip`, `sha2`, `calamine`.
+  `ndarray-stats`, `tar`, `zip`, `calamine`. (`sha2` was dropped here
+  then re-added for the `quant` index cache — see Added above.)
 - External-tool registrations removed from `install` / `check`:
   `iqtree`, `mafft`, `muscle`.
 

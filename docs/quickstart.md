@@ -198,6 +198,7 @@ myconote-cli batch genomes/ --condor --condor-mem 64G
 - Learn interactively: `myconote-cli learn`
 - Interpret results: `myconote-cli explain <stage>` ([docs](analysis/explain.md))
 - Annotate many genomes: `myconote-cli batch genomes/` ([docs](analysis/batch.md))
+- Quantify RNA-seq expression: [quant](analysis/quant.md) (`convert --to cds` → `quant`)
 - Compare orthologs across genomes: [compare](analysis/compare.md)
 - Pairwise synteny of two genomes: convert both to GenBank with `convert --to genbank` and load into clinker
 - Full workshop tutorial: [Workshop Lesson](lesson.md)

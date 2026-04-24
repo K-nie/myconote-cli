@@ -38,7 +38,7 @@ pub fn render(
     prompt.push_str("VALID SUBCOMMANDS (use ONLY these):\n");
     prompt.push_str(
         "sort, mask, train, predict, update, annotate, submit, batch, remote, \
-         stats, compare, convert, clean, fix, \
+         stats, quant, compare, convert, clean, fix, \
          install, check, setup, species, learn, explain, help.\n\n",
     );
 
@@ -143,6 +143,15 @@ fn stage_reference_ranges(stage: &str) -> String {
                      - Common errors: NoStop (wrong genetic code), InternalStop, PartialProblem\n\
                      - Warnings are acceptable but should be reviewed\n\
                      - .sqn file = ready for NCBI upload\n"
+            .to_string(),
+
+        "quant" => "- Salmon mapping rate: >80% typical for well-matched transcriptome/reads\n\
+                    - 50-80%: check strandedness, adapter contamination, wrong genome\n\
+                    - <50%: transcriptome/genome mismatch, poly-A contamination, or wrong organism\n\
+                    - Expressed transcripts (≥1 read): 60-90% of annotated; <40% flags assembly quality\n\
+                    - fastp Q30 after filter: >90% is healthy; <80% suggests run quality issues\n\
+                    - fastp pass rate: >95% typical; <85% means aggressive filtering needed review\n\
+                    - Zero-count transcripts often come from partial CDS at contig ends\n"
             .to_string(),
 
         _ => String::new(),

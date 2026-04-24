@@ -120,8 +120,9 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | Command | Description |
 |---------|-------------|
 | `stats` | Gene counts, lengths, GC content, N50, isoform stats, with taxon-aware expected-range warnings |
+| `quant` | RNA-seq expression quantification: fastp QC → salmon with decoy-aware index → wide count + TPM matrices + tximport-ready per-sample `quant.sf` + reproducibility bundle |
 | `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large) |
-| `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
+| `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / CDS / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |
 | `fix` | Repair errors in GenBank (.gbk) files |
 

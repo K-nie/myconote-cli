@@ -53,6 +53,7 @@ nav:
     - batch: analysis/batch.md
   - Analysis Commands:
     - stats: analysis/stats.md
+    - quant: analysis/quant.md
     - compare: analysis/compare.md
     - explain: analysis/explain.md
   - Databases: databases.md

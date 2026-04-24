@@ -95,6 +95,7 @@ fn print_main_help() {
     println!("  batch    Annotate multiple genomes (directory or sample sheet, HTCondor support)");
     println!("\nAnalysis commands:");
     println!("  stats    Calculate statistics from annotation files");
+    println!("  quant    Quantify RNA-seq expression against the annotated genome (salmon)");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
@@ -333,10 +334,52 @@ fn main() -> Result<()> {
             handle_stats(path, &args[3..])?;
         }
         "quant" => {
-            // Under construction for 0.3.0. The dispatcher returns a
-            // clear error today; full pipeline lands as the sample
-            // sheet / index / fastp / salmon / merge / bundle modules
-            // are filled in.
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli quant <cds.fa> --samples <sheet.tsv> --genome <genome.fa> [options]");
+                println!("\nQuantify RNA-seq expression against an annotated genome using");
+                println!("salmon with a decoy-aware index. Reads → fastp → salmon quant →");
+                println!("wide count / TPM matrices + reproducibility bundle. DE analysis");
+                println!("(DESeq2 / edgeR / limma) stays in R.");
+                println!("\nRequired:");
+                println!("  <cds.fa>                Spliced CDS FASTA (from `convert --to cds`)");
+                println!("  --samples <sheet.tsv>   TSV sample sheet (sample_id, fastq_r1[, fastq_r2, condition, strandedness, batch])");
+                println!("  --genome <genome.fa>    Genome FASTA — used as salmon decoy");
+                println!("\nOptions:");
+                println!("  --output <dir>  -o      Output directory (default: quant_out/)");
+                println!("  --threads <n>   -t      Per-sample salmon/fastp threads (default: all cores)");
+                println!("  --jobs <n>      -j      Outer sample concurrency (default: 1; parallelism");
+                println!("                          default pending A. niger benchmark, see spec)");
+                println!("  -k <n>                  salmon k-mer size (default: 31)");
+                println!("  --tmpdir <dir>          Override temp dir for trimmed FASTQs (default: $TMPDIR)");
+                println!("  --index-cache <dir>     Override salmon index cache location");
+                println!("                          (precedence: flag > MYCONOTE_INDEX_CACHE > XDG > ~/.cache/myconote/)");
+                println!("  --keep-trimmed <dir>    Persist trimmed FASTQs under <dir>/ (default: cleaned up)");
+                println!("  --skip-fastp            Feed input FASTQs directly to salmon (no QC/trim)");
+                println!("  --rebuild-index         Delete any cached index for this input tuple before building");
+                println!("  --seed <n>              Recorded in bundle; passed to salmon where relevant (default: 42)");
+                println!("  --fastp <path>          Override fastp binary (default: PATH lookup)");
+                println!("  --salmon <path>         Override salmon binary (default: PATH lookup)");
+                println!("\nOutputs under --output dir:");
+                println!("  counts.tsv              Wide estimated-counts matrix (transcript × sample)");
+                println!("  tpm.tsv                 Wide TPM matrix (same layout)");
+                println!("  salmon/<sample>/quant.sf  Per-sample salmon output (tximport-ready)");
+                println!("  fastp/<sample>.json     Per-sample fastp QC JSON");
+                println!("  quant_bundle.json       Reproducibility manifest (tool versions, input");
+                println!("                          SHA256s, mapping rates, QC summary)");
+                println!("  sample_sheet.tsv        Copy of the input sheet");
+                println!("\nRequires `fastp` and `salmon` on PATH (`myconote-cli install --for quant`");
+                println!("registers them via conda/mamba).");
+                println!("\nExamples:");
+                println!("  myconote-cli quant cds.fa --samples samples.tsv --genome genome.fa");
+                println!("  myconote-cli quant cds.fa --samples samples.tsv --genome genome.fa \\");
+                println!("      --threads 16 --output results/ --keep-trimmed results/trimmed/");
+                println!("\nFull DE workflow:");
+                println!("  1. myconote-cli predict → annotate                (structural)");
+                println!("  2. myconote-cli convert annotated.gff3 --to cds --fasta genome.fa");
+                println!("  3. myconote-cli quant cds.fa --samples s.tsv --genome genome.fa");
+                println!("  4. R: tximport(files, type=\"salmon\") → DESeq2");
+                return Ok(());
+            }
             quant::run_quant(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
@@ -712,7 +755,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | compare | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())

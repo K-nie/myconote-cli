@@ -287,6 +287,25 @@ const TOOLS: &[Tool] = &[
         manual_note: "https://github.com/davidemms/OrthoFinder",
         version_arg: "-h",
     },
+    // ── RNA-seq expression quantification ────────────────────────────────────
+    Tool {
+        name: "salmon",
+        used_by: "quant",
+        conda_pkg: Some("salmon"),
+        conda_chan: "bioconda",
+        pip_pkg: None,
+        manual_note: "https://salmon.readthedocs.io/",
+        version_arg: "--version",
+    },
+    Tool {
+        name: "fastp",
+        used_by: "quant",
+        conda_pkg: Some("fastp"),
+        conda_chan: "bioconda",
+        pip_pkg: None,
+        manual_note: "https://github.com/OpenGene/fastp",
+        version_arg: "--version",
+    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

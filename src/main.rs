@@ -17,6 +17,7 @@ pub mod names;
 pub mod parser;
 pub mod predict;
 pub mod progress;
+pub mod quant;
 pub mod remote;
 pub mod setup;
 pub mod sort;
@@ -330,6 +331,13 @@ fn main() -> Result<()> {
             }
             let path = &args[2];
             handle_stats(path, &args[3..])?;
+        }
+        "quant" => {
+            // Under construction for 0.3.0. The dispatcher returns a
+            // clear error today; full pipeline lands as the sample
+            // sheet / index / fastp / salmon / merge / bundle modules
+            // are filled in.
+            quant::run_quant(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {

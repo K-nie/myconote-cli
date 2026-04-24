@@ -13,6 +13,7 @@ pub mod names;
 pub mod parser;
 pub mod predict;
 pub mod progress;
+pub mod quant;
 pub mod remote;
 pub mod setup;
 pub mod sort;

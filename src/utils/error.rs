@@ -44,6 +44,13 @@ pub enum MycoNoteError {
 
     #[error("Batch error: {0}")]
     BatchError(String),
+
+    // ── RNA-seq quant (0.3.0) ──────────────────────────────────────────────
+    #[error("quant sample sheet invalid: {0}")]
+    QuantSheet(String),
+
+    #[error("quant external tool ({tool}): {message}")]
+    QuantTool { tool: String, message: String },
 }
 
 impl From<plotters::drawing::DrawingAreaErrorKind<plotters_bitmap::BitMapBackendError>>

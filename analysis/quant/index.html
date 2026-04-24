@@ -12,31 +12,31 @@
         <meta name="author" content="Benjamin Narh-Madey">
       
       
-        <link rel="canonical" href="https://k-nie.github.io/myconote-cli/learn/">
+        <link rel="canonical" href="https://k-nie.github.io/myconote-cli/analysis/quant/">
       
       
-        <link rel="prev" href="../databases/">
+        <link rel="prev" href="../stats/">
       
       
-        <link rel="next" href="../lesson/">
+        <link rel="next" href="../compare/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Interactive Tutorial - Myconote_CLI</title>
+        <title>quant - Myconote_CLI</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,7 +55,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#interactive-tutorial-myconote-cli-learn" class="md-skip">
+        <a href="#myconote-quant" class="md-skip">
           Skip to content
         </a>
       
@@ -98,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Myconote_CLI" class="md-header__button md-logo" aria-label="Myconote_CLI" data-md-component="logo">
+    <a href="../.." title="Myconote_CLI" class="md-header__button md-logo" aria-label="Myconote_CLI" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Interactive Tutorial
+              quant
             
           </span>
         </div>
@@ -231,7 +231,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -252,7 +252,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../installation/" class="md-tabs__link">
+        <a href="../../installation/" class="md-tabs__link">
           
   
   
@@ -272,7 +272,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../pipeline/overview/" class="md-tabs__link">
+        <a href="../../pipeline/overview/" class="md-tabs__link">
           
   
   
@@ -288,11 +288,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../analysis/stats/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../stats/" class="md-tabs__link">
           
   
   
@@ -310,7 +312,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../databases/" class="md-tabs__link">
+      <a href="../../databases/" class="md-tabs__link">
         
   
   
@@ -327,13 +329,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../learn/" class="md-tabs__link">
           
   
   
@@ -353,7 +353,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../reference/kingdoms/" class="md-tabs__link">
+        <a href="../../reference/kingdoms/" class="md-tabs__link">
           
   
   
@@ -387,7 +387,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Myconote_CLI" class="md-nav__button md-logo" aria-label="Myconote_CLI" data-md-component="logo">
+    <a href="../.." title="Myconote_CLI" class="md-nav__button md-logo" aria-label="Myconote_CLI" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -417,7 +417,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -496,7 +496,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -524,7 +524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   
@@ -611,7 +611,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/overview/" class="md-nav__link">
+      <a href="../../pipeline/overview/" class="md-nav__link">
         
   
   
@@ -639,7 +639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/sort/" class="md-nav__link">
+      <a href="../../pipeline/sort/" class="md-nav__link">
         
   
   
@@ -667,7 +667,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/mask/" class="md-nav__link">
+      <a href="../../pipeline/mask/" class="md-nav__link">
         
   
   
@@ -695,7 +695,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/train/" class="md-nav__link">
+      <a href="../../pipeline/train/" class="md-nav__link">
         
   
   
@@ -723,7 +723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/predict/" class="md-nav__link">
+      <a href="../../pipeline/predict/" class="md-nav__link">
         
   
   
@@ -751,7 +751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/update/" class="md-nav__link">
+      <a href="../../pipeline/update/" class="md-nav__link">
         
   
   
@@ -779,7 +779,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/annotate/" class="md-nav__link">
+      <a href="../../pipeline/annotate/" class="md-nav__link">
         
   
   
@@ -807,7 +807,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pipeline/submit/" class="md-nav__link">
+      <a href="../../pipeline/submit/" class="md-nav__link">
         
   
   
@@ -835,7 +835,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../analysis/batch/" class="md-nav__link">
+      <a href="../batch/" class="md-nav__link">
         
   
   
@@ -867,26 +867,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -904,7 +909,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -922,7 +927,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../analysis/stats/" class="md-nav__link">
+      <a href="../stats/" class="md-nav__link">
         
   
   
@@ -947,10 +952,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../analysis/quant/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    quant
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -966,6 +998,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sample-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sample sheet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quant_bundlejson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        quant_bundle.json
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#salmon-index-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Salmon index cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#library-strandedness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Library strandedness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parallelism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parallelism
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-external-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required external tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feeding-into-deseq2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feeding into DESeq2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not do
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -978,7 +1157,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../analysis/compare/" class="md-nav__link">
+      <a href="../compare/" class="md-nav__link">
         
   
   
@@ -1006,7 +1185,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../analysis/explain/" class="md-nav__link">
+      <a href="../explain/" class="md-nav__link">
         
   
   
@@ -1041,7 +1220,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../databases/" class="md-nav__link">
+      <a href="../../databases/" class="md-nav__link">
         
   
   
@@ -1065,31 +1244,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1107,7 +1281,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1122,37 +1296,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Interactive Tutorial
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../learn/" class="md-nav__link">
         
   
   
@@ -1168,92 +1315,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#available-lessons" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Available Lessons
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#during-a-lesson" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        During a Lesson
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#question-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Question Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#progress-tracking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Progress Tracking
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#for-workshop-instructors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        For Workshop Instructors
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1266,7 +1327,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../lesson/" class="md-nav__link">
+      <a href="../../lesson/" class="md-nav__link">
         
   
   
@@ -1353,7 +1414,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/kingdoms/" class="md-nav__link">
+      <a href="../../reference/kingdoms/" class="md-nav__link">
         
   
   
@@ -1381,7 +1442,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/outputs/" class="md-nav__link">
+      <a href="../../reference/outputs/" class="md-nav__link">
         
   
   
@@ -1409,7 +1470,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/citation/" class="md-nav__link">
+      <a href="../../reference/citation/" class="md-nav__link">
         
   
   
@@ -1464,10 +1525,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#quickstart" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Getting Started
+        Quickstart
       
     </span>
   </a>
@@ -1475,10 +1536,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-lessons" class="md-nav__link">
+  <a href="#sample-sheet" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available Lessons
+        Sample sheet
       
     </span>
   </a>
@@ -1486,10 +1547,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#during-a-lesson" class="md-nav__link">
+  <a href="#outputs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        During a Lesson
+        Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quant_bundlejson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        quant_bundle.json
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#salmon-index-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Salmon index cache
       
     </span>
   </a>
@@ -1497,10 +1586,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#question-types" class="md-nav__link">
+  <a href="#library-strandedness" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Question Types
+        Library strandedness
       
     </span>
   </a>
@@ -1508,10 +1597,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#progress-tracking" class="md-nav__link">
+  <a href="#parallelism" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Progress Tracking
+        Parallelism
       
     </span>
   </a>
@@ -1519,10 +1608,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#for-workshop-instructors" class="md-nav__link">
+  <a href="#required-external-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        For Workshop Instructors
+        Required external tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feeding-into-deseq2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feeding into DESeq2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not do
       
     </span>
   </a>
@@ -1546,7 +1668,7 @@
 
 
   
-    <a href="https://github.com/K-nie/myconote-cli/edit/main/docs/learn.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/K-nie/myconote-cli/edit/main/docs/analysis/quant.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1554,170 +1676,173 @@
   
 
 
-<h1 id="interactive-tutorial-myconote-cli-learn">Interactive Tutorial (<code>myconote-cli learn</code>)<a class="headerlink" href="#interactive-tutorial-myconote-cli-learn" title="Permanent link">&para;</a></h1>
-<p>Learn myconote-cli step by step, right in your terminal. Inspired by R's <strong>swirl</strong> package — no browser needed, no external tools required.</p>
-<hr />
-<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>learn<span class="w">          </span><span class="c1"># list all lessons and your progress</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote-cli<span class="w"> </span>learn<span class="w"> </span><span class="m">1</span><span class="w">        </span><span class="c1"># start lesson 1</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>myconote-cli<span class="w"> </span>learn<span class="w"> </span>basics<span class="w">   </span><span class="c1"># start a lesson by name</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>myconote-cli<span class="w"> </span>learn<span class="w"> </span>--resume<span class="w"> </span><span class="c1"># pick up where you left off</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>myconote-cli<span class="w"> </span>learn<span class="w"> </span>--reset<span class="w">  </span><span class="c1"># clear all progress</span>
+<h1 id="myconote-quant">myconote quant<a class="headerlink" href="#myconote-quant" title="Permanent link">&para;</a></h1>
+<p>Quantify RNA-seq expression against an annotated fungal genome. Reads pass through <code>fastp</code> for QC and adapter trimming, then <code>salmon</code> with a decoy-aware index produces per-sample <code>quant.sf</code> files plus wide count and TPM matrices. Differential expression stays in R (DESeq2 / edgeR / limma) — <code>quant</code> stops at the count matrix on purpose.</p>
+<h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Derive the transcriptome for salmon</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>cds<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span>-o<span class="w"> </span>cds.fa
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Quantify</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>myconote-cli<span class="w"> </span>quant<span class="w"> </span>cds.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span>--samples<span class="w"> </span>samples.tsv<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span>--genome<span class="w"> </span>genome.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span>--output<span class="w"> </span>quant_out<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">16</span>
 </code></pre></div>
-<p>Aliases also work: <code>myconote-cli tutorial</code> or <code>myconote-cli swirl</code></p>
-<hr />
-<h2 id="available-lessons">Available Lessons<a class="headerlink" href="#available-lessons" title="Permanent link">&para;</a></h2>
+<p>Then ~10 lines of R to run DESeq2. The <code>quant_out/salmon/&lt;sample&gt;/quant.sf</code> files are consumed directly by <code>tximport</code>.</p>
+<h2 id="sample-sheet">Sample sheet<a class="headerlink" href="#sample-sheet" title="Permanent link">&para;</a></h2>
+<p>TSV, header required:</p>
 <table>
 <thead>
 <tr>
-<th>#</th>
-<th>Lesson</th>
-<th>Duration</th>
-<th>Topics</th>
+<th>column</th>
+<th>required</th>
+<th>meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td><strong>Welcome to MycoNote</strong></td>
-<td>~8 min</td>
-<td>Pipeline overview, kingdoms, file formats, key concepts</td>
+<td><code>sample_id</code></td>
+<td>yes</td>
+<td>unique identifier, <code>[A-Za-z0-9_-]+</code></td>
 </tr>
 <tr>
-<td>2</td>
-<td><strong>Setup &amp; Installation</strong></td>
-<td>~6 min</td>
-<td><code>install</code>, <code>setup</code>, <code>check</code>, <code>species</code> commands</td>
+<td><code>fastq_r1</code></td>
+<td>yes</td>
+<td>R1 FASTQ path (gzipped or plain)</td>
 </tr>
 <tr>
-<td>3</td>
-<td><strong>Pre-processing: Sort &amp; Mask</strong></td>
-<td>~7 min</td>
-<td><code>sort</code>, masking engines, soft vs hard masking</td>
+<td><code>fastq_r2</code></td>
+<td>no</td>
+<td>R2 for paired-end; blank or missing → single-end</td>
 </tr>
 <tr>
-<td>4</td>
-<td><strong>Gene Prediction</strong></td>
-<td>~10 min</td>
-<td>Augustus, SNAP, EVM consensus, protein evidence, ploidy, weights</td>
+<td><code>condition</code></td>
+<td>no</td>
+<td>DE grouping label; passed through to the bundle</td>
 </tr>
 <tr>
-<td>5</td>
-<td><strong>Functional Annotation</strong></td>
-<td>~10 min</td>
-<td>Swiss-Prot, Pfam, BUSCO, tRNA, genetic codes, InterProScan</td>
+<td><code>strandedness</code></td>
+<td>no</td>
+<td><code>unstranded</code> / <code>forward</code> / <code>reverse</code> / <code>auto</code> (default <code>auto</code>)</td>
 </tr>
 <tr>
-<td>6</td>
-<td><strong>Advanced: Training &amp; Evidence</strong></td>
-<td>~8 min</td>
-<td>RNA-seq training, Trinity, PASA, custom evidence weights</td>
-</tr>
-<tr>
-<td>7</td>
-<td><strong>NCBI Submission</strong></td>
-<td>~6 min</td>
-<td>GFF3 validation, <code>.tbl</code> generation, table2asn, BioProject</td>
-</tr>
-<tr>
-<td>8</td>
-<td><strong>Analysis &amp; Handoff</strong></td>
-<td>~8 min</td>
-<td>Stats, phylogenetics, Y1000+ placement, format conversion, handoff to Proksee/IGV/clinker</td>
+<td><code>batch</code></td>
+<td>no</td>
+<td>technical batch label</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Total: ~63 minutes</strong> covering the full pipeline from basics to NCBI submission.</p>
-<hr />
-<h2 id="during-a-lesson">During a Lesson<a class="headerlink" href="#during-a-lesson" title="Permanent link">&para;</a></h2>
-<p>Type your answer and press Enter. Special commands:</p>
+<p>Relative FASTQ paths resolve against the directory containing the sheet. Comment lines starting <code>#</code> and blank lines are ignored. Unknown columns are preserved.</p>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sample_id   fastq_r1    fastq_r2    condition   strandedness
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>WT_rep1 fastq/WT_rep1_R1.fq.gz  fastq/WT_rep1_R2.fq.gz  control reverse
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>WT_rep2 fastq/WT_rep2_R1.fq.gz  fastq/WT_rep2_R2.fq.gz  control reverse
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>WT_rep3 fastq/WT_rep3_R1.fq.gz  fastq/WT_rep3_R2.fq.gz  control reverse
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>C_lim1  fastq/C_lim1_R1.fq.gz   fastq/C_lim1_R2.fq.gz   carbon_limited  reverse
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>C_lim2  fastq/C_lim2_R1.fq.gz   fastq/C_lim2_R2.fq.gz   carbon_limited  reverse
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>C_lim3  fastq/C_lim3_R1.fq.gz   fastq/C_lim3_R2.fq.gz   carbon_limited  reverse
+</code></pre></div>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<p>Under <code>--output</code> (default <code>quant_out/</code>):</p>
 <table>
 <thead>
 <tr>
-<th>Command</th>
-<th>What it does</th>
+<th>path</th>
+<th>purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>hint</code></td>
-<td>Get a contextual hint for the current question</td>
+<td><code>counts.tsv</code></td>
+<td>wide estimated-counts matrix (transcript × sample, sorted rows)</td>
 </tr>
 <tr>
-<td><code>info</code></td>
-<td>Peek at the expected answer</td>
+<td><code>tpm.tsv</code></td>
+<td>wide TPM matrix (same layout)</td>
 </tr>
 <tr>
-<td><code>skip</code></td>
-<td>Move to the next question without answering</td>
+<td><code>salmon/&lt;sample&gt;/quant.sf</code></td>
+<td>per-sample salmon output — tximport consumes this directly</td>
 </tr>
 <tr>
-<td><code>quit</code> / <code>bye</code></td>
-<td>Save progress and exit</td>
+<td><code>salmon/&lt;sample&gt;/logs/...</code></td>
+<td>salmon run logs (mapping rate, EM iterations)</td>
+</tr>
+<tr>
+<td><code>fastp/&lt;sample&gt;.json</code></td>
+<td>full fastp QC report per sample</td>
+</tr>
+<tr>
+<td><code>fastp/&lt;sample&gt;.html</code></td>
+<td>browsable fastp report (per-base quality, adapter content)</td>
+</tr>
+<tr>
+<td><code>quant_bundle.json</code></td>
+<td>fixed-schema reproducibility manifest</td>
+</tr>
+<tr>
+<td><code>sample_sheet.tsv</code></td>
+<td>copy of the input sheet</td>
 </tr>
 </tbody>
 </table>
-<p>After 3 wrong attempts, the correct answer is revealed automatically — the goal is learning, not testing.</p>
-<hr />
-<h2 id="question-types">Question Types<a class="headerlink" href="#question-types" title="Permanent link">&para;</a></h2>
-<p>The tutorial uses 5 question types:</p>
-<p><strong>Multiple choice</strong> — pick a, b, c, or d
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  Which tool does myconote-cli use for protein homology search?
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    a) BLAST
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    b) MMseqs2
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    c) DIAMOND
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    d) HMMER
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  &gt; b
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  Correct!
-</code></pre></div></p>
-<p><strong>Free text</strong> — type the answer (fuzzy-matched, typos forgiven)
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>  What command installs all missing external tools?
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  &gt; install
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  Correct!
-</code></pre></div></p>
-<p><strong>True/False</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>  True or False: myconote-cli can only annotate fungal genomes.
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  &gt; false
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  Correct! It supports fungi, plants, animals, insects, and protists.
-</code></pre></div></p>
-<p><strong>Fill-in-the-blank</strong> — complete a command template
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>  Complete the command:
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  myconote-cli ___ genes.gff3 --to gtf
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  &gt; convert
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  Correct!
-</code></pre></div></p>
-<p><strong>Order steps</strong> — arrange pipeline stages correctly
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>  Put these steps in the correct pipeline order:
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    1) annotate
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    2) predict
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    3) mask
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    4) sort
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  &gt; 4,3,2,1
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>  Correct! sort -&gt; mask -&gt; predict -&gt; annotate
-</code></pre></div></p>
-<hr />
-<h2 id="progress-tracking">Progress Tracking<a class="headerlink" href="#progress-tracking" title="Permanent link">&para;</a></h2>
-<p>Your progress is saved to <code>~/.myconote/learn_progress.json</code> and persists between sessions.</p>
-<ul>
-<li>Completed lessons show a green checkmark in the lesson list</li>
-<li><code>--resume</code> picks up exactly where you left off</li>
-<li><code>--reset</code> clears all progress to start fresh</li>
-</ul>
-<hr />
-<h2 id="for-workshop-instructors">For Workshop Instructors<a class="headerlink" href="#for-workshop-instructors" title="Permanent link">&para;</a></h2>
-<p>The <code>learn</code> system can be used in a classroom setting:</p>
+<h3 id="quant_bundlejson"><code>quant_bundle.json</code><a class="headerlink" href="#quant_bundlejson" title="Permanent link">&para;</a></h3>
+<p>One-screen summary of the run: tool versions (fastp, salmon), SHA256 of every input file, salmon index key and sizing, and a per-sample block with mapping rate, library size, and nine fastp QC fields (reads before/after, Q30 before/after, pass %, adapter trimmed reads/bases, duplication rate, insert-size peak). The full fastp JSON stays under <code>fastp/</code> for deep dives.</p>
+<h2 id="salmon-index-cache">Salmon index cache<a class="headerlink" href="#salmon-index-cache" title="Permanent link">&para;</a></h2>
+<p>The decoy-aware index is expensive to build and cheap to reuse. <code>quant</code> caches it by a content hash of <code>(cds.fa, genome.fa, salmon version, k)</code>. Cache directory resolution in precedence order:</p>
 <ol>
-<li>Students install myconote-cli on their laptops</li>
-<li>Each student works through lessons at their own pace</li>
-<li>No internet required (all lessons are built into the binary)</li>
-<li>Progress is per-user, so students can resume between sessions</li>
+<li><code>--index-cache &lt;dir&gt;</code> (CLI flag)</li>
+<li><code>MYCONOTE_INDEX_CACHE</code> (env var)</li>
+<li><code>$XDG_CACHE_HOME/myconote/salmon_index/</code></li>
+<li><code>~/.cache/myconote/salmon_index/</code> (Linux default when XDG is unset)</li>
+<li><code>~/.myconote/salmon_index/</code> (legacy macOS fallback)</li>
 </ol>
-<p>For a longer workshop format, see the <a href="../lesson/">Workshop Lesson</a> page which provides a 3-hour instructor-guided curriculum.</p>
+<p>No silent fallback to <code>/tmp</code> — a silent location shuffle would break the bundle's reproducibility claim. If the resolved directory is read-only, <code>quant</code> fails fast and names the path that failed.</p>
+<p>Pass <code>--rebuild-index</code> to delete the cache entry for this input tuple and rebuild.</p>
+<h2 id="library-strandedness">Library strandedness<a class="headerlink" href="#library-strandedness" title="Permanent link">&para;</a></h2>
+<p>Salmon auto-detects strandedness from the first few thousand reads when <code>strandedness = auto</code> in the sheet. For Illumina TruSeq stranded dUTP protocols (the common fungal RNA-seq prep) the correct value is <code>reverse</code> — set it explicitly once and skip the auto-detection overhead. <code>quant</code> passes each sample's strandedness to salmon as <code>--libType</code>; paired vs single-end is inferred from the presence of <code>fastq_r2</code>.</p>
+<h2 id="parallelism">Parallelism<a class="headerlink" href="#parallelism" title="Permanent link">&para;</a></h2>
+<p>0.3.0 ships with <code>--jobs 1</code> (one salmon process at a time, each using <code>--threads</code>). Outer parallelism across samples is not yet benchmarked — the A. niger 6-sample benchmark on a 16-core host is pending. <code>--jobs N</code> is accepted but currently logs a warning and runs serially; a real default will land in a follow-up release.</p>
+<h2 id="required-external-tools">Required external tools<a class="headerlink" href="#required-external-tools" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>salmon</code> ≥ 1.10 — <code>conda install -c bioconda salmon</code></li>
+<li><code>fastp</code> ≥ 0.23 — <code>conda install -c bioconda fastp</code></li>
+</ul>
+<p>Both are registered in <code>myconote-cli install</code> and <code>myconote-cli check</code> under <code>used_by = "quant"</code>. Run <code>myconote-cli check</code> to verify both are on PATH.</p>
+<h2 id="feeding-into-deseq2">Feeding into DESeq2<a class="headerlink" href="#feeding-into-deseq2" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nf">library</span><span class="p">(</span><span class="n">tximport</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nf">library</span><span class="p">(</span><span class="n">DESeq2</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">samples</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">read.table</span><span class="p">(</span><span class="s">&quot;quant_out/sample_sheet.tsv&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="n">sep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;\t&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">files</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">file.path</span><span class="p">(</span><span class="s">&quot;quant_out&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;salmon&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">samples</span><span class="o">$</span><span class="n">sample_id</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;quant.sf&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nf">names</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">samples</span><span class="o">$</span><span class="n">sample_id</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># For a gene-level summary: supply a tx2gene table. If you only want</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># transcript-level results, set txOut = TRUE and skip tx2gene.</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">txi</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">tximport</span><span class="p">(</span><span class="n">files</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;salmon&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">txOut</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">dds</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">DESeqDataSetFromTximport</span><span class="p">(</span><span class="n">txi</span><span class="p">,</span><span class="w"> </span><span class="n">colData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">samples</span><span class="p">,</span><span class="w"> </span><span class="n">design</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">condition</span><span class="p">)</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">dds</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">DESeq</span><span class="p">(</span><span class="n">dds</span><span class="p">)</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">res</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">results</span><span class="p">(</span><span class="n">dds</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Mapping rate &lt; 50 %</strong> — usually adapter contamination or the wrong transcriptome. Check <code>fastp/&lt;sample&gt;.html</code>; a right-skewed per-base-quality plot on read 3′ ends flags the former. Verify the <code>cds.fa</code> was derived from the same genome build as the reads.</li>
+<li><strong><code>"not writable"</code> error on cache dir</strong> — <code>$HOME</code> is quota-full on an HPC node. Pass <code>--index-cache &lt;writable dir&gt;</code> or set <code>MYCONOTE_INDEX_CACHE</code> to a scratch path.</li>
+<li><strong>All samples report <code>library_size = 0</code></strong> — no reads mapped. Almost always a strandedness mismatch or a cds / genome pair that don't correspond. Re-check by setting <code>strandedness = auto</code> for one sample and comparing the logged <code>--libType</code> detection against your sheet.</li>
+<li><strong><code>salmon index</code> crashes on k=31 with very small fixtures</strong> — increase k-mer permissible minimum: use <code>-k 21</code> for tutorial-scale inputs.</li>
+</ul>
+<h2 id="what-this-does-not-do">What this does not do<a class="headerlink" href="#what-this-does-not-do" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Differential expression (DE) analysis — done in R.</li>
+<li>SRA/ENA read ingestion — planned for a follow-up release (<code>fetch-rna</code> in the 0.3.x series).</li>
+<li>HISAT2-backed alignment for BAM output — not in scope; users who need a BAM for IGV review should run HISAT2 / STAR externally.</li>
+</ul>
 
 
 
@@ -1793,10 +1918,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

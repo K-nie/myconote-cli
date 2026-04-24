@@ -9,6 +9,7 @@ pub mod check;
 pub mod cli;
 pub mod compare;
 pub mod convert;
+pub mod de_template;
 pub mod fetch_rna;
 pub mod fix;
 pub mod install;
@@ -98,6 +99,7 @@ fn print_main_help() {
     println!("  stats    Calculate statistics from annotation files");
     println!("  quant    Quantify RNA-seq expression against the annotated genome (salmon)");
     println!("  fetch-rna Download RNA-seq FASTQs by SRA/ENA accession");
+    println!("  de-template  Emit an R script for DESeq2 differential expression (requires R + Bioconductor)");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
@@ -413,6 +415,43 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             fetch_rna::run_fetch_rna(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
+        "de-template" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli de-template --quant-dir <dir> --design '<formula>' --contrast '<factor,level1,level2>' [options]");
+                println!("\nGenerate a self-contained R script that runs DESeq2 differential");
+                println!("expression analysis on `quant` output. The script is written to disk");
+                println!("but not executed — you run it yourself with `Rscript`.");
+                println!("\nREQUIRES (install in R BEFORE running the emitted script):");
+                println!("  if (!requireNamespace(\"BiocManager\", quietly=TRUE)) install.packages(\"BiocManager\")");
+                println!("  BiocManager::install(c(\"tximport\", \"DESeq2\", \"apeglm\"))");
+                println!("\nInput (one of):");
+                println!("  --quant-dir <dir>         quant_out/ directory (tximport mode — recommended)");
+                println!("  --counts <counts.tsv>     Wide counts matrix (fallback mode)");
+                println!("\nRequired:");
+                println!("  --design '<R formula>'    DESeq2 design, e.g. '~ condition' or '~ batch + condition'");
+                println!("  --contrast '<factor,level1,level2>'");
+                println!("                            DE contrast to extract. Repeat the flag for");
+                println!("                            multiple comparisons.");
+                println!("\nOptions:");
+                println!("  --samples <sheet.tsv>     Sample sheet (default: <quant-dir>/sample_sheet.tsv)");
+                println!("  --output <file.R>  -o     Output R script (default: de_analysis.R)");
+                println!("  --fdr <n>                 Significance threshold (default: 0.05)");
+                println!("  --lfc <n>                 |LFC| threshold for volcano highlighting (default: 1.0)");
+                println!("\nOutputs (script emits when run):");
+                println!("  de_<factor>_<level1>_vs_<level2>.tsv       Results table sorted by padj");
+                println!("  de_<factor>_<level1>_vs_<level2>_MA.png    MA plot");
+                println!("  de_<factor>_<level1>_vs_<level2>_volcano.png  Volcano plot");
+                println!("\nExample:");
+                println!("  myconote-cli de-template \\");
+                println!("      --quant-dir quant_out \\");
+                println!("      --design '~ condition' \\");
+                println!("      --contrast 'condition,treated,control' \\");
+                println!("      -o analysis.R");
+                println!("  Rscript analysis.R");
+                return Ok(());
+            }
+            de_template::run_de_template(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
         "compare" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {
@@ -787,7 +826,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | compare | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | de-template | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())

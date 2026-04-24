@@ -5,6 +5,7 @@ pub mod check;
 pub mod cli;
 pub mod compare;
 pub mod convert;
+pub mod de_template;
 pub mod fetch_rna;
 pub mod fix;
 pub mod install;

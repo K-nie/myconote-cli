@@ -7,6 +7,28 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ## [Unreleased]
 
 ### Added
+- **`de-template` subcommand** — generate a self-contained R script
+  that runs DESeq2 differential-expression analysis on `quant`
+  output. The tool writes the script; the user runs it with
+  `Rscript`. Implementation is Option 1D from
+  `scratch/rnaseq_spec_decisions.md` — no R runtime dependency on
+  our side, we just emit tximport + DESeq2 + apeglm boilerplate
+  with the user's design and contrasts substituted in.
+  - Prerequisite alerting in three layers: CLI `--help` block,
+    stderr warning when `Rscript` isn't on PATH, and a
+    `requireNamespace()` guard at the top of the emitted R script
+    with a clear `BiocManager::install(...)` hint on failure.
+  - Input validation before writing the script: factor column
+    existence, level values present, design-formula sanitization
+    against `;`, backticks, newlines, `system(...)`, `eval(...)`.
+  - Multiple contrasts per invocation via repeated `--contrast`.
+  - Emits per-contrast TSV (sorted by padj) + MA plot + volcano
+    plot with FDR and |LFC| threshold lines.
+  - `apeglm` LFC shrinkage on when the package is installed, with
+    a graceful fallback to raw LFCs when it isn't.
+  - 23 unit tests + 7 CI-safe integration tests + 1 ignored
+    live `Rscript parse()` syntactic validation (verified against
+    R 4.4.2).
 - **`fetch-rna` subcommand** — download public RNA-seq FASTQs by
   SRA/ENA accession. ENA REST is the default backend (no credentials,
   no `vdb-config`); sra-toolkit (`prefetch` + `fasterq-dump`) is an

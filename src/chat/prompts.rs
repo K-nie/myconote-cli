@@ -38,7 +38,7 @@ pub fn render(
     prompt.push_str("VALID SUBCOMMANDS (use ONLY these):\n");
     prompt.push_str(
         "sort, mask, train, predict, update, annotate, submit, batch, remote, \
-         stats, quant, fetch-rna, compare, convert, clean, fix, \
+         stats, quant, fetch-rna, de-template, compare, convert, clean, fix, \
          install, check, setup, species, learn, explain, help.\n\n",
     );
 
@@ -143,6 +143,15 @@ fn stage_reference_ranges(stage: &str) -> String {
                      - Common errors: NoStop (wrong genetic code), InternalStop, PartialProblem\n\
                      - Warnings are acceptable but should be reviewed\n\
                      - .sqn file = ready for NCBI upload\n"
+            .to_string(),
+
+        "de" => "- Padj (BH-adjusted): FDR<0.05 is the conventional cutoff; FDR<0.01 for stricter\n\
+                    - log2FoldChange: |LFC|>=1 (2-fold) is a common threshold for 'of interest'\n\
+                    - apeglm-shrunk LFCs are smaller than raw; don't compare across pipelines naively\n\
+                    - Low baseMean (<10) + extreme LFC: usually noise, not signal\n\
+                    - Volcano shape: tall & narrow = few DEGs / underpowered; wide & scattered = many DEGs\n\
+                    - MA plot: LFCs should cluster around 0 for low-count rows; systematic drift flags normalization issues\n\
+                    - NA padj: row filtered by DESeq2's independent filtering — expected, not a bug\n"
             .to_string(),
 
         "quant" => "- Salmon mapping rate: >80% typical for well-matched transcriptome/reads\n\

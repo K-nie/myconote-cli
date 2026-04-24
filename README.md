@@ -122,6 +122,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `stats` | Gene counts, lengths, GC content, N50, isoform stats, with taxon-aware expected-range warnings |
 | `quant` | RNA-seq expression quantification: fastp QC → salmon with decoy-aware index → wide count + TPM matrices + tximport-ready per-sample `quant.sf` + reproducibility bundle |
 | `fetch-rna` | Download public RNA-seq FASTQs by SRA/ENA accession (ENA REST default, sra-toolkit fallback); emits a `samples.tsv` ready for `quant` |
+| `de-template` | Generate a DESeq2 differential-expression R script from `quant` output (tximport → DESeq2 → apeglm → TSV + MA + volcano plots). Requires R + Bioconductor installed by the user; the tool writes the script, the user runs `Rscript`. |
 | `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large) |
 | `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / CDS / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |

@@ -49,6 +49,12 @@ const TOOLS: &[Tool] = &[
         version_arg: "--version",
         install_cmd: "License required — http://topaz.gatech.edu/GeneMark/",
     },
+    Tool {
+        name: "prothint.py",
+        used_by: "predict",
+        version_arg: "--version",
+        install_cmd: "Bundled with GeneMark-ES tarball or bioconda braker3 — needed for --genemark-mode ep|etp",
+    },
     // ── Repeat masking ───────────────────────────────────────────────────────
     Tool {
         name: "RepeatMasker",

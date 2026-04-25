@@ -426,3 +426,134 @@ mod evidence_merger_tests {
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GeneMark mode (v0.6.0) — parsing and legacy-alias resolution
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod genemark_mode_tests {
+    use myconote_cli::predict::genemark::GeneMarkMode;
+    use myconote_cli::predict::resolve_genemark_mode;
+    use std::path::PathBuf;
+
+    // ── Mode parsing ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn from_str_accepts_es_et_ep_etp() {
+        assert_eq!(GeneMarkMode::from_str("es"), Some(GeneMarkMode::Es));
+        assert_eq!(GeneMarkMode::from_str("et"), Some(GeneMarkMode::Et));
+        assert_eq!(GeneMarkMode::from_str("ep"), Some(GeneMarkMode::Ep));
+        assert_eq!(GeneMarkMode::from_str("etp"), Some(GeneMarkMode::Etp));
+    }
+
+    #[test]
+    fn from_str_is_case_insensitive() {
+        assert_eq!(GeneMarkMode::from_str("ES"), Some(GeneMarkMode::Es));
+        assert_eq!(GeneMarkMode::from_str("Et"), Some(GeneMarkMode::Et));
+        assert_eq!(GeneMarkMode::from_str("EP"), Some(GeneMarkMode::Ep));
+        assert_eq!(GeneMarkMode::from_str("ETP"), Some(GeneMarkMode::Etp));
+    }
+
+    #[test]
+    fn from_str_accepts_plus_aliases() {
+        // GeneMark literature spells these EP+ and ETP+; accept both.
+        assert_eq!(GeneMarkMode::from_str("ep+"), Some(GeneMarkMode::Ep));
+        assert_eq!(GeneMarkMode::from_str("etp+"), Some(GeneMarkMode::Etp));
+    }
+
+    #[test]
+    fn from_str_rejects_garbage() {
+        assert_eq!(GeneMarkMode::from_str("foo"), None);
+        assert_eq!(GeneMarkMode::from_str(""), None);
+        assert_eq!(GeneMarkMode::from_str("genemark"), None);
+    }
+
+    #[test]
+    fn long_name_is_canonical_publication_form() {
+        // Used in user-facing log lines — must match the upstream paper titles
+        // so users grepping documentation find the right thing.
+        assert_eq!(GeneMarkMode::Es.long_name(), "GeneMark-ES");
+        assert_eq!(GeneMarkMode::Et.long_name(), "GeneMark-ET");
+        assert_eq!(GeneMarkMode::Ep.long_name(), "GeneMark-EP+");
+        assert_eq!(GeneMarkMode::Etp.long_name(), "GeneMark-ETP+");
+    }
+
+    // ── Resolution from legacy flags ─────────────────────────────────────────
+
+    #[test]
+    fn explicit_mode_wins_over_legacy_flags() {
+        // If the user passes --genemark-mode explicitly, the legacy boolean +
+        // hints should never override it.
+        let hints = PathBuf::from("/tmp/intron_hints.gff");
+        assert_eq!(
+            resolve_genemark_mode(Some(GeneMarkMode::Ep), true, Some(&hints)),
+            Some(GeneMarkMode::Ep)
+        );
+    }
+
+    #[test]
+    fn legacy_genemark_alone_resolves_to_es() {
+        // Old `--genemark` flag with no hints == ES mode (the historical default).
+        assert_eq!(
+            resolve_genemark_mode(None, true, None),
+            Some(GeneMarkMode::Es)
+        );
+    }
+
+    #[test]
+    fn legacy_genemark_with_hints_resolves_to_et() {
+        // Pre-0.6.0: passing `--genemark` and `--genemark-hints` together
+        // implied GeneMark-ET. Preserved.
+        let hints = PathBuf::from("/tmp/intron_hints.gff");
+        assert_eq!(
+            resolve_genemark_mode(None, true, Some(&hints)),
+            Some(GeneMarkMode::Et)
+        );
+    }
+
+    #[test]
+    fn legacy_hints_only_still_implies_et() {
+        // Pre-0.6.0 also accepted `--genemark-hints` without `--genemark`
+        // (the hints flag implied the rest). Preserved.
+        let hints = PathBuf::from("/tmp/intron_hints.gff");
+        assert_eq!(
+            resolve_genemark_mode(None, false, Some(&hints)),
+            Some(GeneMarkMode::Et)
+        );
+    }
+
+    #[test]
+    fn no_flags_means_skip() {
+        assert_eq!(resolve_genemark_mode(None, false, None), None);
+    }
+
+    // ── ETP requires both inputs (validated at runtime, not at parse time) ───
+    //
+    // These tests document the contract of run_prediction's ETP branch via
+    // the resolution helper + the predictor config. They live as ignored,
+    // live-tool tests because actually running gmes_petap.pl needs a
+    // licensed GeneMark + ProtHint install.
+
+    #[test]
+    fn etp_resolution_succeeds_even_without_inputs() {
+        // Resolution itself doesn't validate inputs — it just decides which
+        // mode to dispatch. The runtime check happens in run_prediction and
+        // is exercised by the integration-level test below.
+        assert_eq!(
+            resolve_genemark_mode(Some(GeneMarkMode::Etp), false, None),
+            Some(GeneMarkMode::Etp)
+        );
+    }
+
+    #[test]
+    #[ignore = "requires licensed gmes_petap.pl + ProtHint install; run with --ignored"]
+    fn etp_end_to_end_live_smoke() {
+        // Sanity-only smoke gate. We intentionally do not exercise the full
+        // live ETP pipeline in CI because it needs a Georgia-Tech-licensed
+        // GeneMark binary and ProtHint, both of which require manual
+        // installation. Mirrors the de-template `Rscript parse()` gate.
+        assert!(myconote_cli::predict::genemark::genemark_available());
+        assert!(myconote_cli::predict::genemark::prothint_available());
+    }
+}

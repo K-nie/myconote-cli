@@ -21,6 +21,7 @@ pub mod train;
 
 use crate::progress;
 use crate::utils::error::{MycoNoteError, Result};
+use genemark::GeneMarkMode;
 use kingdom::Kingdom;
 use std::path::{Path, PathBuf};
 
@@ -58,11 +59,20 @@ pub struct PredictConfig {
     pub use_glimmerhmm: bool,
     /// GlimmerHMM training directory (None = auto-detect from kingdom)
     pub glimmer_dir: Option<PathBuf>,
-    /// Run GeneMark-ES (self-training, no pre-existing model needed)
+    /// Run GeneMark in any of its self-training modes.  When `None`, GeneMark
+    /// is skipped.  Modes: ES (no evidence), ET (RNA-seq introns), EP+
+    /// (ProtHint-derived protein hints), ETP+ (both).
+    pub genemark_mode: Option<GeneMarkMode>,
+    /// Legacy alias kept for backward compatibility — `--genemark` sets this
+    /// and is translated to `genemark_mode = Some(GeneMarkMode::Es)` if no
+    /// explicit `--genemark-mode` is given.
     pub use_genemark: bool,
-    /// Use GeneMark-ET (RNA-seq intron hints file in GFF format)
+    /// RNA-seq intron hints in GFF format (HISAT2 / STAR splice output).
+    /// Required for GeneMark-ET and GeneMark-ETP+.  When supplied without
+    /// `--genemark-mode`, mode defaults to ET (legacy `--genemark-hints`).
     pub genemark_hints: Option<PathBuf>,
-    /// Protein FASTA for protein→genome evidence (miniprot/exonerate)
+    /// Protein FASTA for protein→genome evidence (miniprot / exonerate) and
+    /// for ProtHint when running GeneMark-EP+ / ETP+.
     pub protein_fasta: Option<PathBuf>,
     /// Maximum intron size for protein alignment
     pub max_intron: usize,
@@ -89,6 +99,7 @@ impl Default for PredictConfig {
             train_species: None,
             use_glimmerhmm: false,
             glimmer_dir: None,
+            genemark_mode: None,
             use_genemark: false,
             genemark_hints: None,
             protein_fasta: None,
@@ -97,6 +108,42 @@ impl Default for PredictConfig {
             weights_file: None,
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GeneMark-mode resolution (handles legacy `--genemark` / `--genemark-hints`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Translate the deprecated boolean / hints-only flags into the new
+/// `GeneMarkMode` enum.  Resolution rules, in order:
+///
+///   1. If `genemark_mode` is set explicitly, use it as-is.
+///   2. Else if `use_genemark` is true and `genemark_hints` is `Some`, ET.
+///   3. Else if `use_genemark` is true alone, ES.
+///   4. Else if `genemark_hints` is set without `use_genemark`, ET (preserves
+///      the old behaviour where supplying hints implied GeneMark-ET).
+///   5. Else `None` — GeneMark is skipped.
+///
+/// EP / ETP modes can only be requested via `--genemark-mode`; there is no
+/// legacy alias for them since they did not exist in earlier releases.
+pub fn resolve_genemark_mode(
+    explicit: Option<GeneMarkMode>,
+    use_genemark: bool,
+    genemark_hints: Option<&Path>,
+) -> Option<GeneMarkMode> {
+    if let Some(m) = explicit {
+        return Some(m);
+    }
+    if use_genemark {
+        if genemark_hints.is_some() {
+            return Some(GeneMarkMode::Et);
+        }
+        return Some(GeneMarkMode::Es);
+    }
+    if genemark_hints.is_some() {
+        return Some(GeneMarkMode::Et);
+    }
+    None
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,43 +345,93 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         }
     }
 
-    // ── 2b. GeneMark-ES / ET (optional self-training predictor) ─────────────
-    // Same silent-no-op bug: `use_genemark` and `genemark_hints` were set but
-    // never dispatched. GeneMark-ES is self-training; GeneMark-ET adds RNA-seq
-    // splice hints when `--genemark-hints <intron_hints.gff>` is supplied.
-    if config.use_genemark {
+    // ── 2b. GeneMark-ES / ET / EP+ / ETP+ (optional) ─────────────────────────
+    //
+    // The actual mode is resolved from three flag sources by
+    // `resolve_genemark_mode`: the new `--genemark-mode <es|et|ep|etp>`, the
+    // deprecated `--genemark` boolean, and the `--genemark-hints <gff>` path.
+    // EP / ETP additionally require `--protein-fasta` because ProtHint needs
+    // a protein database to convert into hints.
+    if let Some(mode) = resolve_genemark_mode(
+        config.genemark_mode,
+        config.use_genemark,
+        config.genemark_hints.as_deref(),
+    ) {
         let gm_dir = config.out_dir.join("genemark");
         let is_fungus = matches!(config.kingdom, Kingdom::Fungi);
-        let pb = progress::spinner("Running GeneMark-ES/ET…");
-        let run_result = if let Some(hints) = config.genemark_hints.as_ref() {
-            if hints.exists() {
-                genemark::run_genemark_et(
+        let pb = progress::spinner(format!("Running {}…", mode.long_name()));
+        let run_result = match mode {
+            GeneMarkMode::Es => {
+                genemark::run_genemark_es(&config.masked_fasta, &gm_dir, is_fungus, config.threads)
+            }
+            GeneMarkMode::Et => match config.genemark_hints.as_ref() {
+                Some(hints) if hints.exists() => genemark::run_genemark_et(
                     &config.masked_fasta,
                     hints,
                     &gm_dir,
                     is_fungus,
                     config.threads,
-                )
-            } else {
-                progress::warn_spinner(
-                    &pb,
-                    format!(
-                        "GeneMark hints file not found: {} (falling back to --ES)",
-                        hints.display()
-                    ),
-                );
-                genemark::run_genemark_es(&config.masked_fasta, &gm_dir, is_fungus, config.threads)
-            }
-        } else {
-            genemark::run_genemark_es(&config.masked_fasta, &gm_dir, is_fungus, config.threads)
+                ),
+                Some(hints) => Err(MycoNoteError::InvalidFormat(format!(
+                    "GeneMark-ET hints file not found: {}. \
+                     Pass --genemark-hints <intron_hints.gff> or drop to \
+                     --genemark-mode es.",
+                    hints.display()
+                ))),
+                None => Err(MycoNoteError::InvalidFormat(
+                    "GeneMark-ET requires --genemark-hints <intron_hints.gff>. \
+                     Use --genemark-mode es for self-training only."
+                        .to_string(),
+                )),
+            },
+            GeneMarkMode::Ep => match config.protein_fasta.as_ref() {
+                Some(prot) => genemark::run_genemark_ep(
+                    &config.masked_fasta,
+                    prot,
+                    &gm_dir,
+                    is_fungus,
+                    config.threads,
+                ),
+                None => Err(MycoNoteError::InvalidFormat(
+                    "GeneMark-EP+ requires --protein-fasta <proteins.fa> \
+                     (e.g. OrthoDB fungi). \
+                     Use --genemark-mode es to skip protein evidence."
+                        .to_string(),
+                )),
+            },
+            GeneMarkMode::Etp => match (
+                config.genemark_hints.as_ref(),
+                config.protein_fasta.as_ref(),
+            ) {
+                (Some(rna), Some(prot)) => genemark::run_genemark_etp(
+                    &config.masked_fasta,
+                    rna,
+                    prot,
+                    &gm_dir,
+                    is_fungus,
+                    config.threads,
+                ),
+                _ => Err(MycoNoteError::InvalidFormat(
+                    "GeneMark-ETP+ requires *both* --genemark-hints <intron_hints.gff> \
+                     and --protein-fasta <proteins.fa>. \
+                     Use --genemark-mode et or ep to drop one input."
+                        .to_string(),
+                )),
+            },
         };
         match run_result {
             Ok(gm_gff) => {
-                progress::finish_spinner(&pb, format!("GeneMark complete → {}", gm_gff.display()));
+                progress::finish_spinner(
+                    &pb,
+                    format!("{} complete → {}", mode.long_name(), gm_gff.display()),
+                );
                 prediction_inputs.push((gm_gff, "GeneMark", weights.genemark));
             }
             Err(e) => {
-                progress::warn_spinner(&pb, format!("GeneMark failed (non-fatal): {}", e));
+                progress::warn_spinner(
+                    &pb,
+                    format!("{} failed (non-fatal): {}", mode.long_name(), e),
+                );
             }
         }
     }

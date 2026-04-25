@@ -75,6 +75,21 @@ const TOOLS: &[Tool] = &[
         manual_note: "Licence required — http://topaz.gatech.edu/GeneMark/",
         version_arg: "--version",
     },
+    // ProtHint converts a protein FASTA into the GFF hint files consumed by
+    // GeneMark-EP+ and GeneMark-ETP+ (--genemark-mode ep | etp).  There is no
+    // standalone bioconda recipe (verified 2026-04-24); ProtHint ships
+    // bundled with the GeneMark-ES installer tarball under
+    // <install>/ProtHint/bin/ and with the bioconda `braker3` package.
+    Tool {
+        name: "prothint.py",
+        used_by: "predict",
+        conda_pkg: None,
+        conda_chan: "",
+        pip_pkg: None,
+        manual_note:
+            "Bundled with GeneMark-ES tarball (<install>/ProtHint/bin) or with bioconda braker3",
+        version_arg: "--version",
+    },
     // ── Repeat masking ───────────────────────────────────────────────────────
     Tool {
         name: "RepeatMasker",

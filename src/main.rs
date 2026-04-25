@@ -242,8 +242,14 @@ fn main() -> Result<()> {
                 println!("  --train-species <name>      Species name for trained model (default: <prefix>_trained)");
                 println!("  --glimmerhmm                Also run GlimmerHMM (adds third ab initio predictor)");
                 println!("  --glimmer-dir <dir>         GlimmerHMM training directory (default: auto-detect)");
-                println!("  --genemark                  Also run GeneMark-ES (self-training, no model needed)");
-                println!("  --genemark-hints <gff>      Use GeneMark-ET with RNA-seq intron hints");
+                println!("  --genemark-mode <mode>      es|et|ep|etp (default: skip GeneMark)");
+                println!("                                es  = self-training only (no evidence)");
+                println!("                                et  = RNA-seq intron hints (--genemark-hints)");
+                println!("                                ep  = protein evidence via ProtHint (--protein-fasta)");
+                println!("                                etp = both (RNA + protein)");
+                println!("  --genemark                  [legacy] alias for --genemark-mode es");
+                println!("  --genemark-hints <gff>      RNA-seq intron hints in GFF (required for et / etp)");
+                println!("  --protein-fasta <fa>        Protein FASTA for miniprot and ProtHint (ep / etp)");
                 println!("  --threads <n>               Threads (default: 4)");
                 println!("\nKingdoms and their default Augustus species:");
                 println!("  fungi    saccharomyces_cerevisiae_S288C");
@@ -1892,6 +1898,21 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                 config.glimmer_dir = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
+            "--genemark-mode" if i + 1 < args.len() => {
+                match predict::genemark::GeneMarkMode::from_str(&args[i + 1]) {
+                    Some(m) => config.genemark_mode = Some(m),
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --genemark-mode {:?}. Expected one of: es, et, ep, etp",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            // Deprecated: --genemark is an alias for --genemark-mode es.
+            // Kept for back-compat with existing scripts; resolve_genemark_mode
+            // upgrades to ET when --genemark-hints is also passed.
             "--genemark" => {
                 config.use_genemark = true;
                 i += 1;

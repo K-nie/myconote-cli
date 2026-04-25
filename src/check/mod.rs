@@ -106,6 +106,12 @@ const TOOLS: &[Tool] = &[
         install_cmd: "conda install -c bioconda pasa",
     },
     Tool {
+        name: "kallisto",
+        used_by: "update",
+        version_arg: "version",
+        install_cmd: "conda install -c bioconda kallisto  # for --kallisto",
+    },
+    Tool {
         name: "TransDecoder.LongOrfs",
         used_by: "train",
         version_arg: "--version",

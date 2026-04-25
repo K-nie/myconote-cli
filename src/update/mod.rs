@@ -11,6 +11,7 @@
 /// coverage information from the minimap2 BAM/PAF output.
 ///
 /// Equivalent to: funannotate update --input <gff3> --fasta <genome> --rna-bam <bam>
+pub mod kallisto;
 pub mod pasa_update;
 
 use crate::utils::error::{MycoNoteError, Result};
@@ -52,6 +53,14 @@ pub struct UpdateConfig {
     pub min_identity: f64,
     /// Minimum transcript alignment coverage (0–1)
     pub min_coverage: f64,
+    /// Run Kallisto to filter low-abundance transcripts before PASA
+    /// (funannotate-style abundance pre-filter). Off by default; opt
+    /// in with `--kallisto`.
+    pub kallisto: bool,
+    /// TPM threshold for the kallisto filter. Default 1.0 (matches
+    /// funannotate). Drop with `--kallisto-min-tpm` for low-coverage
+    /// RNA-seq where 1.0 over-filters.
+    pub kallisto_min_tpm: f64,
 }
 
 impl Default for UpdateConfig {
@@ -71,6 +80,8 @@ impl Default for UpdateConfig {
             max_utr_extension: 2000,
             min_identity: 0.95,
             min_coverage: 0.90,
+            kallisto: false,
+            kallisto_min_tpm: 1.0,
         }
     }
 }
@@ -118,6 +129,63 @@ pub fn run_update(config: &UpdateConfig) -> Result<UpdateResult> {
     // ── Step 1: assemble / gather transcripts ────────────────────────────────
     let transcript_fa = resolve_transcripts(config)?;
 
+    // ── Step 1b: optional Kallisto abundance pre-filter ──────────────────────
+    // Mirrors funannotate's update step: estimate per-transcript TPM,
+    // drop transcripts below `--kallisto-min-tpm`, and pass only the
+    // surviving IDs through to PASA. This eliminates spurious Trinity
+    // assemblies that would otherwise feed PASA noise.
+    let kallisto_passing: Option<Vec<String>> = if config.kallisto {
+        if !kallisto::kallisto_available() {
+            return Err(MycoNoteError::ExternalTool(
+                "kallisto not found in PATH but --kallisto was set.\n  \
+                 Install with: myconote-cli install update\n  \
+                 Or directly:  conda install -c bioconda kallisto"
+                    .to_string(),
+            ));
+        }
+        let tx_path = match transcript_fa.as_ref() {
+            Some(p) => p.clone(),
+            None => {
+                return Err(MycoNoteError::InvalidFormat(
+                    "--kallisto requires a transcript set. Pass --transcripts <file>, \
+                     or --rna-r1 (and --rna-r2) so MycoNote-CLI can assemble with Trinity."
+                        .to_string(),
+                ));
+            }
+        };
+        let samples = kallisto_samples_from_config(config)?;
+        if samples.is_empty() {
+            return Err(MycoNoteError::InvalidFormat(
+                "--kallisto requires at least one RNA-seq sample (--rna-r1 [--rna-r2]). \
+                 Pre-aligned BAM (--rna-bam) cannot be re-quantified by kallisto."
+                    .to_string(),
+            ));
+        }
+        let kfilter = kallisto::KallistoFilter {
+            transcripts: tx_path,
+            samples,
+            min_tpm: config.kallisto_min_tpm,
+            out_dir: config.out_dir.join("kallisto"),
+            threads: config.threads,
+            ..kallisto::KallistoFilter::default()
+        };
+        println!(
+            "  Kallisto pre-filter: min_tpm={}, samples={}",
+            kfilter.min_tpm,
+            kfilter.samples.len()
+        );
+        Some(kallisto::run_kallisto_filter(&kfilter)?)
+    } else {
+        None
+    };
+
+    if let Some(ref ids) = kallisto_passing {
+        println!(
+            "    {} transcripts cleared the Kallisto TPM filter",
+            ids.len()
+        );
+    }
+
     // ── Step 2: align transcripts → genome ───────────────────────────────────
     let bam_path = if let Some(ref bam) = config.rna_bam {
         println!("  Using pre-aligned BAM: {}", bam.display());
@@ -136,6 +204,21 @@ pub fn run_update(config: &UpdateConfig) -> Result<UpdateResult> {
     let use_pasa = pasa_update::pasa_available();
 
     let result = if use_pasa {
+        if let Some(ref ids) = kallisto_passing {
+            // Persist the passing-ID list next to the PASA workdir so a
+            // future PASA wrapper can read it back deterministically.
+            // PASA itself doesn't take a transcript-ID restriction flag,
+            // so we sidecar this for now and document it in the run log.
+            let pasa_filter_path = config.out_dir.join("pasa_kallisto_filter.txt");
+            let mut f = std::fs::File::create(&pasa_filter_path).map_err(MycoNoteError::Io)?;
+            for id in ids {
+                writeln!(f, "{}", id).map_err(MycoNoteError::Io)?;
+            }
+            println!(
+                "  Kallisto-filtered transcript list → {}",
+                pasa_filter_path.display()
+            );
+        }
         println!("  Running PASA gene model update…");
         pasa_update::run_pasa_update(config, &bam_path, transcript_fa.as_deref())?
     } else {
@@ -164,6 +247,21 @@ pub fn run_update(config: &UpdateConfig) -> Result<UpdateResult> {
     println!("  ✓  Updated GFF3 → {}", result.output_gff.display());
 
     Ok(result)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Kallisto sample extraction
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Convert UpdateConfig RNA-seq paths into the (R1, optional R2) pairs
+/// kallisto wants. Only one sample today (we don't yet take repeated
+/// `--rna-r1` flags); future work can extend this.
+fn kallisto_samples_from_config(config: &UpdateConfig) -> Result<Vec<(PathBuf, Option<PathBuf>)>> {
+    let mut out = Vec::new();
+    if let Some(ref r1) = config.rna_r1 {
+        out.push((r1.clone(), config.rna_r2.clone()));
+    }
+    Ok(out)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

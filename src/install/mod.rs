@@ -169,6 +169,18 @@ const TOOLS: &[Tool] = &[
         manual_note: "https://github.com/PASApipeline/PASApipeline",
         version_arg: "--version",
     },
+    // Kallisto pseudoalignment, used by `update --kallisto` to estimate
+    // per-transcript TPM and drop low-abundance transcripts before PASA's
+    // UTR-extension pass. Mirrors funannotate's update step.
+    Tool {
+        name: "kallisto",
+        used_by: "update",
+        conda_pkg: Some("kallisto"),
+        conda_chan: "bioconda",
+        pip_pkg: None,
+        manual_note: "https://pachterlab.github.io/kallisto/",
+        version_arg: "version",
+    },
     Tool {
         name: "TransDecoder.LongOrfs",
         used_by: "train",

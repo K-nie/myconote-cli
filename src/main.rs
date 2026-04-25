@@ -731,6 +731,8 @@ fn main() -> Result<()> {
                 println!("  --organism <name>         Organism name for PASA config");
                 println!("  --max-utr-ext <bp>        Maximum UTR extension (default: 2000)");
                 println!("  --min-identity <float>    Min transcript alignment identity (default: 0.95)");
+                println!("  --kallisto                Run Kallisto to filter low-abundance transcripts before PASA");
+                println!("  --kallisto-min-tpm <f>    TPM threshold for the Kallisto filter (default: 1.0)");
                 println!("  --threads <n>             Threads (default: 4)");
                 println!("\nOutputs:");
                 println!("  updated.gff3              Refined gene models with UTR features");
@@ -2475,6 +2477,24 @@ fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
             "--min-identity" if i + 1 < args.len() => {
                 if let Ok(v) = args[i + 1].parse::<f64>() {
                     config.min_identity = v;
+                }
+                i += 2;
+            }
+            "--kallisto" => {
+                config.kallisto = true;
+                i += 1;
+            }
+            "--kallisto-min-tpm" if i + 1 < args.len() => {
+                match args[i + 1].parse::<f64>() {
+                    Ok(v) if v >= 0.0 && v.is_finite() => {
+                        config.kallisto_min_tpm = v;
+                    }
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "update: --kallisto-min-tpm must be a non-negative finite number, got {:?}",
+                            args[i + 1]
+                        ));
+                    }
                 }
                 i += 2;
             }

@@ -749,3 +749,139 @@ mod braker_tests {
         assert_eq!(c.genetic_code, 1);
     }
 }
+
+#[cfg(test)]
+mod update_kallisto_cli_tests {
+    //! Tests for the `--kallisto` / `--kallisto-min-tpm` flags on the
+    //! `update` subcommand. We drive the binary through assert_cmd so
+    //! the full main-arm parser path is exercised.
+
+    use assert_cmd::Command;
+    use predicates::prelude::*;
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    /// `--kallisto-min-tpm <value>` accepts well-formed floats.
+    /// Smoke-test by invoking with a missing GFF: parsing happens
+    /// before the run, so a successful-parse-but-failed-run path
+    /// still proves the flag was accepted. We require the error to
+    /// be about the GFF, not the flag.
+    #[test]
+    fn kallisto_min_tpm_accepts_valid_float() {
+        let dir = tempdir().unwrap();
+        let bogus_gff = dir.path().join("missing.gff3");
+        let bogus_fa = dir.path().join("missing.fa");
+
+        let mut cmd = Command::cargo_bin("myconote-cli").unwrap();
+        cmd.args([
+            "update",
+            bogus_gff.to_str().unwrap(),
+            "--fasta",
+            bogus_fa.to_str().unwrap(),
+            "--kallisto-min-tpm",
+            "0.5",
+        ]);
+        // It will fail because the GFF doesn't exist; that's expected.
+        // Crucially, the error must NOT mention --kallisto-min-tpm
+        // (which would mean the flag parse failed).
+        let output = cmd.assert().failure();
+        let stderr = String::from_utf8_lossy(&output.get_output().stderr).to_string();
+        assert!(
+            !stderr.contains("--kallisto-min-tpm"),
+            "0.5 should parse cleanly; stderr: {}",
+            stderr
+        );
+    }
+
+    /// `--kallisto-min-tpm` rejects malformed values (no silent default).
+    #[test]
+    fn kallisto_min_tpm_rejects_garbage() {
+        let dir = tempdir().unwrap();
+        let bogus_gff = dir.path().join("missing.gff3");
+        let bogus_fa = dir.path().join("missing.fa");
+
+        let mut cmd = Command::cargo_bin("myconote-cli").unwrap();
+        cmd.args([
+            "update",
+            bogus_gff.to_str().unwrap(),
+            "--fasta",
+            bogus_fa.to_str().unwrap(),
+            "--kallisto-min-tpm",
+            "not-a-float",
+        ]);
+        cmd.assert()
+            .failure()
+            .stderr(predicate::str::contains("--kallisto-min-tpm"));
+    }
+
+    /// `--kallisto-min-tpm` rejects negative values (TPM is non-negative).
+    #[test]
+    fn kallisto_min_tpm_rejects_negative() {
+        let dir = tempdir().unwrap();
+        let bogus_gff = dir.path().join("missing.gff3");
+        let bogus_fa = dir.path().join("missing.fa");
+
+        let mut cmd = Command::cargo_bin("myconote-cli").unwrap();
+        cmd.args([
+            "update",
+            bogus_gff.to_str().unwrap(),
+            "--fasta",
+            bogus_fa.to_str().unwrap(),
+            "--kallisto-min-tpm",
+            "-1.0",
+        ]);
+        cmd.assert()
+            .failure()
+            .stderr(predicate::str::contains("--kallisto-min-tpm"));
+    }
+
+    /// `--kallisto` without any RNA-seq input must error with a clear
+    /// message naming `--rna-r1`. We have to provide a real GFF + FASTA
+    /// so the run gets past the file-existence checks and reaches the
+    /// kallisto branch.
+    #[test]
+    fn kallisto_without_rnaseq_errors_loudly() {
+        let dir = tempdir().unwrap();
+        let gff = dir.path().join("genes.gff3");
+        let fa = dir.path().join("genome.fa");
+        // Minimal valid GFF3 + FASTA.
+        let mut g = std::fs::File::create(&gff).unwrap();
+        writeln!(g, "##gff-version 3").unwrap();
+        writeln!(g, "chr1\tmyconote\tgene\t1\t100\t.\t+\t.\tID=g1").unwrap();
+        let mut f = std::fs::File::create(&fa).unwrap();
+        writeln!(f, ">chr1").unwrap();
+        writeln!(f, "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC").unwrap();
+        writeln!(f, "GTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT").unwrap();
+
+        let mut cmd = Command::cargo_bin("myconote-cli").unwrap();
+        cmd.args([
+            "update",
+            gff.to_str().unwrap(),
+            "--fasta",
+            fa.to_str().unwrap(),
+            "--output",
+            dir.path().join("update_out").to_str().unwrap(),
+            "--kallisto",
+        ]);
+        // Either the kallisto-not-installed error or the no-RNA-seq
+        // error is acceptable — both are loud, both name actionable
+        // next steps. We just need it to fail (not silently fall back).
+        let output = cmd.assert().failure().get_output().clone();
+        let combined = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        // Must mention either kallisto being missing, or RNA-seq inputs.
+        let mentions_kallisto = combined.to_lowercase().contains("kallisto");
+        let mentions_rnaseq = combined.to_lowercase().contains("rna-seq")
+            || combined.to_lowercase().contains("rna seq")
+            || combined.contains("--rna-r1")
+            || combined.contains("RNA-seq");
+        assert!(
+            mentions_kallisto || mentions_rnaseq,
+            "error must explain how to recover; got: {}",
+            combined
+        );
+    }
+}

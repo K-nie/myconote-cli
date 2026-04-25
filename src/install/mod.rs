@@ -115,7 +115,7 @@ const TOOLS: &[Tool] = &[
     },
     Tool {
         name: "minimap2",
-        used_by: "train/update/synteny",
+        used_by: "train/update/synteny/clean",
         conda_pkg: Some("minimap2"),
         conda_chan: "bioconda",
         pip_pkg: None,

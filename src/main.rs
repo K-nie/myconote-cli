@@ -8,6 +8,7 @@ pub mod ase_template;
 pub mod batch;
 pub mod chat;
 pub mod check;
+pub mod clean;
 pub mod cli;
 pub mod compare;
 pub mod convert;
@@ -615,19 +616,44 @@ fn main() -> Result<()> {
         }
         "clean" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
-                println!("Usage: myconote-cli clean <annotations.gff3> [options]");
-                println!("\nOptions:");
+                println!("Usage: myconote-cli clean <input> [--mode <gff3|contigs>] [options]");
+                println!("\nModes:");
+                println!("  gff3       Validate + repair a GFF3 annotation file (default).");
+                println!("  contigs    Drop redundant contigs from a FASTA assembly via");
+                println!("             minimap2 self-alignment (purge near-duplicate haplotigs).");
+                println!("\nGFF3-mode options (--mode gff3):");
                 println!("  --output <file.gff3>    Output file (default: <input>_clean.gff3)");
                 println!("  --fix-coords            Fix off-by-one coordinate errors");
                 println!("  --remove-orphans        Remove features with missing parents");
                 println!("  --min-length <bp>       Remove features shorter than this (default: 1)");
+                println!("\nContig-mode options (--mode contigs):");
+                println!("  --output <file.fa>      Output FASTA (default: <input>_clean.fa)");
+                println!("  --report <file.tsv>     TSV listing dropped contigs (default: <input>_dropped.tsv)");
+                println!("  --coverage <0..1>       Min query-coverage of the shorter contig (default: 0.95)");
+                println!("  --identity <0..1>       Min alignment identity (default: 0.95)");
+                println!("  --threads <n>           Threads passed to minimap2 (default: 4)");
+                println!("  --minimap2 <path>       Override minimap2 binary");
+                println!("\nRequires (contig mode): minimap2");
+                println!("  conda install -c bioconda minimap2");
                 println!("\nExamples:");
                 println!("  myconote-cli clean genes.gff3");
                 println!("  myconote-cli clean genes.gff3 --remove-orphans --output clean.gff3");
+                println!("  myconote-cli clean assembly.fa --mode contigs");
+                println!("  myconote-cli clean assembly.fa --mode contigs --coverage 0.9 --identity 0.98");
                 return Ok(());
             }
             let path = &args[2];
-            handle_clean(path, &args[3..])?;
+            // Sniff --mode early so we know which routine to dispatch to.
+            let mode = parse_clean_mode(&args[3..]);
+            match mode.as_str() {
+                "contigs" => handle_clean_contigs(path, &args[3..])?,
+                "gff3" | "" => handle_clean(path, &args[3..])?,
+                other => {
+                    return Err(anyhow::anyhow!(
+                        "clean: unknown --mode '{other}' (expected 'gff3' or 'contigs')"
+                    ));
+                }
+            }
         }
         "update" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -1413,8 +1439,106 @@ fn handle_convert_genbank(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// clean command: validate and fix GFF3
+// clean command: validate and fix GFF3, OR purge redundant FASTA contigs
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Look ahead in the clean argv for a `--mode <value>` pair. Empty
+/// string when the flag isn't present (then we default to gff3).
+fn parse_clean_mode(args: &[String]) -> String {
+    let mut i = 0usize;
+    while i < args.len() {
+        if args[i] == "--mode" && i + 1 < args.len() {
+            return args[i + 1].clone();
+        }
+        i += 1;
+    }
+    String::new()
+}
+
+/// Contig-cleanup mode: minimap2 self-alignment + drop near-duplicates.
+/// Lives in `src/clean/mod.rs`; this is the argv parser + default-output
+/// resolver, matching the rest of `main.rs`'s style.
+fn handle_clean_contigs(fasta_path: &str, args: &[String]) -> Result<()> {
+    use clean::{run_contig_clean, ContigCleanConfig};
+
+    let mut cfg = ContigCleanConfig {
+        input: PathBuf::from(fasta_path),
+        ..ContigCleanConfig::default()
+    };
+
+    let mut i = 0usize;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--mode" if i + 1 < args.len() => {
+                // Consumed by parse_clean_mode; just skip.
+                i += 2;
+            }
+            "--output" | "-o" if i + 1 < args.len() => {
+                cfg.output = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            "--report" if i + 1 < args.len() => {
+                cfg.report = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            "--coverage" if i + 1 < args.len() => {
+                cfg.coverage = args[i + 1].parse().map_err(|_| {
+                    anyhow::anyhow!("--coverage must be a number, got '{}'", args[i + 1])
+                })?;
+                i += 2;
+            }
+            "--identity" if i + 1 < args.len() => {
+                cfg.identity = args[i + 1].parse().map_err(|_| {
+                    anyhow::anyhow!("--identity must be a number, got '{}'", args[i + 1])
+                })?;
+                i += 2;
+            }
+            "--threads" | "-t" if i + 1 < args.len() => {
+                cfg.threads = args[i + 1].parse().map_err(|_| {
+                    anyhow::anyhow!(
+                        "--threads must be a positive integer, got '{}'",
+                        args[i + 1]
+                    )
+                })?;
+                i += 2;
+            }
+            "--minimap2" if i + 1 < args.len() => {
+                cfg.minimap2 = PathBuf::from(&args[i + 1]);
+                i += 2;
+            }
+            _ => i += 1,
+        }
+    }
+
+    // Default output: <stem>_clean.<ext>
+    if cfg.output.as_os_str().is_empty() {
+        let p = PathBuf::from(fasta_path);
+        let stem = p
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let ext = p
+            .extension()
+            .map(|e| format!(".{}", e.to_string_lossy()))
+            .unwrap_or_else(|| ".fa".to_string());
+        let dir = p.parent().unwrap_or(std::path::Path::new("."));
+        cfg.output = dir.join(format!("{}_clean{}", stem, ext));
+    }
+    if cfg.report.as_os_str().is_empty() {
+        let p = PathBuf::from(fasta_path);
+        let stem = p
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let dir = p.parent().unwrap_or(std::path::Path::new("."));
+        cfg.report = dir.join(format!("{}_dropped.tsv", stem));
+    }
+
+    run_contig_clean(&cfg).map_err(|e| anyhow::anyhow!("{}", e))?;
+    Ok(())
+}
 
 fn handle_clean(gff_path: &str, args: &[String]) -> Result<()> {
     use parser::gff::GFFRecord;

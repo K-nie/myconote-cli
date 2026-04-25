@@ -4,6 +4,7 @@ pub mod ase_template;
 pub mod batch;
 pub mod chat;
 pub mod check;
+pub mod clean;
 pub mod cli;
 pub mod compare;
 pub mod convert;

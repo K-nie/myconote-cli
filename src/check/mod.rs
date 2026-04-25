@@ -77,7 +77,7 @@ const TOOLS: &[Tool] = &[
     },
     Tool {
         name: "minimap2",
-        used_by: "train/update",
+        used_by: "train/update/clean",
         version_arg: "--version",
         install_cmd: "conda install -c bioconda minimap2",
     },

@@ -12,7 +12,52 @@ myconote-cli compare <g1.gff3> <g1.fa> <g2.gff3> <g2.fa> [...] [options]
 - **`pangenome_summary.tsv`** — Tettelin-style bins: `core` / `core_single_copy` / `soft_core` / `shell` / `cloud` / `singletons`, with counts and fractions.
 - **`species_tree.nwk`** — rooted species tree from STAG/STRIDE (produced by OrthoFinder).
 - **`compare_report.txt`** — human-readable summary.
+- **`report.html`** — interactive HTML report (when `--html` is set; see below).
 - **Untouched OrthoFinder output** preserved under `compare_out/proteins/OrthoFinder/Results_<date>/` — includes gene trees, duplication events, multiple sequence alignments (with `--msa`), and per-species single-copy ortholog FASTAs.
+
+## HTML report (`--html`)
+
+`compare --html` emits `compare_out/report.html` alongside the TSV
+outputs. The page is a single self-contained HTML file: CSS and JS
+are inlined, no CDN, no Google Fonts, no external resources. It opens
+correctly from a `file://` URL on a plane.
+
+The report carries five panels:
+
+1. **Pan-genome shape** — core / soft-core / shell / cloud /
+   singleton counts as a coloured table plus a stacked-bar SVG.
+2. **Per-genome statistics** — sortable table of n_proteins,
+   n_orthogroups, % core, % singletons, with click-to-sort headers
+   driven by 70 lines of vanilla JS.
+3. **Ortholog table** — sortable + filterable. Up to 5,000 rows
+   render inline; the full set is in `ortholog_table.tsv`.
+4. **Species tree** — rooted Newick from OrthoFinder rendered as
+   inline SVG with branch lengths to scale, leaf labels readable
+   (right-aligned beside each leaf path).
+5. **Reproducibility footer** — tool version + git SHA, the exact
+   `myconote-cli compare …` invocation, and SHA256 hashes of every
+   input GFF3 and FASTA so the report itself documents what produced
+   it.
+
+Imagine the page as roughly: a centred 1200-px-wide column with the
+heading, a two-column grid (count table + stacked bar) for the
+pan-genome panel, the per-genome stats table beneath, then the
+filter input above the ortholog table, the SVG tree, and a
+monospaced footer block with the SHA256s.
+
+User-supplied gene IDs and genome names are HTML-escaped on the way
+into every panel (including the SVG tree leaves) so a malicious gene
+name like `<script>…</script>` can't break out into markup.
+
+```bash
+myconote-cli compare \
+  s1.gff3 s1.fa \
+  s2.gff3 s2.fa \
+  s3.gff3 s3.fa \
+  --html
+# Opens in any browser:
+open compare_out/report.html
+```
 
 ## Genome-count caps
 
@@ -64,6 +109,7 @@ myconote-cli compare \
 | `--genetic-code <n>` | 1 | NCBI translation table (e.g. 12 for *Candida* CTG clade) |
 | `--soft-core <frac>` | 0.95 | Soft-core presence threshold |
 | `--cloud <frac>` | 0.15 | Cloud upper-bound threshold |
+| `--html` | off | Emit a self-contained interactive HTML report (`report.html`) |
 
 ## Primary-transcript filtering
 

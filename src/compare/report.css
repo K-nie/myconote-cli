@@ -1,0 +1,198 @@
+/* myconote compare report — self-contained styling.
+   No external CSS, no @font-face, no Google Fonts. Everything ships
+   inline so the report renders correctly when opened from a file://
+   URL on a plane. */
+
+:root {
+  --col-core:        #2a623d;
+  --col-soft-core:   #65b56a;
+  --col-shell:       #e6ad3c;
+  --col-cloud:       #c45c4d;
+  --col-singletons:  #8a4a92;
+  --col-bg:          #fafafa;
+  --col-fg:          #222;
+  --col-muted:       #666;
+  --col-border:      #d0d0d0;
+  --col-table-alt:   #f3f3f3;
+  --col-link:        #1a5fb4;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--col-bg);
+  color: var(--col-fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+               sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 32px 0 12px 0;
+  font-size: 20px;
+  border-bottom: 1px solid var(--col-border);
+  padding-bottom: 4px;
+}
+
+h3 {
+  margin: 18px 0 8px 0;
+  font-size: 16px;
+  color: var(--col-muted);
+}
+
+.subtitle {
+  color: var(--col-muted);
+  margin: 0 0 24px 0;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+th, td {
+  border: 1px solid var(--col-border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #ececec;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+th[data-sortable="1"]::after {
+  content: " ⇅";
+  color: var(--col-muted);
+  font-size: 11px;
+}
+
+th.sorted-asc::after { content: " ↑"; color: var(--col-fg); }
+th.sorted-desc::after { content: " ↓"; color: var(--col-fg); }
+
+tbody tr:nth-child(even) { background: var(--col-table-alt); }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 12px 0 24px 0;
+}
+
+.panel {
+  background: white;
+  border: 1px solid var(--col-border);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.bar-chart {
+  width: 100%;
+  height: 60px;
+  border: 1px solid var(--col-border);
+  display: flex;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--col-muted);
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+.tree-svg {
+  background: white;
+  border: 1px solid var(--col-border);
+  border-radius: 4px;
+}
+
+.tree-leaf-label {
+  font-size: 12px;
+  fill: var(--col-fg);
+}
+
+.tree-branch {
+  fill: none;
+  stroke: var(--col-fg);
+  stroke-width: 1.5;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--col-border);
+  border-radius: 3px;
+  margin: 8px 0;
+}
+
+.footer {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--col-border);
+  color: var(--col-muted);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.footer code {
+  background: white;
+  padding: 1px 4px;
+  border: 1px solid var(--col-border);
+  border-radius: 3px;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.no-data {
+  color: var(--col-muted);
+  font-style: italic;
+  padding: 12px;
+}

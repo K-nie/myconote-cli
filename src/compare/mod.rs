@@ -11,6 +11,7 @@
 //! thresholds. Users with HPC can pass `--force-cap` to bypass the tier cap
 //! at their own risk.
 
+pub mod html;
 pub mod orthofinder;
 pub mod primary_transcripts;
 
@@ -83,6 +84,8 @@ pub struct CompareConfig {
     pub soft_core_frac: f64,
     /// Cloud threshold (fraction at or below which a cluster is "cloud").
     pub cloud_frac: f64,
+    /// Emit an interactive HTML report alongside the TSV outputs.
+    pub html: bool,
 }
 
 impl Default for CompareConfig {
@@ -98,6 +101,7 @@ impl Default for CompareConfig {
             genetic_code: 1,
             soft_core_frac: 0.95,
             cloud_frac: 0.15,
+            html: false,
         }
     }
 }
@@ -340,6 +344,25 @@ pub fn run_compare(config: &CompareConfig) -> Result<()> {
         &summary,
         sco_count,
     )?;
+
+    // ── 7. Optional HTML report ──────────────────────────────────────────
+    if config.html {
+        let html_path = config.output_dir.join("report.html");
+        let species_tree = html::read_species_tree(&config.output_dir.join("species_tree.nwk"));
+        let run_command = std::env::args().collect::<Vec<_>>().join(" ");
+        let input_hashes = html::collect_input_hashes(&config.inputs);
+        html::render_html_report(
+            &html_path,
+            &config.inputs,
+            &protein_counts,
+            &orthogroups,
+            &summary,
+            species_tree.as_deref(),
+            &run_command,
+            &input_hashes,
+        )?;
+        println!("    HTML report:         {}", html_path.display());
+    }
 
     println!();
     println!("✓  Comparison complete.");

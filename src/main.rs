@@ -617,6 +617,7 @@ fn main() -> Result<()> {
                 println!("  --genetic-code <n>     NCBI translation table (default: 1)");
                 println!("  --soft-core <frac>     Soft-core threshold fraction (default: 0.95)");
                 println!("  --cloud <frac>         Cloud upper bound fraction (default: 0.15)");
+                println!("  --html                 Emit a self-contained interactive HTML report (report.html)");
                 println!("\nGenome-count caps (auto-detected from protein count):");
                 println!("  Fungi   (≤15 000 proteins/genome):  cap = 5");
                 println!("  Medium  (15–30 k):                   cap = 3");
@@ -1196,6 +1197,10 @@ fn handle_compare(args: &[String]) -> Result<()> {
                     config.force_cap = Some(n);
                 }
                 i += 2;
+            }
+            "--html" => {
+                config.html = true;
+                i += 1;
             }
             _ => {
                 eprintln!("Unknown compare option: {}", args[i]);

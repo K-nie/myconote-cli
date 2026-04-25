@@ -1463,6 +1463,7 @@ dependencies = [
  "statrs 0.17.1",
  "tempfile",
  "thiserror 1.0.69",
+ "tinytemplate",
  "toml",
  "ureq",
  "walkdir",
@@ -2579,6 +2580,16 @@ checksum = "42d3e9c45c09de15d06dd8acf5f4e0e399e85927b7f00711024eb7ae10fa4869"
 dependencies = [
  "displaydoc",
  "zerovec",
+]
+
+[[package]]
+name = "tinytemplate"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be4d6b5f19ff7664e8c98d03e2139cb510db9b0a60b55f8e8709b689d939b6bc"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

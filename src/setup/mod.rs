@@ -113,7 +113,7 @@ pub const DATABASES: &[DbEntry] = &[
     },
     DbEntry {
         key:         "augustus-fungi",
-        description: "Curated fungal species configs for Augustus (~30 species)",
+        description: "Curated fungal species configs for Augustus (~50 species)",
         size_hint:   "~5 MB",
         urls: &[],  // species fetched per-name from the Augustus GitHub mirror
         // Marker is the user-local config dir myconote installs into.
@@ -137,10 +137,26 @@ pub const DATABASES: &[DbEntry] = &[
 // Names match the upstream config/species/<name>/ directory verbatim.
 // Cross-checked against
 // https://github.com/Gaius-Augustus/Augustus/tree/master/config/species
-// at v0.5.1 release time. If a species disappears upstream the
-// per-species fetch will fail loudly with the URL it tried.
+// at v0.7.0 release time (2026-04-24). The list is built by filtering the
+// full upstream species set (167 directories) against a curated fungal
+// genus catalogue plus the bare-genus aliases that Augustus historically
+// shipped (`saccharomyces`, `cryptococcus`, `coprinus`, `fusarium`,
+// `histoplasma`, `neurospora`, `pneumocystis`, `ustilago`,
+// `pchrysosporium`, `anidulans`).
+//
+// Note on size: funannotate's bundled Augustus tree advertises ~100
+// species, but the upstream `config/species/` directory in the
+// `Gaius-Augustus/Augustus` repo only carries ~50 fungal entries — the
+// rest are metazoan / protist / plant. We ship every fungal entry the
+// upstream repo actually distributes; if a species disappears upstream
+// the per-species fetch will fail loudly with the URL it tried.
+//
+// `chlamydomonas` and `Chlamydomonas_eustigma` are green algae kept here
+// because the original 35-species manifest carried `chlamydomonas`,
+// presumably for users running a multi-kingdom predict scaffold.
 pub const AUGUSTUS_FUNGI_SPECIES: &[&str] = &[
     // ── Saccharomycotina budding yeasts ──
+    "saccharomyces",
     "saccharomyces_cerevisiae_S288C",
     "saccharomyces_cerevisiae_rm11-1a_1",
     "candida_albicans",
@@ -156,6 +172,7 @@ pub const AUGUSTUS_FUNGI_SPECIES: &[&str] = &[
     "schizosaccharomyces_pombe",
     "pneumocystis",
     // ── Pezizomycotina filamentous ascomycetes ──
+    "anidulans",
     "aspergillus_fumigatus",
     "aspergillus_nidulans",
     "aspergillus_oryzae",
@@ -163,23 +180,36 @@ pub const AUGUSTUS_FUNGI_SPECIES: &[&str] = &[
     "botrytis_cinerea",
     "chaetomium_globosum",
     "coccidioides_immitis",
+    "fusarium",
     "fusarium_graminearum",
+    "histoplasma",
     "histoplasma_capsulatum",
     "magnaporthe_grisea",
+    "neurospora",
     "neurospora_crassa",
     "Sclerotinia_sclerotiorum",
     "Sordaria_macrospora",
     "verticillium_albo_atrum1",
+    "verticillium_longisporum1",
     // ── Basidiomycota ──
+    "coprinus",
     "coprinus_cinereus",
+    "cryptococcus",
     "cryptococcus_neoformans_gattii",
     "cryptococcus_neoformans_neoformans_B",
+    "cryptococcus_neoformans_neoformans_JEC21",
     "laccaria_bicolor",
+    "pchrysosporium",
     "phanerochaete_chrysosporium",
+    "ustilago",
     "ustilago_maydis",
     // ── Mucoromycota / Microsporidia ──
     "rhizopus_oryzae",
+    "Encephalitozoon_cuniculi",
     "encephalitozoon_cuniculi_GB",
+    // ── Chlorophyta (kept for multi-kingdom users; both upstream entries) ──
+    "chlamydomonas",
+    "Chlamydomonas_eustigma",
 ];
 
 /// Each Augustus species directory contains six files matching
@@ -1582,10 +1612,14 @@ tags = []
 
     #[test]
     fn augustus_fungi_species_list_is_curated() {
-        // Bound: 30–50 well-studied taxa per the v0.5.1 spec.
+        // v0.7.0 expansion: ~50 fungal entries matching the upstream
+        // `config/species/` directory. Bound is wider than v0.5.1 to
+        // accommodate the bare-genus aliases (`saccharomyces`,
+        // `fusarium`, etc.) and the verticillium_longisporum1 +
+        // cryptococcus_neoformans_neoformans_JEC21 additions.
         assert!(
-            AUGUSTUS_FUNGI_SPECIES.len() >= 25 && AUGUSTUS_FUNGI_SPECIES.len() <= 50,
-            "expected 25–50 species, got {}",
+            AUGUSTUS_FUNGI_SPECIES.len() >= 45 && AUGUSTUS_FUNGI_SPECIES.len() <= 60,
+            "expected 45–60 species, got {}",
             AUGUSTUS_FUNGI_SPECIES.len()
         );
     }

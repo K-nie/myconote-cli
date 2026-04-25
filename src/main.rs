@@ -822,7 +822,7 @@ fn main() -> Result<()> {
                 println!("  busco            BUSCO fungi lineage data — used by annotate");
                 println!("  chat-corpus      Q1 open-access paper corpus — used by explain");
                 println!("  ollama           Ollama LLM runtime + model — used by explain");
-                println!("  augustus-fungi   Curated fungal Augustus species (~30) — used by predict/train");
+                println!("  augustus-fungi   Curated fungal Augustus species (~50) — used by predict/train");
                 println!("\nExamples:");
                 println!("  myconote-cli setup --list");
                 println!("  myconote-cli setup                     # download everything");

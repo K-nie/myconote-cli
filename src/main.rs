@@ -15,6 +15,7 @@ pub mod convert;
 pub mod de_template;
 pub mod fetch_rna;
 pub mod fix;
+pub mod go_template;
 pub mod install;
 pub mod learn;
 pub mod mask;
@@ -107,6 +108,7 @@ fn print_main_help() {
     println!(
         "  ase-template Emit an R script for binomial ASE tests on `ase` output (base R only)"
     );
+    println!("  go-template  Emit an R script for topGO Fisher's GO enrichment from DE + annotate output");
     println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
@@ -542,6 +544,40 @@ fn main() -> Result<()> {
             }
             ase_template::run_ase_template(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
         }
+        "go-template" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli go-template --de-results <de_*.tsv> --annotations <annotations.tsv> [options]");
+                println!("\nGenerate a self-contained R script that runs topGO Fisher's");
+                println!("exact test for GO enrichment on a `de-template` results TSV plus");
+                println!("an `annotate` `annotations.tsv` (carrying GO terms). The script is");
+                println!("written to disk but not executed — you run it yourself with `Rscript`.");
+                println!("\nREQUIRES (install in R BEFORE running the emitted script):");
+                println!("  if (!requireNamespace(\"BiocManager\", quietly=TRUE)) install.packages(\"BiocManager\")");
+                println!("  BiocManager::install(c(\"topGO\"))");
+                println!("\nRequired:");
+                println!("  --de-results <tsv>      DE results TSV from `de-template` (with padj column)");
+                println!("  --annotations <tsv>     Annotation TSV from `annotate` (with go_terms column)");
+                println!("\nOptions:");
+                println!("  --output <file.R>  -o   Output R script (default: go_enrichment.R)");
+                println!("  --fdr <n>               Significance threshold on padj (default: 0.05)");
+                println!("  --ontology <BP|MF|CC|all> Which GO ontology to test (default: all)");
+                println!("  --top <n>               Top-N enriched terms shown in dot plot (default: 30)");
+                println!("  --de-id-col <name>      ID column in DE TSV (default: transcript)");
+                println!("  --ann-id-col <name>     ID column in annotations TSV (default: locus_tag)");
+                println!("  --go-col <name>         GO terms column in annotations TSV (default: go_terms)");
+                println!("  --go-separator <str>    Separator inside GO column (default: |)");
+                println!("\nOutputs (script emits when run):");
+                println!("  go_<ontology>_enrichment.tsv  One TSV per ontology, sorted by Fisher p");
+                println!("  go_dotplot.pdf                One panel per ontology, top-N terms");
+                println!("\nExample:");
+                println!("  myconote-cli go-template \\");
+                println!("      --de-results de_condition_treated_vs_control.tsv \\");
+                println!("      --annotations annotate_out/annotations.tsv");
+                println!("  Rscript go_enrichment.R");
+                return Ok(());
+            }
+            go_template::run_go_template(&args[2..]).map_err(|e| anyhow::anyhow!("{}", e))?;
+        }
         "compare" => {
             if args.len() < 4 || has_help_flag(&args[2..]) {
                 println!("Usage: myconote-cli compare <g1.gff3> <g1.fa> <g2.gff3> <g2.fa> [...] [options]");
@@ -945,7 +981,7 @@ fn main() -> Result<()> {
             let path = &args[2];
             handle_submit(path, &args[3..])?;
         }
-        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | de-template | ase | ase-template | compare | convert | clean | fix | install | check | setup | species | learn", command),
+        _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | de-template | ase | ase-template | go-template | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
     Ok(())

@@ -125,6 +125,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `de-template` | Generate a DESeq2 differential-expression R script from `quant` output (tximport → DESeq2 → apeglm → TSV + MA + volcano plots). Requires R + Bioconductor installed by the user; the tool writes the script, the user runs `Rscript`. |
 | `ase` | Allele-specific expression for phased/heterozygous/hybrid fungal genomes — builds personalized transcriptomes per haplotype from a phased VCF, then runs salmon against each haplotype independently. Emits `<sample>.<hap>` counts + TPM, informativeness summary, and per-haplotype mapping-rate asymmetry flags. |
 | `ase-template` | Generate a binomial-ASE R script from `ase` output (base R only, no Bioconductor). Per-transcript `binom.test` with sample-specific null from hap0:hap1 library ratio, BH-adjusted per sample. Tool writes the script, user runs `Rscript`. |
+| `go-template` | Generate a topGO Fisher's-exact-test R script from a `de-template` results TSV plus an `annotate` `annotations.tsv`. Runs BP / MF / CC ontologies (or one), BH-adjusts within each, emits per-ontology TSVs and a combined dot plot. Tool writes the script, user runs `Rscript`. |
 | `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large) |
 | `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / CDS / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |

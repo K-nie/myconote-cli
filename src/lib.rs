@@ -11,6 +11,7 @@ pub mod convert;
 pub mod de_template;
 pub mod fetch_rna;
 pub mod fix;
+pub mod go_template;
 pub mod install;
 pub mod learn;
 pub mod mask;

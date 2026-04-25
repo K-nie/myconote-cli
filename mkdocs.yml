@@ -58,6 +58,7 @@ nav:
     - de-template: analysis/de-template.md
     - ase: analysis/ase.md
     - ase-template: analysis/ase-template.md
+    - go-template: analysis/go-template.md
     - compare: analysis/compare.md
     - explain: analysis/explain.md
   - Databases: databases.md

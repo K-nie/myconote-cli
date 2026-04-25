@@ -33,6 +33,7 @@ pub const VALID_SUBCOMMANDS: &[&str] = &[
     "de-template",
     "ase",
     "ase-template",
+    "go-template",
     "compare",
     "convert",
     "clean",

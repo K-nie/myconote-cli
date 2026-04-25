@@ -6,6 +6,95 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-04-25
+
+### Fixed
+- **Audit pass over user-facing claims.** Comprehensive sweep across
+  README, CHANGELOG, help text, learn lessons, and source after three
+  rapid feature releases (v0.5.0 → v0.7.0). Full report in
+  `docs/audit/v0.7.1_audit.md`. Specific corrections:
+  - README "18 NCBI translation tables supported in total" → "25 NCBI
+    translation tables supported in total (tables 1–6, 9–14, 16,
+    21–31, 33)" — matches the data-driven registry in
+    `src/annotate/genetic_code.rs::REGISTRY`.
+  - README "8 lessons" → "20 lessons" with the new four-track
+    catalogue description (foundation 1-8, RNA-seq 9-14, predictors
+    15-16, quality 17-20).
+  - `learn` lesson 5 narrative "myconote-cli supports 18 NCBI
+    translation tables" → "25 NCBI translation tables — tables 1–6,
+    9–14, 16, 21–31, and 33". Same drift, same fix.
+  - `learn` lesson 1 final True/False reframed: "myconote-cli can only
+    annotate fungal genomes" → "myconote-cli is focused primarily on
+    fungal genomes" (matches the v0.5.0 fungi-narrow scope: defaults
+    target fungi; non-fungal kingdom flags remain as experimental
+    scaffold).
+  - `learn` lesson 8 ("Analysis & Visualization") rewritten end-to-end
+    from `plot` / `view` / `synteny` (none of which exist as
+    subcommands; they were aspirational in v0.1.0 and removed before
+    v0.2.0) to `stats` + `compare` + `convert` with explicit handoff
+    guidance to IGV / Proksee / JBrowse2 / clinker as external
+    visualization tools. Now titled "Stats, Comparative Genomics, and
+    Conversion".
+  - `docs/learn.md` rewritten to reflect the 20-lesson catalogue with
+    four tracks; the previous version still listed "8 \| Analysis &
+    Handoff \| ~8 min \| Stats, phylogenetics, Y1000+ placement, …"
+    which referenced removed features.
+  - `docs/paper/myconote_manuscript.md` annotated with a v0.7.1 audit
+    TODO block at the top covering two count drifts ("fifteen
+    functional annotation sources" — code has 11; "ships ~35 curated
+    fungal Augustus species" — manifest is 49 since v0.7.0). Code is
+    the source of truth; user revises framing.
+- **Removed dead `src/cli/` clap scaffold.** `src/cli/commands.rs` and
+  `src/cli/mod.rs` were unused pre-v0.2.0 clap-derived enum +
+  argument structs (`Phylogeny(PhylogenyArgs)`, `Blast(BlastArgs)`,
+  `Align(AlignArgs)`, `CompareArgs.build_tree`, `CompareArgs.plot_type`)
+  for subcommands that were never wired up — main.rs uses manual arg
+  parsing throughout. Deleted entire directory; removed `pub mod cli;`
+  from `src/main.rs` and `src/lib.rs`. Build remains warning-clean.
+  Without this removal, repo-wide greps for `phylogeny` / `Blast` /
+  `Align` would keep returning false positives that obscure real
+  drift in future audits.
+
+### Changed
+- **`learn` tutorial expanded from 8 to 20 lessons** (~127 additional
+  minutes of content) covering the modern features added in v0.5.0
+  through v0.7.0. Lessons 9-20 are completable in any order — the
+  catalogue is split into four tracks:
+  - Foundation track (1-8, sequential): pipeline basics through NCBI
+    submission. Lessons 1, 5, and 8 cleaned up as part of the audit
+    (see Fixed above).
+  - RNA-seq track (9-14): `quant` (salmon decoy-aware index, fastp QC,
+    SHA256 cache), `fetch-rna` (ENA REST default, MD5 verification,
+    sample-sheet emission), `de-template` (tximport + DESeq2 +
+    apeglm), `ase` (phased VCF, personalized transcriptome,
+    unphased-het hard error), `ase-template` (per-sample-corrected
+    binomial test — the most pedagogically valuable concept in the
+    ASE stack), `go-template` (topGO Fisher's exact, BP/MF/CC).
+  - Modern predictors track (15-16): `predict --use-braker` (BRAKER
+    1/2/3 mode auto-detection, conflict guard, genetic-code
+    forwarding), `predict --genemark-mode` (ES/ET/EP+/ETP+, ProtHint
+    dependency).
+  - Quality and reproducibility track (17-20): `clean --mode contigs`
+    (purge_dups-style haplotig dedup), `setup --db augustus-fungi`
+    (the 49-species manifest, AUGUSTUS_CONFIG_PATH), reproducibility
+    manifests (`quant_bundle.json` / `ase_bundle.json` schema, SHA256
+    input hashing, byte-identical re-runs from a published bundle),
+    NCBI codon tables (Candida CTG-clade focus, the
+    silent-mistranslation failure mode under Standard, Table 12
+    propagation through to BRAKER's `--translation_table`).
+- Each new lesson follows the existing pattern (objective →
+  narrative → command → verify → next-step nudge), routes to
+  `myconote-cli check` / `install` first when external tools are
+  needed, and offers `skip` for users without the dependencies.
+- 10 new lib tests in `src/learn/lessons.rs::tests` guard the
+  catalogue: count (must be 20), title uniqueness, every lesson has
+  a verification terminal step, lesson durations within
+  `[5, 20]` minutes, RNA-seq / predictors / quality tracks present
+  by keyword, name-based lookup integrity for new lessons, and a
+  regression test that no lesson body re-introduces removed
+  subcommands (`myconote-cli phylogeny`, `myconote-cli place`,
+  `Y1000+`).
+
 ## [0.7.0] — 2026-04-24
 
 ### Added
@@ -442,5 +531,10 @@ Initial public release. Pipeline: `sort → mask → train → predict → updat
 `compare`, `convert`, `clean`, `fix`) and five utilities (`install`,
 `check`, `setup`, `species`, `learn`).
 
+[0.7.1]: https://github.com/K-nie/myconote-cli/releases/tag/v0.7.1
+[0.7.0]: https://github.com/K-nie/myconote-cli/releases/tag/v0.7.0
+[0.6.0]: https://github.com/K-nie/myconote-cli/releases/tag/v0.6.0
+[0.5.1]: https://github.com/K-nie/myconote-cli/releases/tag/v0.5.1
+[0.5.0]: https://github.com/K-nie/myconote-cli/releases/tag/v0.5.0
 [0.2.0]: https://github.com/K-nie/myconote-cli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/K-nie/myconote-cli/releases/tag/v0.1.0

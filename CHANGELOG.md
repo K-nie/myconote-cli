@@ -6,6 +6,8 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-04-24
+
 ### Added
 - **`ase` subcommand** — allele-specific expression for heterozygous,
   hybrid, or polyploid fungal genomes. Builds personalized

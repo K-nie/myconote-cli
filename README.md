@@ -17,7 +17,7 @@ Sort → Mask → Train → Predict → Update → Annotate → Submit
 
 Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) that hand off cleanly to **Proksee** (web circular maps), **IGV** (desktop browser), and **clinker** (cross-species synteny).
 
-**New in v0.5.1** — `clean --mode contigs` purges near-duplicate haplotigs via minimap2 self-alignment; `setup --db augustus-fungi` ships a curated 35-species fungal Augustus bundle with `--dry-run` audit; `go-template` emits a topGO Fisher's-exact-test R script from `de-template` + `annotate` outputs. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+**New in v0.6.0** — `predict --genemark-mode <es|et|ep|etp>` reaches the two protein-evidence-guided GeneMark variants (EP+ via ProtHint and ETP+) that fill the gap relative to funannotate, especially for novel CTG-clade fungi without RNA-seq; `predict --use-braker` runs BRAKER 1/2/3 as a complete predictor (replacing the in-house Augustus/SNAP/GlimmerHMM/GeneMark + EVM stack) with auto-detected mode and full forwarding of `--genetic-code`. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 **New to myconote?** Run `myconote-cli learn` for an interactive, swirl-style tutorial right in your terminal.
 
@@ -107,7 +107,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `sort` | Sort contigs by length, rename headers, filter short scaffolds |
 | `mask` | Identify and soft-mask repeats (5 engines: self, repeatmasker, repeatmodeler, both, full) |
 | `train` | RNA-seq-guided training of Augustus and SNAP via Trinity + PASA |
-| `predict` | Multi-tool gene prediction (Augustus + SNAP + GlimmerHMM + GeneMark + protein evidence + EVM consensus) |
+| `predict` | Multi-tool gene prediction (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + protein evidence + EVM consensus), or BRAKER 1/2/3 as a single-engine alternative via `--use-braker` |
 | `update` | Refine gene models with RNA-seq evidence (PASA or lightweight UTR extension) |
 | `annotate` | Functional annotation (MMseqs2, Pfam, InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome) |
 | `submit` | NCBI GenBank submission prep (GFF3 validation + .tbl + table2asn + .sqn) |

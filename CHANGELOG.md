@@ -6,6 +6,84 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-04-24
+
+### Added
+- **`predict --genemark-mode <es|et|ep|etp>`** — adds the two
+  protein-evidence-guided GeneMark variants that were previously
+  unreachable (EP+ and ETP+) and replaces the dual `--genemark` /
+  `--genemark-hints` flags with a single mode selector. EP+
+  (`gmes_petap.pl --EP`) is the highest-impact addition for novel
+  CTG-clade fungi without RNA-seq because the alternative-yeast
+  nuclear code makes published predictors error-prone, and protein
+  evidence anchors the training. EP/ETP+ each call ProtHint
+  internally to convert the genome + protein FASTA into the GFF
+  hint files that GeneMark consumes; ETP+ additionally takes the
+  RNA-seq intron hints. ETP requires both `--genemark-hints` and
+  `--protein-fasta` and fails loudly if either is missing — no
+  silent fallback. The legacy flags still work and are translated:
+  `--genemark` (alone) → ES; `--genemark` + hints → ET; hints alone
+  → ET. EP/ETP have no legacy alias because they did not exist in
+  earlier releases. `prothint.py` registered in `install` / `check`
+  with `manual_note` flagging that ProtHint has no standalone
+  bioconda recipe (verified 2026-04-24 against bioconda osx-64 and
+  noarch — `PackagesNotFoundError` for both `prothint` and the
+  `prothint*` glob); ProtHint ships bundled with the GeneMark-ES
+  installer tarball under `<install>/ProtHint/bin/` and with the
+  bioconda `braker3` package. 11 unit tests cover mode-string
+  parsing (`es|et|ep|etp` plus the publication-style `EP+`/`ETP+`
+  aliases, case-insensitive), the legacy-alias resolution table,
+  and the canonical long-name strings used in user-facing logs.
+  The end-to-end live ETP test is gated under `#[ignore]` like
+  `de-template`'s `Rscript parse()` check, because actually
+  running `gmes_petap.pl --ETP` needs a Georgia-Tech-licensed
+  GeneMark binary plus ProtHint together.
+- **`predict --use-braker`** — BRAKER 1/2/3 as a first-class
+  predictor. When set, MycoNote-CLI does not run Augustus / SNAP /
+  GlimmerHMM / GeneMark / miniprot itself or the EVM consensus
+  stage; `braker.pl` is invoked end-to-end and `braker.gff3` is
+  published as `consensus.gff3` so the downstream `update`,
+  `annotate`, `submit` stages consume it unchanged. New
+  `src/predict/braker.rs` exposes a `BrakerMode` enum
+  (`Braker1` / `Braker2` / `Braker3`) that maps to BRAKER's
+  `--esmode` / `--epmode` / `--etpmode` switches; flag names
+  verified against `Gaius-Augustus/BRAKER` `scripts/braker.pl`
+  GetOptions on 2026-04-24. Mode auto-detects from inputs:
+  RNA-only → BRAKER1, protein-only → BRAKER2, both → BRAKER3.
+  `--braker-mode <1|2|3>` overrides auto-detection;
+  `--braker-rna-bam <file>` is repeatable (and accepts a
+  comma-separated list); `--braker-proteins <fa>` carries the
+  protein database. New `--genetic-code <n>` flag forwards through
+  to BRAKER as `--translation_table`, wiring the *Candida* CTG
+  code (12) and ciliate-style codes (6) end-to-end through
+  Augustus + GeneMark inside BRAKER. New
+  `check_braker_conflicts` rejects `--use-braker` combined with
+  any of the standard predictor flags (`--genemark-mode`,
+  `--genemark`, `--genemark-hints`, `--protein-evidence`,
+  `--protein-fasta`, `--glimmerhmm`) and lists every offending
+  flag in a single error so the fix is one round-trip, not
+  whack-a-mole. `--no-snap` is intentionally not a conflict
+  (disabling a predictor that wouldn't run anyway is a no-op).
+  `braker.pl` registered in `install` / `check` with
+  `conda_pkg=braker3` (verified 2026-04-24: bioconda osx-64 lists
+  `braker3` 3.0.3 → 3.0.8; the binary it provides is `braker.pl`,
+  not `braker3.pl`). 25 tests added (10 in
+  `src/predict/braker.rs`, 15 in `tests/unit_tests.rs`): mode-string
+  parsing (numeric + named), the mode-flag string contract against
+  upstream BRAKER CLI, the four-cell auto-detection truth table,
+  default-config invariants, and the eight conflict cases. Live
+  BRAKER smoke test gated under `#[ignore]`.
+
+### Documentation
+- **`docs/pipeline/predict.md`** rewritten from a stub. New
+  "Choosing a GeneMark mode" subsection lays out the four GeneMark
+  modes side by side with their inputs, quality tier, and when to
+  reach for each, with an OrthoDB-fungi example for EP+. New
+  "Using BRAKER for maximum accuracy" subsection covers the
+  auto-detection table, the genetic-code forwarding, and the
+  full dependency chain (braker3 + Augustus +
+  `AUGUSTUS_CONFIG_PATH` + licensed GeneMark + ProtHint).
+
 ## [0.5.1] — 2026-04-25
 
 ### Added

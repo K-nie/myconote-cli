@@ -93,7 +93,7 @@ fn print_main_help() {
     println!("  sort     Sort + rename genome contigs by length (pre-processing)");
     println!("  mask     Identify and soft-mask repeats in a genome FASTA");
     println!("  train    RNA-seq mediated training of Augustus/SNAP (Trinity + PASA)");
-    println!("  predict  Predict genes (Augustus + SNAP + GlimmerHMM + GeneMark + EVM)");
+    println!("  predict  Predict genes (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + EVM, or BRAKER via --use-braker)");
     println!("  update   Refine gene models with RNA-seq evidence (PASA UTR extension)");
     println!("  annotate Functionally annotate genes (MMseqs2 + Pfam + EggNog + CAZyme + MEROPS + tRNAscan + ...)");
     println!("  submit   Prepare NCBI GenBank submission (validation + table2asn)");

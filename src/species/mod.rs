@@ -31,7 +31,12 @@ pub struct AugustusSpecies {
 // Required files for a valid species
 // ─────────────────────────────────────────────────────────────────────────────
 
-const REQUIRED_FILES: &[&str] = &[
+// Augustus species directories use a `<species>_<file>` naming
+// convention on the canonical tree (e.g. saccharomyces_cerevisiae_S288C
+// → saccharomyces_cerevisiae_S288C_parameters.cfg). We accept that
+// form first and fall back to the bare names in case some legacy or
+// hand-curated dirs use them.
+const REQUIRED_SUFFIXES: &[&str] = &[
     "parameters.cfg",
     "exon_probs.pbl",
     "intron_probs.pbl",
@@ -77,7 +82,7 @@ pub fn list_species(filter: Option<&str>) {
                     continue;
                 }
 
-                let complete = check_species_complete(&sp_path);
+                let complete = check_species_complete(&sp_path, &name);
                 let display = read_display_name(&sp_path, &name);
 
                 all_species.push(AugustusSpecies {
@@ -282,8 +287,12 @@ fn find_augustus_config_dirs() -> Vec<(PathBuf, bool)> {
     dirs
 }
 
-fn check_species_complete(sp_path: &Path) -> bool {
-    REQUIRED_FILES.iter().all(|f| sp_path.join(f).exists())
+fn check_species_complete(sp_path: &Path, species_name: &str) -> bool {
+    REQUIRED_SUFFIXES.iter().all(|suffix| {
+        let prefixed = sp_path.join(format!("{species_name}_{suffix}"));
+        let bare = sp_path.join(suffix);
+        prefixed.exists() || bare.exists()
+    })
 }
 
 fn read_display_name(sp_path: &Path, fallback: &str) -> String {
@@ -326,4 +335,65 @@ fn read_display_name(sp_path: &Path, fallback: &str) -> String {
     }
 
     fallback.to_string()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn touch(p: &Path) {
+        std::fs::write(p, b"").unwrap();
+    }
+
+    #[test]
+    fn complete_with_prefixed_filenames() {
+        // Real Augustus species dirs ship `<name>_parameters.cfg` etc.
+        // Confirmed against augustus-3.5.0's bundled species/.
+        let tmp = TempDir::new().unwrap();
+        let sp = tmp.path().join("saccharomyces_cerevisiae_S288C");
+        std::fs::create_dir_all(&sp).unwrap();
+        for suffix in REQUIRED_SUFFIXES {
+            touch(&sp.join(format!("saccharomyces_cerevisiae_S288C_{suffix}")));
+        }
+        assert!(check_species_complete(
+            &sp,
+            "saccharomyces_cerevisiae_S288C"
+        ));
+    }
+
+    #[test]
+    fn complete_with_bare_filenames() {
+        // Legacy / hand-curated dirs may use the bare names — accept those too.
+        let tmp = TempDir::new().unwrap();
+        let sp = tmp.path().join("custom_species");
+        std::fs::create_dir_all(&sp).unwrap();
+        for suffix in REQUIRED_SUFFIXES {
+            touch(&sp.join(suffix));
+        }
+        assert!(check_species_complete(&sp, "custom_species"));
+    }
+
+    #[test]
+    fn incomplete_when_a_required_file_missing() {
+        let tmp = TempDir::new().unwrap();
+        let sp = tmp.path().join("partial");
+        std::fs::create_dir_all(&sp).unwrap();
+        // Only three of four required files present.
+        touch(&sp.join("partial_parameters.cfg"));
+        touch(&sp.join("partial_exon_probs.pbl"));
+        touch(&sp.join("partial_intron_probs.pbl"));
+        // partial_igenic_probs.pbl deliberately absent.
+        assert!(!check_species_complete(&sp, "partial"));
+    }
+
+    #[test]
+    fn empty_dir_is_incomplete() {
+        let tmp = TempDir::new().unwrap();
+        let sp = tmp.path().join("empty");
+        std::fs::create_dir_all(&sp).unwrap();
+        assert!(!check_species_complete(&sp, "empty"));
+    }
 }

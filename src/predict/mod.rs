@@ -1,4 +1,5 @@
 pub mod augustus;
+pub mod braker;
 pub mod evidence;
 pub mod genemark;
 pub mod glimmer;
@@ -80,6 +81,22 @@ pub struct PredictConfig {
     pub ploidy: Option<u8>,
     /// Evidence weights TOML file (None = use defaults)
     pub weights_file: Option<PathBuf>,
+    // ── BRAKER (v0.6.0) ──────────────────────────────────────────────────────
+    /// When true, hand the entire prediction over to BRAKER and skip the
+    /// standard ab-initio + EVM consensus stack.  Mutually exclusive with the
+    /// per-tool predictor flags (Augustus / SNAP / GlimmerHMM / GeneMark /
+    /// miniprot are not invoked when BRAKER is the engine).
+    pub use_braker: bool,
+    /// BRAKER1/2/3 mode override.  `None` means auto-detect from the inputs:
+    /// RNA-only -> 1, protein-only -> 2, both -> 3.
+    pub braker_mode: Option<braker::BrakerMode>,
+    /// RNA-seq BAM(s) for BRAKER (`--bam`, repeatable).
+    pub braker_rna_bams: Vec<PathBuf>,
+    /// Protein FASTA for BRAKER (`--prot_seq`, typically OrthoDB fungi).
+    pub braker_proteins: Option<PathBuf>,
+    /// NCBI translation table forwarded to BRAKER as `--translation_table`
+    /// and through Augustus / GeneMark.  Only meaningful when `use_braker`.
+    pub genetic_code: u8,
 }
 
 impl Default for PredictConfig {
@@ -106,6 +123,11 @@ impl Default for PredictConfig {
             max_intron: 10_000,
             ploidy: None,
             weights_file: None,
+            use_braker: false,
+            braker_mode: None,
+            braker_rna_bams: Vec::new(),
+            braker_proteins: None,
+            genetic_code: 1,
         }
     }
 }
@@ -147,6 +169,56 @@ pub fn resolve_genemark_mode(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// BRAKER conflict check
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Reject predict configs where `--use-braker` is combined with the standard
+/// per-predictor flags.  BRAKER is a complete alternative engine; the EVM
+/// stack does not run when it's on, so any per-predictor flag is at best
+/// dead weight and at worst confusing (e.g. `--genemark-mode etp` while
+/// BRAKER also runs its own GeneMark-ETP+ internally).
+///
+/// This is a pure function so it can be unit-tested without spinning up
+/// the whole pipeline.
+pub fn check_braker_conflicts(config: &PredictConfig) -> Result<()> {
+    if !config.use_braker {
+        return Ok(());
+    }
+    let mut conflicts: Vec<&'static str> = Vec::new();
+    if config.genemark_mode.is_some() {
+        conflicts.push("--genemark-mode");
+    }
+    if config.use_genemark {
+        conflicts.push("--genemark");
+    }
+    if config.genemark_hints.is_some() {
+        conflicts.push("--genemark-hints");
+    }
+    if config.protein_evidence.is_some() {
+        conflicts.push("--protein-evidence");
+    }
+    if config.protein_fasta.is_some() {
+        conflicts.push("--protein-fasta");
+    }
+    if config.use_glimmerhmm {
+        conflicts.push("--glimmerhmm");
+    }
+    // Note: --no-snap is NOT a conflict — it's a way to disable a predictor
+    // we wouldn't run anyway, so silently allow it.
+    if conflicts.is_empty() {
+        Ok(())
+    } else {
+        Err(MycoNoteError::InvalidFormat(format!(
+            "--use-braker is mutually exclusive with the standard predictor \
+             flags. Drop these and re-run: {}. \
+             Pass RNA-seq + protein evidence via --braker-rna-bam and \
+             --braker-proteins instead.",
+            conflicts.join(", ")
+        )))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SNAP HMM defaults per kingdom
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -175,8 +247,59 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         )));
     }
 
+    // ── Reject predict configs that mix BRAKER with the standard stack ───────
+    check_braker_conflicts(config)?;
+
     // ── Create output directory ───────────────────────────────────────────────
     std::fs::create_dir_all(&config.out_dir).map_err(MycoNoteError::Io)?;
+
+    // ── BRAKER short-circuit ─────────────────────────────────────────────────
+    // When `--use-braker` is on, hand the entire prediction over to braker.pl
+    // and skip the EVM consensus stack entirely.  The downstream stages
+    // (`update`, `annotate`, `submit`) consume `braker.gff3` exactly the way
+    // they consume the EVM-generated `consensus.gff3`, so we just publish
+    // braker.gff3 as the canonical predict output and return.
+    if config.use_braker {
+        println!("── Gene prediction (BRAKER) ─────────────────────────────────");
+        println!("  Kingdom : {}", config.kingdom.display_name());
+        println!("  Input   : {}", config.masked_fasta.display());
+        println!("  Output  : {}", config.out_dir.display());
+
+        let species = config
+            .augustus_species
+            .clone()
+            .unwrap_or_else(|| format!("{}_braker", config.locus_prefix.to_lowercase()));
+
+        let braker_cfg = braker::BrakerConfig {
+            genome: config.masked_fasta.clone(),
+            rna_bams: config.braker_rna_bams.clone(),
+            proteins: config.braker_proteins.clone(),
+            out_dir: config.out_dir.join("braker"),
+            species,
+            threads: config.threads,
+            genetic_code: config.genetic_code,
+            mode: config.braker_mode,
+            fungus: matches!(config.kingdom, Kingdom::Fungi),
+        };
+
+        let braker_gff = braker::run_braker(&braker_cfg)?;
+        // Publish under the canonical name downstream stages expect, so the
+        // BRAKER and EVM paths are interchangeable from the user's POV.
+        let consensus_gff = config.out_dir.join("consensus.gff3");
+        std::fs::copy(&braker_gff, &consensus_gff).map_err(MycoNoteError::Io)?;
+
+        let gene_count = count_genes_in_gff3(&consensus_gff)?;
+        println!("  ✓  BRAKER consensus → {}", consensus_gff.display());
+        println!("     {} genes called", gene_count);
+
+        // Reuse the existing summary writer with a single-source list so the
+        // output shape is identical to the EVM path.
+        let summary_path = config.out_dir.join("predict_summary.txt");
+        let inputs = vec![(braker_gff.clone(), "BRAKER", 0.0)];
+        write_summary(&summary_path, config, gene_count, &inputs)?;
+
+        return Ok((consensus_gff, gene_count));
+    }
 
     println!("── Gene prediction ──────────────────────────────────────────");
     println!("  Kingdom : {}", config.kingdom.display_name());
@@ -502,6 +625,30 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     write_summary(&summary_path, config, gene_count, &prediction_inputs)?;
 
     Ok((consensus_gff, gene_count))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gene counter (used on the BRAKER short-circuit path where EVM doesn't run)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Count `gene` features in a GFF3 file.  Used after a BRAKER run where we
+/// don't go through the EVM consensus stage (which already returned a count).
+fn count_genes_in_gff3(gff: &Path) -> Result<usize> {
+    use std::io::{BufRead, BufReader};
+    let file = std::fs::File::open(gff).map_err(MycoNoteError::Io)?;
+    let reader = BufReader::new(file);
+    let mut n = 0usize;
+    for line in reader.lines() {
+        let line = line.map_err(MycoNoteError::Io)?;
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
+        let cols: Vec<&str> = line.split('\t').collect();
+        if cols.len() >= 3 && cols[2] == "gene" {
+            n += 1;
+        }
+    }
+    Ok(n)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

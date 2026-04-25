@@ -250,6 +250,24 @@ fn main() -> Result<()> {
                 println!("  --genemark                  [legacy] alias for --genemark-mode es");
                 println!("  --genemark-hints <gff>      RNA-seq intron hints in GFF (required for et / etp)");
                 println!("  --protein-fasta <fa>        Protein FASTA for miniprot and ProtHint (ep / etp)");
+                println!("  --genetic-code <n>          NCBI translation table (default: 1).");
+                println!("                              Forwarded to BRAKER when --use-braker is on.");
+                println!("                              12 = Candida CTG clade.");
+                println!();
+                println!("  BRAKER (replaces the standard ab-initio + EVM stack):");
+                println!("  --use-braker                Run BRAKER as a complete predictor");
+                println!("                              Mutually exclusive with --genemark-mode,");
+                println!("                              --protein-fasta, --glimmerhmm, etc.");
+                println!("                              Requires bioconda braker3 + Augustus +");
+                println!("                              licensed GeneMark + ProtHint.  Run");
+                println!("                              `myconote-cli setup --db augustus-fungi`");
+                println!("                              once to populate AUGUSTUS_CONFIG_PATH.");
+                println!("  --braker-mode <1|2|3>       Override auto-detection:");
+                println!("                                1 = RNA-seq only");
+                println!("                                2 = proteins only");
+                println!("                                3 = both (gold standard)");
+                println!("  --braker-rna-bam <file>     RNA-seq BAM (repeatable; or comma-list)");
+                println!("  --braker-proteins <fa>      Protein FASTA (e.g. OrthoDB fungi)");
                 println!("  --threads <n>               Threads (default: 4)");
                 println!("\nKingdoms and their default Augustus species:");
                 println!("  fungi    saccharomyces_cerevisiae_S288C");
@@ -1945,6 +1963,49 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                 if let Ok(n) = args[i + 1].parse::<usize>() {
                     config.threads = n;
                 }
+                i += 2;
+            }
+            "--genetic-code" if i + 1 < args.len() => {
+                match args[i + 1].parse::<u8>() {
+                    Ok(n) => config.genetic_code = n,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --genetic-code {:?}: expected an integer",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            // ── BRAKER flags (v0.6.0) ────────────────────────────────────────
+            "--use-braker" => {
+                config.use_braker = true;
+                i += 1;
+            }
+            "--braker-mode" if i + 1 < args.len() => {
+                match predict::braker::BrakerMode::from_str(&args[i + 1]) {
+                    Some(m) => config.braker_mode = Some(m),
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --braker-mode {:?}. Expected: 1, 2, or 3",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            // --braker-rna-bam may be repeated, OR given a comma-separated list.
+            "--braker-rna-bam" if i + 1 < args.len() => {
+                for bam in args[i + 1].split(',') {
+                    let bam = bam.trim();
+                    if !bam.is_empty() {
+                        config.braker_rna_bams.push(PathBuf::from(bam));
+                    }
+                }
+                i += 2;
+            }
+            "--braker-proteins" if i + 1 < args.len() => {
+                config.braker_proteins = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
             _ => i += 1,

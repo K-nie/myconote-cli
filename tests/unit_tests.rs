@@ -557,3 +557,195 @@ mod genemark_mode_tests {
         assert!(myconote_cli::predict::genemark::prothint_available());
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BRAKER (v0.6.0) — config, mutual exclusion, mode auto-detection
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod braker_tests {
+    use myconote_cli::predict::braker::{detect_mode, BrakerMode};
+    use myconote_cli::predict::genemark::GeneMarkMode;
+    use myconote_cli::predict::{check_braker_conflicts, PredictConfig};
+    use std::path::PathBuf;
+
+    // ── Mode auto-detection contract ─────────────────────────────────────────
+
+    #[test]
+    fn auto_detect_rna_only_picks_braker1() {
+        let bams = vec![PathBuf::from("rna1.bam")];
+        assert_eq!(detect_mode(&bams, None), Some(BrakerMode::Braker1));
+    }
+
+    #[test]
+    fn auto_detect_protein_only_picks_braker2() {
+        let prot = PathBuf::from("orthodb_fungi.fa");
+        assert_eq!(detect_mode(&[], Some(&prot)), Some(BrakerMode::Braker2));
+    }
+
+    #[test]
+    fn auto_detect_both_picks_braker3() {
+        let bams = vec![PathBuf::from("a.bam"), PathBuf::from("b.bam")];
+        let prot = PathBuf::from("orthodb_fungi.fa");
+        assert_eq!(detect_mode(&bams, Some(&prot)), Some(BrakerMode::Braker3));
+    }
+
+    #[test]
+    fn auto_detect_neither_returns_none() {
+        // run_braker converts this into a hard error at call time; we don't
+        // silently fall back to anything (no silent fallbacks rule).
+        assert_eq!(detect_mode(&[], None), None);
+    }
+
+    // ── Mode-flag mapping (BRAKER CLI contract) ──────────────────────────────
+
+    #[test]
+    fn braker_mode_flag_strings_match_upstream_braker_cli() {
+        // Verified against Gaius-Augustus/BRAKER scripts/braker.pl on
+        // 2026-04-24 — these are the GetOptions keys, not invented.
+        assert_eq!(BrakerMode::Braker1.mode_flag(), "--esmode");
+        assert_eq!(BrakerMode::Braker2.mode_flag(), "--epmode");
+        assert_eq!(BrakerMode::Braker3.mode_flag(), "--etpmode");
+    }
+
+    #[test]
+    fn braker_mode_from_str_accepts_numeric_and_named() {
+        assert_eq!(BrakerMode::from_str("1"), Some(BrakerMode::Braker1));
+        assert_eq!(BrakerMode::from_str("braker2"), Some(BrakerMode::Braker2));
+        assert_eq!(BrakerMode::from_str("3"), Some(BrakerMode::Braker3));
+        assert_eq!(BrakerMode::from_str("4"), None);
+        assert_eq!(BrakerMode::from_str(""), None);
+    }
+
+    // ── Mutual-exclusion contract for --use-braker vs standard predictors ────
+
+    #[test]
+    fn braker_off_never_conflicts() {
+        // When BRAKER isn't active, every per-predictor flag is fine.
+        let cfg = PredictConfig {
+            use_genemark: true,
+            use_glimmerhmm: true,
+            genemark_mode: Some(GeneMarkMode::Etp),
+            protein_fasta: Some(PathBuf::from("p.fa")),
+            ..PredictConfig::default()
+        };
+        assert!(check_braker_conflicts(&cfg).is_ok());
+    }
+
+    #[test]
+    fn braker_alone_with_braker_inputs_is_clean() {
+        let cfg = PredictConfig {
+            use_braker: true,
+            braker_rna_bams: vec![PathBuf::from("a.bam")],
+            braker_proteins: Some(PathBuf::from("p.fa")),
+            ..PredictConfig::default()
+        };
+        assert!(
+            check_braker_conflicts(&cfg).is_ok(),
+            "BRAKER-native flags must not collide with --use-braker"
+        );
+    }
+
+    #[test]
+    fn braker_with_genemark_mode_is_a_conflict() {
+        let cfg = PredictConfig {
+            use_braker: true,
+            genemark_mode: Some(GeneMarkMode::Etp),
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("--genemark-mode"),
+            "error must name the offending flag: {}",
+            msg
+        );
+        assert!(
+            msg.contains("--use-braker"),
+            "error must name the BRAKER flag too: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn braker_with_protein_fasta_is_a_conflict() {
+        // --protein-fasta has no meaning under BRAKER (BRAKER takes
+        // --braker-proteins instead). Reject it loudly so the user doesn't
+        // think their proteins are being fed to BRAKER.
+        let cfg = PredictConfig {
+            use_braker: true,
+            protein_fasta: Some(PathBuf::from("p.fa")),
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        assert!(err.to_string().contains("--protein-fasta"));
+    }
+
+    #[test]
+    fn braker_with_protein_evidence_is_a_conflict() {
+        let cfg = PredictConfig {
+            use_braker: true,
+            protein_evidence: Some(PathBuf::from("blast.tsv")),
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        assert!(err.to_string().contains("--protein-evidence"));
+    }
+
+    #[test]
+    fn braker_with_glimmerhmm_is_a_conflict() {
+        let cfg = PredictConfig {
+            use_braker: true,
+            use_glimmerhmm: true,
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        assert!(err.to_string().contains("--glimmerhmm"));
+    }
+
+    #[test]
+    fn braker_with_legacy_genemark_alias_is_a_conflict() {
+        let cfg = PredictConfig {
+            use_braker: true,
+            use_genemark: true,
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        assert!(err.to_string().contains("--genemark"));
+    }
+
+    #[test]
+    fn braker_lists_all_conflicting_flags_at_once() {
+        // The error message should be exhaustive — fix-then-rerun rather than
+        // whack-a-mole.
+        let cfg = PredictConfig {
+            use_braker: true,
+            genemark_mode: Some(GeneMarkMode::Es),
+            protein_fasta: Some(PathBuf::from("p.fa")),
+            use_glimmerhmm: true,
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        let msg = err.to_string();
+        for flag in ["--genemark-mode", "--protein-fasta", "--glimmerhmm"] {
+            assert!(
+                msg.contains(flag),
+                "error should list every offending flag; missing {} in: {}",
+                flag,
+                msg
+            );
+        }
+    }
+
+    // ── Default config sanity ───────────────────────────────────────────────
+
+    #[test]
+    fn predict_default_braker_off() {
+        let c = PredictConfig::default();
+        assert!(!c.use_braker);
+        assert!(c.braker_mode.is_none());
+        assert!(c.braker_rna_bams.is_empty());
+        assert!(c.braker_proteins.is_none());
+        assert_eq!(c.genetic_code, 1);
+    }
+}

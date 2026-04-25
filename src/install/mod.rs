@@ -90,6 +90,20 @@ const TOOLS: &[Tool] = &[
             "Bundled with GeneMark-ES tarball (<install>/ProtHint/bin) or with bioconda braker3",
         version_arg: "--version",
     },
+    // BRAKER 1/2/3.  The single bioconda recipe is `braker3` (verified
+    // 2026-04-24: versions 3.0.3 → 3.0.8 on bioconda osx-64); the binary it
+    // installs is `braker.pl`, which auto-selects the BRAKER1 / BRAKER2 /
+    // BRAKER3 mode from the inputs (or from --esmode/--epmode/--etpmode).
+    // BRAKER also pulls Augustus, GeneMark, and ProtHint as runtime deps.
+    Tool {
+        name: "braker.pl",
+        used_by: "predict",
+        conda_pkg: Some("braker3"),
+        conda_chan: "bioconda",
+        pip_pkg: None,
+        manual_note: "https://github.com/Gaius-Augustus/BRAKER",
+        version_arg: "--version",
+    },
     // ── Repeat masking ───────────────────────────────────────────────────────
     Tool {
         name: "RepeatMasker",

@@ -55,6 +55,12 @@ const TOOLS: &[Tool] = &[
         version_arg: "--version",
         install_cmd: "Bundled with GeneMark-ES tarball or bioconda braker3 — needed for --genemark-mode ep|etp",
     },
+    Tool {
+        name: "braker.pl",
+        used_by: "predict",
+        version_arg: "--version",
+        install_cmd: "conda install -c bioconda braker3 — needed for --use-braker",
+    },
     // ── Repeat masking ───────────────────────────────────────────────────────
     Tool {
         name: "RepeatMasker",

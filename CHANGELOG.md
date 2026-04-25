@@ -6,6 +6,60 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-04-25
+
+### Added
+- **`clean --mode contigs`** — extends the existing GFF3-cleanup
+  subcommand with a FASTA mode that runs `minimap2 -X` self-alignment
+  on a genome assembly and drops contigs whose entire span is covered
+  by a longer contig at high identity. Useful for purging
+  near-duplicate haplotigs from draft assemblies (purge_dups /
+  purge_haplotigs territory). Defaults: `--coverage 0.95
+  --identity 0.95`. Emits a cleaned FASTA plus a TSV report listing
+  each dropped contig and the contig that subsumed it. The PAF
+  intermediate is removed on success and kept on failure for
+  debugging. Mutual subsumption is broken deterministically (longer
+  wins, lex-smaller on ties). `clean` is now registered as a `used_by`
+  consumer for `minimap2` in both `check` and `install` catalogues.
+  11 unit tests cover the FASTA reader, PAF parser, drop decisions,
+  and FASTA + report writers.
+- **`setup --db augustus-fungi`** — curated bundle of ~35 fungal
+  Augustus species fetched from the upstream GitHub mirror and
+  installed into `~/.myconote/augustus_config/species/<name>/` so a
+  fresh MycoNote-CLI install can predict on most fungi out of the
+  box. List spans Saccharomycotina, Taphrinomycotina,
+  Pezizomycotina, Basidiomycota, Mucoromycota, and Microsporidia;
+  every name matches the upstream `config/species/<name>/` directory
+  verbatim. Six config files per species
+  (parameters/metapars/{exon,intron,igenic}_probs/weightmatrix). A
+  new `--dry-run` flag prints what would be downloaded without
+  fetching, so the curated list can be audited; a new singular `--db
+  <name>` flag complements the existing `--dbs` plural form. After
+  install, the user is told to set
+  `AUGUSTUS_CONFIG_PATH=$HOME/.myconote/augustus_config` so Augustus
+  picks the configs up. 9 unit tests cover catalogue presence, list
+  invariants (size, uniqueness, breadth across major clades), URL
+  construction, and the `species_present` completeness check.
+- **`go-template` subcommand** — same Option 1D pattern as
+  `de-template` / `ase-template`. Takes a `de-template` results TSV
+  plus an `annotate` `annotations.tsv` (carrying a `go_terms` column)
+  and emits a self-contained R script that builds the gene → GO
+  mapping, defines the universe + foreground from the DE results, and
+  runs topGO's classic Fisher's exact test for each ontology in
+  BP / MF / CC. Outputs one TSV per ontology (sorted by classic
+  Fisher *p*, BH-adjusted within ontology) plus a combined dot plot
+  PDF. Three-layer prereq alerting (CLI help / runtime stderr /
+  in-script `requireNamespace("topGO")` guard) mirrors the other two
+  template subcommands. Configurable join columns
+  (`--de-id-col` / `--ann-id-col`) and GO-column / separator so the
+  same template handles transcript-level DE joined to locus-tag
+  annotations or any other shared identifier. 18 unit tests cover
+  argv parsing, ontology choices, render embedding, R-string
+  escaping, and the rfc3339 helper. New
+  `docs/analysis/go-template.md` at parity with the other two
+  template docs; mkdocs nav and README analysis-commands table
+  updated.
+
 ## [0.5.0] — 2026-04-24
 
 ### Added

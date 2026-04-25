@@ -17,7 +17,7 @@ Sort → Mask → Train → Predict → Update → Annotate → Submit
 
 Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) that hand off cleanly to **Proksee** (web circular maps), **IGV** (desktop browser), and **clinker** (cross-species synteny).
 
-**New in v0.5.0** — RNA-seq stack landed: `quant` (salmon + decoy index), `fetch-rna` (SRA/ENA ingestion), `de-template` (DESeq2 R-script generator), `ase` (allele-specific expression for heterozygous / hybrid / polyploid fungi via per-haplotype salmon), and `ase-template` (binomial ASE R-script generator). See [CHANGELOG.md](CHANGELOG.md) for the full list.
+**New in v0.5.1** — `clean --mode contigs` purges near-duplicate haplotigs via minimap2 self-alignment; `setup --db augustus-fungi` ships a curated 35-species fungal Augustus bundle with `--dry-run` audit; `go-template` emits a topGO Fisher's-exact-test R script from `de-template` + `annotate` outputs. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 **New to myconote?** Run `myconote-cli learn` for an interactive, swirl-style tutorial right in your terminal.
 

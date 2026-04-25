@@ -109,10 +109,12 @@ fn print_main_help() {
         "  ase-template Emit an R script for binomial ASE tests on `ase` output (base R only)"
     );
     println!("  go-template  Emit an R script for topGO Fisher's GO enrichment from DE + annotate output");
-    println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder)");
+    println!("  compare  N-genome ortholog inference + pan-genome summary (OrthoFinder, optional HTML report)");
     println!("  convert  Convert between genome annotation and sequence formats");
     println!("  clean    Validate and fix a GFF3 annotation file");
     println!("  fix      Repair errors in GenBank (.gbk) files");
+    println!("\nAI-powered interpretation:");
+    println!("  explain  LLM-powered result interpreter — grounded findings, paper citations, next-command recommendations");
     println!("\nUtility commands:");
     println!("  install  Install missing external tools via conda/mamba");
     println!("  check    Check which external tools are installed");

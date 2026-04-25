@@ -6,6 +6,88 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-04-24
+
+### Added
+- **`update --kallisto`** — funannotate-style abundance pre-filter
+  for the `update` step. When set, MycoNote-CLI builds a kallisto
+  index over the transcript set, runs `kallisto quant` per
+  RNA-seq sample, drops transcripts whose TPM falls below
+  `--kallisto-min-tpm` (default **1.0**), and passes only the
+  surviving transcript IDs through to PASA's update step. The
+  filtered ID list is written to
+  `update_out/pasa_kallisto_filter.txt` for auditability. Pass
+  semantics are "in any sample" (max TPM ≥ threshold) so a
+  transcript that's expressed in one condition isn't silently
+  dropped because it's quiet in another. New `update::kallisto`
+  module owns the driver: header-row-aware abundance.tsv parser
+  that tolerates extra columns and rejects missing required
+  columns with named errors, deterministic per-transcript
+  aggregation via BTreeMap, and a `KallistoFilter` config struct.
+  Kallisto CLI verified against pachterlab.github.io/kallisto/manual
+  on 2026-04-24 (kallisto 0.50.0):
+  `kallisto index -i out.idx <fa>`,
+  `kallisto quant -i idx -o out r1 r2`. When `--kallisto` is set
+  but `kallisto` is missing from PATH, the run aborts with a
+  pointer at `myconote-cli install update`; when set without an
+  RNA-seq input or with only `--rna-bam` (which kallisto cannot
+  re-quantify), the run aborts with an actionable message. No
+  silent fallback. `kallisto` registered in install/check
+  catalogues with `conda_pkg=kallisto`, `conda_chan=bioconda`,
+  `used_by=update`. 9 unit tests in src/update/kallisto.rs cover
+  the parser and aggregation; 4 in tests/unit_tests.rs drive the
+  CLI parser path (valid/garbage/negative `--kallisto-min-tpm`,
+  `--kallisto` without RNA-seq).
+- **`compare --html`** — self-contained interactive HTML report
+  alongside the existing TSV outputs. Single file at
+  `compare_out/report.html`, opens correctly from `file://` with
+  no network access — CSS and JS are inlined via `include_str!`,
+  no CDN, no Google Fonts, no JS frameworks. Carries five panels:
+  pan-genome shape (table + stacked-bar SVG), per-genome stats
+  (sortable table), ortholog table (sortable + text-filterable,
+  capped at 5,000 rows with a pointer at the full TSV), species
+  tree (inline SVG with branch lengths to scale), and a
+  reproducibility footer with tool version + git SHA + run
+  command + SHA256 of every input GFF/FASTA. Templating via
+  `tinytemplate` 1.2 (runtime, no proc-macros — picked over
+  askama for footprint and over handlebars for dep-tree size).
+  Newick parser is 56 lines hand-rolled, rejects bare strings
+  without `(` or `;` so truncated files don't silently parse as
+  single-leaf trees. Every user-supplied gene ID, orthogroup ID,
+  and genome name (including SVG leaf labels) runs through an
+  HTML-escape pass that catches all five XSS-relevant characters,
+  defending against malicious input from upstream pipelines.
+  Client-side JS is 70 lines of vanilla — no React, no jQuery. 12
+  unit tests cover the escape helper, full report rendering,
+  Newick parsing, SVG emission, and the per-genome stats
+  arithmetic; the XSS guard is tested with a literal
+  `<script>alert('pwned')</script>` payload as a gene ID.
+- **`setup --db augustus-fungi`** expansion — curated fungal
+  Augustus species manifest grows from 35 to 49 entries by
+  filtering the upstream `Gaius-Augustus/Augustus/config/species/`
+  directory (167 dirs, queried 2026-04-24) against a curated
+  fungal-genus catalogue plus the bare-genus aliases Augustus
+  historically ships (`saccharomyces`, `fusarium`, `cryptococcus`,
+  `coprinus`, `histoplasma`, `neurospora`, `pneumocystis`,
+  `ustilago`, `pchrysosporium`, `anidulans`). Every name in the
+  expanded manifest verifies against the upstream GitHub API. The
+  spec hoped for ~100 entries to match funannotate's bundled tree,
+  but `Augustus/config/species/` only ships ~50 fungal entries —
+  funannotate downloads beyond what's in the upstream repo. We
+  don't fabricate names that aren't upstream. The species-list
+  test bound widens to 45..=60 to accommodate the bare-genus
+  aliases plus `verticillium_longisporum1` and
+  `cryptococcus_neoformans_neoformans_JEC21`. Catalogue
+  description and `setup --db augustus-fungi` help text bump from
+  "~30" to "~50".
+
+### Fixed
+- **`myconote-cli --help`** now lists the `explain` subcommand
+  under a new "AI-powered interpretation" section between Analysis
+  and Utility, mirroring the README structure. The arm itself
+  worked since 0.6.0 but users discovering MycoNote-CLI through
+  `--help` never saw the LLM interpreter exists.
+
 ## [0.6.0] — 2026-04-24
 
 ### Added

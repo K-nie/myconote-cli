@@ -17,7 +17,7 @@ Sort → Mask → Train → Predict → Update → Annotate → Submit
 
 Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) that hand off cleanly to **Proksee** (web circular maps), **IGV** (desktop browser), and **clinker** (cross-species synteny).
 
-**New in v0.6.0** — `predict --genemark-mode <es|et|ep|etp>` reaches the two protein-evidence-guided GeneMark variants (EP+ via ProtHint and ETP+) that fill the gap relative to funannotate, especially for novel CTG-clade fungi without RNA-seq; `predict --use-braker` runs BRAKER 1/2/3 as a complete predictor (replacing the in-house Augustus/SNAP/GlimmerHMM/GeneMark + EVM stack) with auto-detected mode and full forwarding of `--genetic-code`. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+**New in v0.7.0** — `update --kallisto` runs Kallisto to estimate per-transcript TPM and drops low-abundance transcripts before PASA's UTR pass (funannotate parity); `compare --html` emits a self-contained interactive HTML report (pan-genome shape, per-genome stats, sortable ortholog table, inline-SVG species tree, reproducibility footer) that opens from `file://` with no network; `setup --db augustus-fungi` expands from 35 to 49 curated fungal Augustus species. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 **New to myconote?** Run `myconote-cli learn` for an interactive, swirl-style tutorial right in your terminal.
 
@@ -126,7 +126,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `ase` | Allele-specific expression for phased/heterozygous/hybrid fungal genomes — builds personalized transcriptomes per haplotype from a phased VCF, then runs salmon against each haplotype independently. Emits `<sample>.<hap>` counts + TPM, informativeness summary, and per-haplotype mapping-rate asymmetry flags. |
 | `ase-template` | Generate a binomial-ASE R script from `ase` output (base R only, no Bioconductor). Per-transcript `binom.test` with sample-specific null from hap0:hap1 library ratio, BH-adjusted per sample. Tool writes the script, user runs `Rscript`. |
 | `go-template` | Generate a topGO Fisher's-exact-test R script from a `de-template` results TSV plus an `annotate` `annotations.tsv`. Runs BP / MF / CC ontologies (or one), BH-adjusts within each, emits per-ontology TSVs and a combined dot plot. Tool writes the script, user runs `Rscript`. |
-| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large) |
+| `compare` | N-genome ortholog inference (OrthoFinder wrapper) — pan-genome summary + rooted species tree; tiered genome-count caps (5 fungi / 3 small plants / 2 large); optional self-contained interactive HTML report via `--html` |
 | `convert` | Format conversion: GFF3 ↔ GTF / BED / GenBank / CDS / protein FASTA; FASTA ↔ FASTQ / PHYLIP / NEXUS; VCF conversions |
 | `clean` | Validate and repair GFF3 annotation files |
 | `fix` | Repair errors in GenBank (.gbk) files |

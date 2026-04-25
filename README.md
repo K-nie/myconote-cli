@@ -17,7 +17,7 @@ Sort → Mask → Train → Predict → Update → Annotate → Submit
 
 Each step is a separate subcommand. All intermediate files use standard formats (GFF3, FASTA, GenBank) that hand off cleanly to **Proksee** (web circular maps), **IGV** (desktop browser), and **clinker** (cross-species synteny).
 
-**New in v0.7.0** — `update --kallisto` runs Kallisto to estimate per-transcript TPM and drops low-abundance transcripts before PASA's UTR pass (funannotate parity); `compare --html` emits a self-contained interactive HTML report (pan-genome shape, per-genome stats, sortable ortholog table, inline-SVG species tree, reproducibility footer) that opens from `file://` with no network; `setup --db augustus-fungi` expands from 35 to 49 curated fungal Augustus species. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+**New in v0.7.1** — comprehensive audit pass that fixes drift between docs / help text / code (counts, stale references, dead CLI scaffold) and a major expansion of the interactive `learn` tutorial from 8 to 20 lessons covering the full RNA-seq stack (`quant`, `fetch-rna`, `de-template`, `ase`, `ase-template`, `go-template`), the modern predictors (`predict --use-braker`, `--genemark-mode ep|etp`), `clean --mode contigs`, the `setup --db augustus-fungi` bundle, reproducibility manifests, and NCBI codon tables (Candida CTG focus). See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 **New to myconote?** Run `myconote-cli learn` for an interactive, swirl-style tutorial right in your terminal.
 
@@ -156,7 +156,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `setup` | Download and index annotation databases (Swiss-Prot, Pfam, EggNOG, BUSCO, dbCAN, MEROPS, Ollama, paper corpus) |
 | `remote` | Submit proteins to remote servers (Phobius, InterProScan, DeepLoc) |
 | `species` | List all Augustus species models (grouped by kingdom) |
-| `learn` | Interactive tutorial system -- 8 lessons, swirl-style, right in your terminal |
+| `learn` | Interactive tutorial system -- 20 lessons, swirl-style, right in your terminal |
 
 ---
 
@@ -194,7 +194,7 @@ myconote-cli annotate genes.gff3 --fasta genome.fa --genetic-code 12   # Candida
 | 4 | Mold Mitochondrial | Mold/protozoan mitochondria |
 | 2 | Vertebrate Mitochondrial | Vertebrate mitochondria |
 
-18 NCBI translation tables supported in total.
+25 NCBI translation tables supported in total (tables 1–6, 9–14, 16, 21–31, 33).
 
 ---
 
@@ -377,12 +377,17 @@ Generates `condor.sub`, `run_genome.sh` (per-job wrapper), and `condor_genomes.t
 Learn myconote-cli step by step, like R's swirl:
 
 ```bash
-myconote-cli learn          # list all 8 lessons
+myconote-cli learn          # list all 20 lessons
 myconote-cli learn 1        # start lesson 1
 myconote-cli learn --resume # pick up where you left off
 ```
 
-8 lessons covering the full pipeline, from basics to NCBI submission. Progress is saved between sessions.
+20 lessons covering the full pipeline (basics to NCBI submission), the
+RNA-seq stack (`quant`, `fetch-rna`, `de-template`, `ase`, `ase-template`,
+`go-template`), the modern predictors (BRAKER, GeneMark-EP/ETP+),
+`clean --mode contigs`, the `setup --db augustus-fungi` bundle,
+reproducibility manifests, and NCBI codon tables (Candida CTG focus).
+Progress is saved between sessions.
 
 ---
 

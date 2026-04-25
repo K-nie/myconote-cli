@@ -748,22 +748,27 @@ fn main() -> Result<()> {
                 println!("\nOptions:");
                 println!("  --list                   Show all databases and their download status");
                 println!("  --check                  Verify existing databases are intact");
-                println!("  --db <name> [name ...]   Download only specific databases");
+                println!("  --db <name>              Download a single database (repeatable)");
+                println!("  --dbs <name> [name ...]  Download a list of databases");
                 println!("  --db-dir <dir>           Custom database directory (default: ~/.myconote/dbs)");
                 println!("  --force                  Re-download even if the database already exists");
+                println!("  --dry-run                Show what would be downloaded without fetching");
                 println!("\nAvailable databases:");
-                println!("  swiss-prot   UniProt/Swiss-Prot (MMseqs2 indexed) — used by annotate");
-                println!("  pfam         Pfam-A HMM profiles (hmmpress indexed) — used by annotate");
-                println!("  eggnog       EggNog-mapper database (COG/NOG) — used by annotate --eggnog");
-                println!("  dbcan        CAZyme DIAMOND database — used by annotate --cazyme");
-                println!("  merops       MEROPS protease DIAMOND database — used by annotate --merops");
-                println!("  busco        BUSCO fungi lineage data — used by annotate");
-                println!("  chat-corpus  Q1 open-access paper corpus — used by explain");
-                println!("  ollama       Ollama LLM runtime + model — used by explain");
+                println!("  swiss-prot       UniProt/Swiss-Prot (MMseqs2 indexed) — used by annotate");
+                println!("  pfam             Pfam-A HMM profiles (hmmpress indexed) — used by annotate");
+                println!("  eggnog           EggNog-mapper database (COG/NOG) — used by annotate --eggnog");
+                println!("  dbcan            CAZyme DIAMOND database — used by annotate --cazyme");
+                println!("  merops           MEROPS protease DIAMOND database — used by annotate --merops");
+                println!("  busco            BUSCO fungi lineage data — used by annotate");
+                println!("  chat-corpus      Q1 open-access paper corpus — used by explain");
+                println!("  ollama           Ollama LLM runtime + model — used by explain");
+                println!("  augustus-fungi   Curated fungal Augustus species (~30) — used by predict/train");
                 println!("\nExamples:");
                 println!("  myconote-cli setup --list");
                 println!("  myconote-cli setup                     # download everything");
-                println!("  myconote-cli setup --db swiss-prot pfam");
+                println!("  myconote-cli setup --dbs swiss-prot pfam");
+                println!("  myconote-cli setup --db augustus-fungi");
+                println!("  myconote-cli setup --db augustus-fungi --dry-run");
                 println!("  myconote-cli setup --check");
                 return Ok(());
             }
@@ -2383,7 +2388,7 @@ fn handle_update(gff_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn handle_setup(args: &[String]) -> Result<()> {
-    use setup::{check_databases, download_databases, list_databases};
+    use setup::{check_databases, download_databases_with, list_databases};
 
     let db_dir_default = {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
@@ -2393,6 +2398,7 @@ fn handle_setup(args: &[String]) -> Result<()> {
     let mut db_dir = db_dir_default;
     let mut keys: Vec<String> = Vec::new();
     let mut force = false;
+    let mut dry_run = false;
     let mut do_list = false;
     let mut do_check = false;
 
@@ -2410,8 +2416,17 @@ fn handle_setup(args: &[String]) -> Result<()> {
                     i += 1;
                 }
             }
+            // Singular form: --db <name>. Repeatable across invocations.
+            "--db" if i + 1 < args.len() => {
+                keys.push(args[i + 1].clone());
+                i += 2;
+            }
             "--force" => {
                 force = true;
+                i += 1;
+            }
+            "--dry-run" => {
+                dry_run = true;
                 i += 1;
             }
             "--list" => {
@@ -2449,7 +2464,8 @@ fn handle_setup(args: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    download_databases(&db_dir, &keys, force).map_err(|e| anyhow::anyhow!("{}", e))?;
+    download_databases_with(&db_dir, &keys, force, dry_run)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     Ok(())
 }
 

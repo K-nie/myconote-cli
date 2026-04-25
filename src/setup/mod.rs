@@ -111,7 +111,91 @@ pub const DATABASES: &[DbEntry] = &[
         marker_file: "ollama/installed.version",
         index_cmd:   "",
     },
+    DbEntry {
+        key:         "augustus-fungi",
+        description: "Curated fungal species configs for Augustus (~30 species)",
+        size_hint:   "~5 MB",
+        urls: &[],  // species fetched per-name from the Augustus GitHub mirror
+        // Marker is the user-local config dir myconote installs into.
+        // Lives outside dbs/ so AUGUSTUS_CONFIG_PATH points at it directly.
+        marker_file: "augustus_config/species",
+        index_cmd:   "",
+    },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Augustus fungal-species manifest
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Curated list of fungal species shipped with Augustus that we want
+// preinstalled for fungal annotation. The list is biased toward
+// well-studied taxa across the major fungal subphyla — Saccharomycotina
+// budding yeasts, Pezizomycotina filamentous ascomycetes, basidiomycetes,
+// and a handful of model microsporidia/early-diverging fungi — so a fresh
+// MycoNote-CLI install can predict on most fungi out of the box.
+//
+// Names match the upstream config/species/<name>/ directory verbatim.
+// Cross-checked against
+// https://github.com/Gaius-Augustus/Augustus/tree/master/config/species
+// at v0.5.1 release time. If a species disappears upstream the
+// per-species fetch will fail loudly with the URL it tried.
+pub const AUGUSTUS_FUNGI_SPECIES: &[&str] = &[
+    // ── Saccharomycotina budding yeasts ──
+    "saccharomyces_cerevisiae_S288C",
+    "saccharomyces_cerevisiae_rm11-1a_1",
+    "candida_albicans",
+    "candida_guilliermondii",
+    "candida_tropicalis",
+    "debaryomyces_hansenii",
+    "eremothecium_gossypii",
+    "kluyveromyces_lactis",
+    "lodderomyces_elongisporus",
+    "pichia_stipitis",
+    "yarrowia_lipolytica",
+    // ── Taphrinomycotina (fission yeast clade) ──
+    "schizosaccharomyces_pombe",
+    "pneumocystis",
+    // ── Pezizomycotina filamentous ascomycetes ──
+    "aspergillus_fumigatus",
+    "aspergillus_nidulans",
+    "aspergillus_oryzae",
+    "aspergillus_terreus",
+    "botrytis_cinerea",
+    "chaetomium_globosum",
+    "coccidioides_immitis",
+    "fusarium_graminearum",
+    "histoplasma_capsulatum",
+    "magnaporthe_grisea",
+    "neurospora_crassa",
+    "Sclerotinia_sclerotiorum",
+    "Sordaria_macrospora",
+    "verticillium_albo_atrum1",
+    // ── Basidiomycota ──
+    "coprinus_cinereus",
+    "cryptococcus_neoformans_gattii",
+    "cryptococcus_neoformans_neoformans_B",
+    "laccaria_bicolor",
+    "phanerochaete_chrysosporium",
+    "ustilago_maydis",
+    // ── Mucoromycota / Microsporidia ──
+    "rhizopus_oryzae",
+    "encephalitozoon_cuniculi_GB",
+];
+
+/// Each Augustus species directory contains six files matching
+/// `<species>_<suffix>` upstream. Listing them here keeps the
+/// downloader honest if a future species is missing one.
+pub const AUGUSTUS_SPECIES_FILES: &[&str] = &[
+    "_parameters.cfg",
+    "_metapars.cfg",
+    "_exon_probs.pbl",
+    "_intron_probs.pbl",
+    "_igenic_probs.pbl",
+    "_weightmatrix.txt",
+];
+
+const AUGUSTUS_GITHUB_RAW: &str =
+    "https://raw.githubusercontent.com/Gaius-Augustus/Augustus/master/config/species";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry points
@@ -265,6 +349,19 @@ fn approximate_date(secs: u64) -> String {
 }
 
 pub fn download_databases(db_dir: &Path, keys: &[String], force: bool) -> Result<()> {
+    download_databases_with(db_dir, keys, force, false)
+}
+
+/// Same as `download_databases` but with a `dry_run` flag that prints
+/// what would be fetched without writing or hitting the network. Used
+/// by the `augustus-fungi` target so users can audit the curated
+/// species list before pulling them.
+pub fn download_databases_with(
+    db_dir: &Path,
+    keys: &[String],
+    force: bool,
+    dry_run: bool,
+) -> Result<()> {
     std::fs::create_dir_all(db_dir).map_err(MycoNoteError::Io)?;
 
     let to_download: Vec<&DbEntry> = if keys.is_empty() {
@@ -282,13 +379,17 @@ pub fn download_databases(db_dir: &Path, keys: &[String], force: bool) -> Result
     }
 
     for db in to_download {
-        let marker = db_dir.join(db.marker_file);
-        if marker.exists() && !force {
-            println!(
-                "  [skip] {} — already present (use --force to re-download)",
-                db.key
-            );
-            continue;
+        // augustus-fungi installs into ~/.myconote/augustus_config, not
+        // db_dir; its marker check lives inside the downloader.
+        if db.key != "augustus-fungi" {
+            let marker = db_dir.join(db.marker_file);
+            if marker.exists() && !force {
+                println!(
+                    "  [skip] {} — already present (use --force to re-download)",
+                    db.key
+                );
+                continue;
+            }
         }
 
         println!(
@@ -305,11 +406,14 @@ pub fn download_databases(db_dir: &Path, keys: &[String], force: bool) -> Result
             "busco" => download_busco(db_dir)?,
             "chat-corpus" => download_chat_corpus(db_dir)?,
             "ollama" => setup_ollama(db_dir)?,
+            "augustus-fungi" => download_augustus_fungi(db_dir, force, dry_run)?,
             other => println!("  ⚠  No download handler for '{}'", other),
         }
     }
 
-    println!("\n✓ Setup complete. Run `myconote setup --check` to verify.");
+    if !dry_run {
+        println!("\n✓ Setup complete. Run `myconote setup --check` to verify.");
+    }
     Ok(())
 }
 
@@ -875,6 +979,159 @@ fn setup_ollama(db_dir: &Path) -> Result<()> {
     Ok(())
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// augustus-fungi: bundle a curated set of fungal species configs
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Resolve the user-local Augustus config directory. We install into
+/// ~/.myconote/augustus_config/ rather than the system Augustus tree so
+/// MycoNote-CLI never touches a conda-installed Augustus's species/.
+pub fn augustus_config_root() -> PathBuf {
+    home_myconote_dir().join("augustus_config")
+}
+
+/// Build the GitHub raw URLs for every file of every species in
+/// `species`. Pure, deterministic — used directly by `--dry-run` and
+/// indirectly by the live downloader. Public for unit tests.
+pub fn augustus_fungi_plan(species: &[&str]) -> Vec<(String, String)> {
+    let mut out = Vec::with_capacity(species.len() * AUGUSTUS_SPECIES_FILES.len());
+    for sp in species {
+        for suffix in AUGUSTUS_SPECIES_FILES {
+            let filename = format!("{}{}", sp, suffix);
+            let url = format!("{}/{}/{}", AUGUSTUS_GITHUB_RAW, sp, filename);
+            out.push((filename, url));
+        }
+    }
+    out
+}
+
+/// Whether a species directory is already populated with all six files
+/// at `<config>/species/<name>/<name>_<file>`.
+fn species_present(config_root: &Path, name: &str) -> bool {
+    let dir = config_root.join("species").join(name);
+    if !dir.is_dir() {
+        return false;
+    }
+    AUGUSTUS_SPECIES_FILES
+        .iter()
+        .all(|suffix| dir.join(format!("{}{}", name, suffix)).is_file())
+}
+
+fn download_augustus_fungi(db_dir: &Path, force: bool, dry_run: bool) -> Result<()> {
+    let config_root = augustus_config_root();
+    let species_root = config_root.join("species");
+
+    if dry_run {
+        println!(
+            "  [dry-run] would install {} fungal Augustus species into {}",
+            AUGUSTUS_FUNGI_SPECIES.len(),
+            species_root.display()
+        );
+        for sp in AUGUSTUS_FUNGI_SPECIES {
+            let already = species_present(&config_root, sp);
+            println!(
+                "    {:<42} {}",
+                sp,
+                if already {
+                    "[already present]"
+                } else {
+                    "[would download]"
+                }
+            );
+        }
+        println!(
+            "\n  After install, set:  export AUGUSTUS_CONFIG_PATH={}",
+            config_root.display()
+        );
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(&species_root).map_err(MycoNoteError::Io)?;
+
+    let mut installed = 0usize;
+    let mut skipped = 0usize;
+    let mut failed: Vec<String> = Vec::new();
+
+    for sp in AUGUSTUS_FUNGI_SPECIES {
+        if species_present(&config_root, sp) && !force {
+            println!("  [skip] {} (already present)", sp);
+            skipped += 1;
+            continue;
+        }
+
+        let sp_dir = species_root.join(sp);
+        std::fs::create_dir_all(&sp_dir).map_err(MycoNoteError::Io)?;
+
+        let mut species_ok = true;
+        for suffix in AUGUSTUS_SPECIES_FILES {
+            let filename = format!("{}{}", sp, suffix);
+            let url = format!("{}/{}/{}", AUGUSTUS_GITHUB_RAW, sp, filename);
+            let dest = sp_dir.join(&filename);
+
+            if dest.exists() && !force {
+                continue;
+            }
+
+            print!("  {:<42} {} … ", sp, suffix.trim_start_matches('_'));
+            use std::io::Write as IoWrite;
+            std::io::stdout().flush().ok();
+
+            // Use curl -fsSL --retry so transient blips don't kill the
+            // whole bundle. wget_or_curl logs noisily; here we want one
+            // line per file.
+            let ok = Command::new("curl")
+                .args([
+                    "-fsSL",
+                    "--retry",
+                    "3",
+                    "--retry-delay",
+                    "2",
+                    "--max-time",
+                    "60",
+                    "-o",
+                    dest.to_str().unwrap_or(""),
+                    &url,
+                ])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+
+            if ok {
+                println!("ok");
+            } else {
+                println!("\x1b[31mFAILED\x1b[0m  ({})", url);
+                species_ok = false;
+                let _ = std::fs::remove_file(&dest);
+            }
+        }
+
+        if species_ok {
+            installed += 1;
+        } else {
+            failed.push((*sp).to_string());
+        }
+    }
+
+    let _ = write_db_version(db_dir, "augustus-fungi", AUGUSTUS_GITHUB_RAW);
+
+    println!();
+    println!(
+        "  augustus-fungi: {} installed, {} already present, {} failed",
+        installed,
+        skipped,
+        failed.len()
+    );
+    if !failed.is_empty() {
+        println!("    Failures: {}", failed.join(", "));
+    }
+    println!();
+    println!("  Point Augustus at the curated config dir:");
+    println!("    export AUGUSTUS_CONFIG_PATH={}", config_root.display());
+    println!("    # then verify with:  myconote-cli species --grouped");
+
+    Ok(())
+}
+
 /// Get the installed Ollama version, if any.
 fn get_ollama_version() -> Option<String> {
     let output = Command::new("ollama").args(["--version"]).output().ok()?;
@@ -1308,5 +1565,124 @@ tags = []
         let entry = DATABASES.iter().find(|d| d.key == "chat-corpus");
         assert!(entry.is_some());
         assert!(entry.unwrap().marker_file.contains("corpus_manifest"));
+    }
+
+    // ── augustus-fungi tests ────────────────────────────────────────────────
+
+    #[test]
+    fn database_catalog_has_augustus_fungi() {
+        let entry = DATABASES.iter().find(|d| d.key == "augustus-fungi");
+        assert!(entry.is_some(), "augustus-fungi missing from catalogue");
+        assert!(
+            entry.unwrap().description.to_lowercase().contains("fungal")
+                || entry.unwrap().description.to_lowercase().contains("fungi"),
+            "augustus-fungi description should mention fungi"
+        );
+    }
+
+    #[test]
+    fn augustus_fungi_species_list_is_curated() {
+        // Bound: 30–50 well-studied taxa per the v0.5.1 spec.
+        assert!(
+            AUGUSTUS_FUNGI_SPECIES.len() >= 25 && AUGUSTUS_FUNGI_SPECIES.len() <= 50,
+            "expected 25–50 species, got {}",
+            AUGUSTUS_FUNGI_SPECIES.len()
+        );
+    }
+
+    #[test]
+    fn augustus_fungi_species_list_is_unique() {
+        let mut seen = std::collections::HashSet::new();
+        for sp in AUGUSTUS_FUNGI_SPECIES {
+            assert!(seen.insert(*sp), "duplicate species: {}", sp);
+        }
+    }
+
+    #[test]
+    fn augustus_fungi_covers_each_major_clade() {
+        // We deliberately want breadth — at least one entry from each
+        // of the major fungal subphyla. If the curated list ever loses
+        // breadth this test fires.
+        let saccharomycotina = ["saccharomyces_cerevisiae_S288C", "candida_albicans"];
+        let pezizomycotina = ["aspergillus_fumigatus", "neurospora_crassa"];
+        let basidiomycota = ["cryptococcus_neoformans_neoformans_B", "ustilago_maydis"];
+        let early_diverging = ["rhizopus_oryzae", "encephalitozoon_cuniculi_GB"];
+        for sp in [
+            saccharomycotina[0],
+            pezizomycotina[0],
+            basidiomycota[0],
+            early_diverging[0],
+        ] {
+            assert!(
+                AUGUSTUS_FUNGI_SPECIES.contains(&sp),
+                "expected {} in curated list",
+                sp
+            );
+        }
+        for sp in [
+            saccharomycotina[1],
+            pezizomycotina[1],
+            basidiomycota[1],
+            early_diverging[1],
+        ] {
+            assert!(
+                AUGUSTUS_FUNGI_SPECIES.contains(&sp),
+                "expected {} in curated list",
+                sp
+            );
+        }
+    }
+
+    #[test]
+    fn augustus_fungi_plan_is_six_files_per_species() {
+        let plan = augustus_fungi_plan(AUGUSTUS_FUNGI_SPECIES);
+        assert_eq!(plan.len(), AUGUSTUS_FUNGI_SPECIES.len() * 6);
+    }
+
+    #[test]
+    fn augustus_fungi_plan_urls_point_at_github_raw() {
+        let plan = augustus_fungi_plan(&["saccharomyces_cerevisiae_S288C"]);
+        assert_eq!(plan.len(), 6);
+        for (filename, url) in &plan {
+            assert!(filename.starts_with("saccharomyces_cerevisiae_S288C_"));
+            assert!(url.starts_with(
+                "https://raw.githubusercontent.com/Gaius-Augustus/Augustus/master/config/species/"
+            ));
+            assert!(url.contains("saccharomyces_cerevisiae_S288C/"));
+            assert!(url.ends_with(filename));
+        }
+    }
+
+    #[test]
+    fn augustus_fungi_plan_filenames_match_required_suffixes() {
+        let plan = augustus_fungi_plan(&["candida_albicans"]);
+        let suffixes: std::collections::BTreeSet<&str> = plan
+            .iter()
+            .map(|(f, _)| f.trim_start_matches("candida_albicans"))
+            .collect();
+        for required in AUGUSTUS_SPECIES_FILES {
+            assert!(suffixes.contains(*required), "missing suffix {}", required);
+        }
+    }
+
+    #[test]
+    fn species_present_returns_false_for_empty_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        // Create the species dir but no files — should be incomplete.
+        let sp_dir = dir.path().join("species").join("dummy_species");
+        std::fs::create_dir_all(&sp_dir).unwrap();
+        assert!(!species_present(dir.path(), "dummy_species"));
+    }
+
+    #[test]
+    fn species_present_returns_true_when_all_files_exist() {
+        let dir = tempfile::tempdir().unwrap();
+        let sp = "dummy_species";
+        let sp_dir = dir.path().join("species").join(sp);
+        std::fs::create_dir_all(&sp_dir).unwrap();
+        for suffix in AUGUSTUS_SPECIES_FILES {
+            std::fs::write(sp_dir.join(format!("{}{}", sp, suffix)), "x").unwrap();
+        }
+        assert!(species_present(dir.path(), sp));
     }
 }

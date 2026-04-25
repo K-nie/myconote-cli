@@ -220,13 +220,15 @@ myconote-cli predict genome.fa --weights weights.toml
 
 ## Supported kingdoms
 
-| Kingdom | Default Augustus model | BUSCO lineage | Intron range |
-|---------|----------------------|---------------|--------------|
-| `fungi` | saccharomyces_cerevisiae_S288C | fungi_odb10 | 40-2,000 bp |
-| `plant` | arabidopsis | viridiplantae_odb10 | 40-50,000 bp |
-| `animal` | human | metazoa_odb10 | 40-500,000 bp |
-| `insect` | fly | insecta_odb10 | 40-50,000 bp |
-| `protist` | toxoplasma | eukaryota_odb10 | 20-1,000 bp |
+**Primary use case is fungal annotation.** Defaults, test fixtures, validation experiments, and the curated `setup --db augustus-fungi` species bundle all target fungi. The `--kingdom plant|animal|insect|protist` paths remain in the codebase as an experimental multi-kingdom scaffold but are **not validated at this release** — for plant, animal, or insect annotation, BRAKER or MAKER are the right tools.
+
+| Kingdom | Default Augustus model | BUSCO lineage | Intron range | Status |
+|---------|----------------------|---------------|--------------|--------|
+| `fungi` | saccharomyces_cerevisiae_S288C | fungi_odb10 | 40-2,000 bp | **Primary, validated** |
+| `plant` | arabidopsis | viridiplantae_odb10 | 40-50,000 bp | Experimental scaffold |
+| `animal` | human | metazoa_odb10 | 40-500,000 bp | Experimental scaffold |
+| `insect` | fly | insecta_odb10 | 40-50,000 bp | Experimental scaffold |
+| `protist` | toxoplasma | eukaryota_odb10 | 20-1,000 bp | Experimental scaffold |
 
 ---
 

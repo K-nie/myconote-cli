@@ -2,114 +2,138 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://k-nie.github.io/myconote-cli/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/databases/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/installation/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/learn/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/lesson/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/quickstart/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
+    </url>
+    <url>
+         <loc>https://k-nie.github.io/myconote-cli/analysis/ase-template/</loc>
+         <lastmod>2026-07-08</lastmod>
+    </url>
+    <url>
+         <loc>https://k-nie.github.io/myconote-cli/analysis/ase/</loc>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/analysis/batch/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/analysis/compare/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
+    </url>
+    <url>
+         <loc>https://k-nie.github.io/myconote-cli/analysis/de-template/</loc>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/analysis/explain/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/analysis/fetch-rna/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
+    </url>
+    <url>
+         <loc>https://k-nie.github.io/myconote-cli/analysis/go-template/</loc>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/analysis/quant/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/analysis/stats/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
+    </url>
+    <url>
+         <loc>https://k-nie.github.io/myconote-cli/audit/v0.7.1_audit/</loc>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/chat/eval/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
+    </url>
+    <url>
+         <loc>https://k-nie.github.io/myconote-cli/paper/ase_validation/</loc>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/paper/myconote_manuscript/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/paper/reproducibility/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/paper/htcondor_benchmark/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/annotate/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/mask/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/overview/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/predict/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/sort/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/submit/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/train/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/pipeline/update/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/reference/citation/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/reference/kingdoms/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/reference/outputs/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
     <url>
          <loc>https://k-nie.github.io/myconote-cli/talks/gsa_2026_slides/</loc>
-         <lastmod>2026-04-24</lastmod>
+         <lastmod>2026-07-08</lastmod>
     </url>
 </urlset>

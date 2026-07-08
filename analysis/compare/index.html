@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://k-nie.github.io/myconote-cli/analysis/compare/">
       
       
-        <link rel="prev" href="../fetch-rna/">
+        <link rel="prev" href="../go-template/">
       
       
         <link rel="next" href="../explain/">
@@ -1008,6 +1008,118 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../de-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    de-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ase-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../go-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    go-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1075,6 +1187,17 @@
     <span class="md-ellipsis">
       
         What you get
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#html-report-html" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTML report (--html)
       
     </span>
   </a>
@@ -1536,6 +1659,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#html-report-html" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTML report (--html)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#genome-count-caps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1658,8 +1792,47 @@
 <li><strong><code>pangenome_summary.tsv</code></strong> — Tettelin-style bins: <code>core</code> / <code>core_single_copy</code> / <code>soft_core</code> / <code>shell</code> / <code>cloud</code> / <code>singletons</code>, with counts and fractions.</li>
 <li><strong><code>species_tree.nwk</code></strong> — rooted species tree from STAG/STRIDE (produced by OrthoFinder).</li>
 <li><strong><code>compare_report.txt</code></strong> — human-readable summary.</li>
+<li><strong><code>report.html</code></strong> — interactive HTML report (when <code>--html</code> is set; see below).</li>
 <li><strong>Untouched OrthoFinder output</strong> preserved under <code>compare_out/proteins/OrthoFinder/Results_&lt;date&gt;/</code> — includes gene trees, duplication events, multiple sequence alignments (with <code>--msa</code>), and per-species single-copy ortholog FASTAs.</li>
 </ul>
+<h2 id="html-report-html">HTML report (<code>--html</code>)<a class="headerlink" href="#html-report-html" title="Permanent link">&para;</a></h2>
+<p><code>compare --html</code> emits <code>compare_out/report.html</code> alongside the TSV
+outputs. The page is a single self-contained HTML file: CSS and JS
+are inlined, no CDN, no Google Fonts, no external resources. It opens
+correctly from a <code>file://</code> URL on a plane.</p>
+<p>The report carries five panels:</p>
+<ol>
+<li><strong>Pan-genome shape</strong> — core / soft-core / shell / cloud /
+   singleton counts as a coloured table plus a stacked-bar SVG.</li>
+<li><strong>Per-genome statistics</strong> — sortable table of n_proteins,
+   n_orthogroups, % core, % singletons, with click-to-sort headers
+   driven by 70 lines of vanilla JS.</li>
+<li><strong>Ortholog table</strong> — sortable + filterable. Up to 5,000 rows
+   render inline; the full set is in <code>ortholog_table.tsv</code>.</li>
+<li><strong>Species tree</strong> — rooted Newick from OrthoFinder rendered as
+   inline SVG with branch lengths to scale, leaf labels readable
+   (right-aligned beside each leaf path).</li>
+<li><strong>Reproducibility footer</strong> — tool version + git SHA, the exact
+   <code>myconote-cli compare …</code> invocation, and SHA256 hashes of every
+   input GFF3 and FASTA so the report itself documents what produced
+   it.</li>
+</ol>
+<p>Imagine the page as roughly: a centred 1200-px-wide column with the
+heading, a two-column grid (count table + stacked bar) for the
+pan-genome panel, the per-genome stats table beneath, then the
+filter input above the ortholog table, the SVG tree, and a
+monospaced footer block with the SHA256s.</p>
+<p>User-supplied gene IDs and genome names are HTML-escaped on the way
+into every panel (including the SVG tree leaves) so a malicious gene
+name like <code>&lt;script&gt;…&lt;/script&gt;</code> can't break out into markup.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>s1.gff3<span class="w"> </span>s1.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>s2.gff3<span class="w"> </span>s2.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>s3.gff3<span class="w"> </span>s3.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--html
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Opens in any browser:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>open<span class="w"> </span>compare_out/report.html
+</code></pre></div>
 <h2 id="genome-count-caps">Genome-count caps<a class="headerlink" href="#genome-count-caps" title="Permanent link">&para;</a></h2>
 <p>Scope is capped by genome size because OrthoFinder's all-vs-all similarity search scales with <code>total_proteins²</code>. Above a certain total, commodity hardware swaps to disk and the run becomes unreliable.</p>
 <table>
@@ -1700,21 +1873,21 @@
 <li><code>--force-cap &lt;n&gt;</code> (advanced escape hatch; not shown in <code>--help</code>)</li>
 </ol>
 <h2 id="quick-examples">Quick examples<a class="headerlink" href="#quick-examples" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Three closely related yeasts</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>sc.gff3<span class="w"> </span>sc.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>sp.gff3<span class="w"> </span>sp.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>cg.gff3<span class="w"> </span>cg.fa
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Two Arabidopsis accessions with all cores</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>col0.gff3<span class="w"> </span>col0.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>cvi.gff3<span class="w"> </span>cvi.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">16</span><span class="w"> </span>--msa
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Single-copy orthologs are emitted to compare_out/proteins/OrthoFinder/Results_*/</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Single_Copy_Orthologue_Sequences/ — ready to feed into external ML-tree</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># builders (IQ-TREE, RAxML-NG) after alignment with MAFFT.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Three closely related yeasts</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>sc.gff3<span class="w"> </span>sc.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>sp.gff3<span class="w"> </span>sp.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>cg.gff3<span class="w"> </span>cg.fa
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Two Arabidopsis accessions with all cores</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>myconote-cli<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>col0.gff3<span class="w"> </span>col0.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span>cvi.gff3<span class="w"> </span>cvi.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span>--threads<span class="w"> </span><span class="m">16</span><span class="w"> </span>--msa
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Single-copy orthologs are emitted to compare_out/proteins/OrthoFinder/Results_*/</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="c1"># Single_Copy_Orthologue_Sequences/ — ready to feed into external ML-tree</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># builders (IQ-TREE, RAxML-NG) after alignment with MAFFT.</span>
 </code></pre></div>
 <h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
@@ -1766,6 +1939,11 @@
 <td>0.15</td>
 <td>Cloud upper-bound threshold</td>
 </tr>
+<tr>
+<td><code>--html</code></td>
+<td>off</td>
+<td>Emit a self-contained interactive HTML report (<code>report.html</code>)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="primary-transcript-filtering">Primary-transcript filtering<a class="headerlink" href="#primary-transcript-filtering" title="Permanent link">&para;</a></h2>
@@ -1801,7 +1979,7 @@
 </table>
 <p><code>core_single_copy</code> is usually the answer to "which genes should I align to build a species tree?" — these are automatically separated by OrthoFinder into the <code>Single_Copy_Orthologue_Sequences/</code> directory.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioconda<span class="w"> </span>orthofinder
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioconda<span class="w"> </span>orthofinder
 </code></pre></div>
 <p>OrthoFinder itself brings in DIAMOND, MAFFT (if <code>--msa</code>), FastTree, and the required Python stack. If you already use OrthoFinder in other workflows, no extra installation is needed.</p>
 <h2 id="typical-runtimes">Typical runtimes<a class="headerlink" href="#typical-runtimes" title="Permanent link">&para;</a></h2>

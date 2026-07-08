@@ -1000,6 +1000,118 @@
   
   
     <li class="md-nav__item">
+      <a href="../../analysis/de-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    de-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/ase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/ase-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/go-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    go-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../analysis/compare/" class="md-nav__link">
         
   
@@ -1463,10 +1575,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-submit-all-96-jobs" class="md-nav__link">
+  <a href="#4-submit-all-72-jobs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Submit all 96 jobs
+        4. Submit all 72 jobs
       
     </span>
   </a>
@@ -1631,14 +1743,14 @@
 
 
 <h1 id="myconote-cli-htcondor-benchmark-suite">MycoNote-CLI HTCondor Benchmark Suite<a class="headerlink" href="#myconote-cli-htcondor-benchmark-suite" title="Permanent link">&para;</a></h1>
-<p>A complete benchmarking package for comparing MycoNote-CLI against funannotate, MAKER, and BRAKER3 across 8 reference eukaryotic genomes on the GLBRC HTCondor pool.</p>
+<p>A complete benchmarking package for comparing MycoNote-CLI against funannotate, MAKER, and BRAKER3 across six fungal reference genomes on the GLBRC HTCondor pool.</p>
 <p>This package implements the comprehensive comparative benchmark requested by Reviewer #2 of the MycoNote-CLI manuscript.</p>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p><strong>Tools compared</strong>: 4 (MycoNote-CLI v0.2.0, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)</p>
-<p><strong>Genomes</strong>: 8 reference genomes spanning fungi, plants, insects, animals, and protists (Table 1)</p>
+<p><strong>Genomes</strong>: 6 fungal reference genomes spanning Saccharomycotina, Pezizomycotina, and Basidiomycota (Table 1). Non-fungal taxa are out of scope for this panel; the <code>--kingdom plant|animal|insect|protist</code> paths are experimental and not validated at this release.</p>
 <p><strong>Replicates</strong>: 3 per tool per genome</p>
-<p><strong>Total jobs</strong>: 96 (4 tools x 8 genomes x 3 replicates)</p>
+<p><strong>Total jobs</strong>: 72 (4 tools × 6 genomes × 3 replicates)</p>
 <p><strong>Estimated total compute</strong>: 500-1,000 CPU-hours</p>
 <p><strong>Estimated wall time on HTCondor</strong>: 12-24 hours (with parallel slot allocation)</p>
 <p><strong>Output</strong>: Comparison tables suitable for inclusion in the manuscript Results section, sensitivity/specificity metrics at gene/exon/nucleotide levels for each tool-genome combination, performance metrics (runtime, memory), and BUSCO completeness scores.</p>
@@ -1651,7 +1763,7 @@
 <th>ID</th>
 <th>Organism</th>
 <th>Size (Mb)</th>
-<th>Kingdom</th>
+<th>Clade</th>
 <th>NCBI RefSeq assembly</th>
 </tr>
 </thead>
@@ -1660,67 +1772,54 @@
 <td>sce</td>
 <td><em>Saccharomyces cerevisiae</em> S288C</td>
 <td>12</td>
-<td>Fungi</td>
+<td>Saccharomycotina (budding yeast)</td>
 <td>GCF_000146045.2 (R64)</td>
 </tr>
 <tr>
 <td>cal</td>
 <td><em>Candida albicans</em> SC5314</td>
 <td>14</td>
-<td>Fungi (CTG clade)</td>
+<td>Saccharomycotina (CTG clade)</td>
 <td>GCF_000182965.3 (ASM18296v3)</td>
+</tr>
+<tr>
+<td>ylp</td>
+<td><em>Yarrowia lipolytica</em> CLIB122</td>
+<td>21</td>
+<td>Saccharomycotina (dimorphic)</td>
+<td>GCF_000002525.2 (ASM252v1)</td>
 </tr>
 <tr>
 <td>ani</td>
 <td><em>Aspergillus nidulans</em> FGSC A4</td>
 <td>30</td>
-<td>Fungi</td>
+<td>Pezizomycotina (filamentous ascomycete)</td>
 <td>GCF_000011425.1 (ASM1142v1)</td>
+</tr>
+<tr>
+<td>ncr</td>
+<td><em>Neurospora crassa</em> OR74A</td>
+<td>40</td>
+<td>Pezizomycotina (filamentous ascomycete)</td>
+<td>GCF_000182925.2 (NC12)</td>
 </tr>
 <tr>
 <td>cne</td>
 <td><em>Cryptococcus neoformans</em> JEC21</td>
 <td>19</td>
-<td>Fungi</td>
+<td>Basidiomycota (human pathogen)</td>
 <td>GCF_000091045.1 (ASM9104v1)</td>
-</tr>
-<tr>
-<td>ath</td>
-<td><em>Arabidopsis thaliana</em> Col-0</td>
-<td>135</td>
-<td>Plant</td>
-<td>GCF_000001735.4 (TAIR10.1)</td>
-</tr>
-<tr>
-<td>dme</td>
-<td><em>Drosophila melanogaster</em></td>
-<td>144</td>
-<td>Insect</td>
-<td>GCF_000001215.4 (Release 6)</td>
-</tr>
-<tr>
-<td>cel</td>
-<td><em>Caenorhabditis elegans</em></td>
-<td>100</td>
-<td>Animal</td>
-<td>GCF_000002985.6 (WBcel235)</td>
-</tr>
-<tr>
-<td>pfa</td>
-<td><em>Plasmodium falciparum</em> 3D7</td>
-<td>23</td>
-<td>Protist</td>
-<td>GCF_000002765.6</td>
 </tr>
 </tbody>
 </table>
-<p>All eight assemblies carry manually curated NCBI RefSeq annotations (which mirror the canonical community resources — SGD, CGD, FungiDB, TAIR, FlyBase, WormBase, PlasmoDB — but through a single stable download endpoint). These serve as gold standards for sensitivity/specificity calculations.</p>
+<p>All six assemblies carry manually curated NCBI RefSeq annotations (which mirror the canonical community resources — SGD, CGD, AspGD, FungiDB, JGI MycoCosm — but through a single stable download endpoint). These serve as gold standards for sensitivity/specificity calculations.</p>
+<p>The panel spans the three subphyla that contain almost all fungal-annotation targets: Saccharomycotina (budding yeasts), Pezizomycotina (filamentous ascomycetes), and Basidiomycota (mushrooms, pathogens). Non-fungal genomes are deliberately excluded — they're out of scope for the tool's current validated use case.</p>
 <hr />
 <h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>htcondor_benchmark/
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  README.md                          # this file
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  setup.sh                           # one-time setup: download genomes, install tools
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  submit_all.sh                      # submit all 96 jobs to HTCondor
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  submit_all.sh                      # submit all 72 jobs to HTCondor
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  collect_results.sh                 # aggregate results into tables
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  scripts/
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    compare_annotations.py           # compute sens/spec from GFF3 vs reference
@@ -1756,8 +1855,8 @@
 <h3 id="3-one-time-setup">3. One-time setup<a class="headerlink" href="#3-one-time-setup" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bash<span class="w"> </span>setup.sh
 </code></pre></div>
-<p>This downloads all 8 reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, and verifies the setup.</p>
-<h3 id="4-submit-all-96-jobs">4. Submit all 96 jobs<a class="headerlink" href="#4-submit-all-96-jobs" title="Permanent link">&para;</a></h3>
+<p>This downloads all six fungal reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, and verifies the setup.</p>
+<h3 id="4-submit-all-72-jobs">4. Submit all 72 jobs<a class="headerlink" href="#4-submit-all-72-jobs" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>submit_all.sh
 </code></pre></div>
 <p>This submits all jobs to HTCondor. Jobs run in parallel as slots become available.</p>
@@ -1788,7 +1887,7 @@
 - Fraction with high-confidence Swiss-Prot hit (&gt;50% identity, e&lt;1e-50)
 - Fraction with Pfam domain
 - Fraction with GO term assignment
-- BUSCO completeness against appropriate lineage (fungi_odb10, viridiplantae_odb10, etc.)</p>
+- BUSCO completeness against the appropriate fungal lineage (saccharomycetes_odb10, eurotiomycetes_odb10, sordariomycetes_odb10, or tremellomycetes_odb10, chosen per genome)</p>
 <p><strong>Performance metrics</strong> (from <code>/usr/bin/time -v</code>):
 - Wall-clock time (seconds)
 - CPU user time + system time
@@ -1856,7 +1955,7 @@
 </tr>
 </tbody>
 </table>
-<p>For the largest genomes (Arabidopsis, Drosophila), runtimes can be substantially longer.</p>
+<p>Runtimes are dominated by <code>annotate</code> (functional annotation against MMseqs2 / Pfam / InterProScan), not by gene prediction. The largest genomes in the panel are <em>Aspergillus nidulans</em> (30 Mb) and <em>Neurospora crassa</em> (40 Mb); the full fungal panel fits comfortably inside the time budgets above.</p>
 <hr />
 <h2 id="submission-strategy">Submission Strategy<a class="headerlink" href="#submission-strategy" title="Permanent link">&para;</a></h2>
 <p>The <code>submit_all.sh</code> script uses HTCondor's <code>queue</code> mechanism to submit jobs in priority order:</p>
@@ -1870,7 +1969,7 @@
 <p>Each submit file uses HTCondor's <code>getenv = true</code> to inherit the conda environment, and <code>transfer_input_files</code> to bring the genome and reference annotation to the execute node.</p>
 <hr />
 <h2 id="expected-outcomes">Expected Outcomes<a class="headerlink" href="#expected-outcomes" title="Permanent link">&para;</a></h2>
-<p><strong>For the manuscript</strong>: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across 8 genomes, with statistical significance markers. This is the central result the reviewer asked for.</p>
+<p><strong>For the manuscript</strong>: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.</p>
 <p><strong>For users</strong>: Confidence in MycoNote-CLI's accuracy relative to established tools. If the benchmarks show MycoNote-CLI achieves comparable accuracy to funannotate/MAKER/BRAKER while running faster, that justifies adoption. If it shows MycoNote-CLI is less accurate, that informs honest scoping of where it should be used.</p>
 <p><strong>For the field</strong>: A reproducible benchmark protocol that other developers can use to evaluate new annotation tools.</p>
 <hr />

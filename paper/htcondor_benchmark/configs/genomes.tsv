@@ -1,9 +1,18 @@
 id	organism	kingdom	genome_size_mb	genetic_code	busco_lineage	ncbi_accession
+# Fungal benchmark panel — matches the fungi focus of the tool.
+# Six genomes spanning Saccharomycotina (sce, cal, ylp), Pezizomycotina
+# (ani, ncr), and Basidiomycota (cne). Curated reference annotations are
+# available in SGD (sce), Candida Genome Database (cal), AspGD (ani),
+# FungiDB (ncr, cne), and JGI MycoCosm (ylp).
+#
+# Multi-kingdom rows (plant, animal, insect, protist) were removed
+# from this panel. The --kingdom support for non-fungal taxa remains
+# in the codebase but is experimental and out of scope for this
+# benchmark. If a future release validates multi-kingdom behaviour,
+# add those rows back in a separate benchmark panel.
 sce	Saccharomyces_cerevisiae_S288C	fungi	12	1	saccharomycetes_odb10	GCF_000146045.2
 cal	Candida_albicans_SC5314	fungi	14	12	saccharomycetes_odb10	GCF_000182965.3
+ylp	Yarrowia_lipolytica_CLIB122	fungi	21	1	saccharomycetes_odb10	GCF_000002525.2
 ani	Aspergillus_nidulans_FGSC_A4	fungi	30	1	eurotiomycetes_odb10	GCF_000011425.1
+ncr	Neurospora_crassa_OR74A	fungi	40	1	sordariomycetes_odb10	GCF_000182925.2
 cne	Cryptococcus_neoformans_JEC21	fungi	19	1	tremellomycetes_odb10	GCF_000091045.1
-ath	Arabidopsis_thaliana_Col0	plant	135	1	viridiplantae_odb10	GCF_000001735.4
-dme	Drosophila_melanogaster	insect	144	1	insecta_odb10	GCF_000001215.4
-cel	Caenorhabditis_elegans	animal	100	1	nematoda_odb10	GCF_000002985.6
-pfa	Plasmodium_falciparum_3D7	protist	23	1	apicomplexa_odb10	GCF_000002765.6

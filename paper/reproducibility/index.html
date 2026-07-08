@@ -1000,6 +1000,118 @@
   
   
     <li class="md-nav__item">
+      <a href="../../analysis/de-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    de-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/ase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/ase-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../analysis/go-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    go-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../analysis/compare/" class="md-nav__link">
         
   
@@ -1632,7 +1744,7 @@
 
 <h1 id="myconote-cli-reproducibility-package">MycoNote-CLI Reproducibility Package<a class="headerlink" href="#myconote-cli-reproducibility-package" title="Permanent link">&para;</a></h1>
 <p>This document provides the exact commands, software versions, and input files needed to reproduce all results in the MycoNote-CLI manuscript.</p>
-<p><strong>Manuscript:</strong> Narh-Madey B et al. (2026). MycoNote-CLI: an integrated, validated, and reproducible eukaryotic genome annotation pipeline.</p>
+<p><strong>Manuscript:</strong> Narh-Madey B et al. (2026). MycoNote-CLI: an integrated, validated, and reproducible fungal genome annotation pipeline.</p>
 <hr />
 <h2 id="1-software-versions">1. Software Versions<a class="headerlink" href="#1-software-versions" title="Permanent link">&para;</a></h2>
 <p>The following software versions were used for all reported benchmarks:</p>
@@ -1647,8 +1759,8 @@
 <tbody>
 <tr>
 <td>MycoNote-CLI</td>
-<td>v0.2.0</td>
-<td>https://github.com/K-nie/myconote-cli/releases/tag/v0.2.0</td>
+<td>v0.5.1</td>
+<td>https://github.com/K-nie/myconote-cli/releases/tag/v0.5.1</td>
 </tr>
 <tr>
 <td>Rust toolchain</td>
@@ -1730,6 +1842,36 @@
 <td>4.1.4</td>
 <td>bioconda channel</td>
 </tr>
+<tr>
+<td>salmon</td>
+<td>1.11.4</td>
+<td>bioconda channel (used by <code>quant</code>, <code>ase</code>)</td>
+</tr>
+<tr>
+<td>fastp</td>
+<td>1.3.2</td>
+<td>bioconda channel (used by <code>quant</code>, <code>ase</code>)</td>
+</tr>
+<tr>
+<td>sra-toolkit</td>
+<td>3.1.1</td>
+<td>bioconda channel (optional fallback for <code>fetch-rna</code>)</td>
+</tr>
+<tr>
+<td>wgsim</td>
+<td>htslib build</td>
+<td>bioconda channel (used in §3.5 ASE controlled-truth fixture)</td>
+</tr>
+<tr>
+<td>R</td>
+<td>4.4.2</td>
+<td>upstream binary (used by emitted <code>de-template</code> / <code>ase-template</code> / <code>go-template</code> scripts)</td>
+</tr>
+<tr>
+<td>Augustus fungi bundle</td>
+<td>curated 35-species set</td>
+<td><code>myconote-cli setup --db augustus-fungi</code> (v0.5.1)</td>
+</tr>
 </tbody>
 </table>
 <p>For comparison runs:
@@ -1809,10 +1951,10 @@
 <hr />
 <h2 id="5-exact-commands">5. Exact Commands<a class="headerlink" href="#5-exact-commands" title="Permanent link">&para;</a></h2>
 <h3 id="51-setup">5.1 Setup<a class="headerlink" href="#51-setup" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Install MycoNote-CLI v0.2.0</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Install MycoNote-CLI v0.5.1</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/K-nie/myconote-cli.git
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd</span><span class="w"> </span>myconote-cli
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>v0.2.0
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>v0.5.1
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>cargo<span class="w"> </span>build<span class="w"> </span>--release
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>sudo<span class="w"> </span>cp<span class="w"> </span>target/release/myconote-cli<span class="w"> </span>/usr/local/bin/
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
@@ -1921,14 +2063,14 @@
 </code></pre></div>
 <hr />
 <h2 id="6-planned-comparative-benchmark-for-final-manuscript">6. Planned Comparative Benchmark (For Final Manuscript)<a class="headerlink" href="#6-planned-comparative-benchmark-for-final-manuscript" title="Permanent link">&para;</a></h2>
-<p><strong>This section describes the comprehensive benchmark we plan to run before final manuscript submission. These results are not yet available; the v0.2.0 release contains only the two-genome demonstration.</strong></p>
+<p><strong>This section describes the comprehensive benchmark we plan to run before final manuscript submission. These results are not yet available; the v0.5.1 release contains only the two-genome demonstration.</strong></p>
 <h3 id="61-reference-genomes-planned">6.1 Reference Genomes (Planned)<a class="headerlink" href="#61-reference-genomes-planned" title="Permanent link">&para;</a></h3>
-<p>We plan to benchmark on the following 8 reference genomes spanning four eukaryotic kingdoms, all with curated reference annotations:</p>
+<p>We plan to benchmark on the following 6 fungal reference genomes spanning ascomycete yeasts (Saccharomycotina), filamentous ascomycetes (Pezizomycotina), and basidiomycetes, all with curated reference annotations:</p>
 <table>
 <thead>
 <tr>
 <th>Organism</th>
-<th>Kingdom</th>
+<th>Clade</th>
 <th>Source</th>
 <th>Reference annotation</th>
 </tr>
@@ -1936,51 +2078,39 @@
 <tbody>
 <tr>
 <td><em>Saccharomyces cerevisiae</em> S288C</td>
-<td>Fungi</td>
+<td>Saccharomycotina</td>
 <td>SGD</td>
 <td>sacCer3 / R64-1-1</td>
 </tr>
 <tr>
-<td><em>Aspergillus nidulans</em> FGSC A4</td>
-<td>Fungi</td>
-<td>AspGD</td>
-<td>NCBI RefSeq</td>
-</tr>
-<tr>
-<td><em>Cryptococcus neoformans</em> JEC21</td>
-<td>Fungi</td>
-<td>NCBI RefSeq</td>
-<td>NCBI RefSeq</td>
-</tr>
-<tr>
 <td><em>Candida albicans</em> SC5314</td>
-<td>Fungi (CTG)</td>
+<td>Saccharomycotina (CTG clade)</td>
 <td>CGD</td>
 <td>CGD curated</td>
 </tr>
 <tr>
-<td><em>Arabidopsis thaliana</em></td>
-<td>Plant</td>
-<td>TAIR</td>
-<td>TAIR10</td>
+<td><em>Yarrowia lipolytica</em> CLIB122</td>
+<td>Saccharomycotina</td>
+<td>NCBI RefSeq</td>
+<td>NCBI RefSeq</td>
 </tr>
 <tr>
-<td><em>Drosophila melanogaster</em></td>
-<td>Insect</td>
-<td>FlyBase</td>
-<td>FlyBase r6</td>
+<td><em>Aspergillus nidulans</em> FGSC A4</td>
+<td>Pezizomycotina</td>
+<td>AspGD</td>
+<td>NCBI RefSeq</td>
 </tr>
 <tr>
-<td><em>Caenorhabditis elegans</em></td>
-<td>Animal</td>
-<td>WormBase</td>
-<td>WormBase WS283</td>
+<td><em>Neurospora crassa</em> OR74A</td>
+<td>Pezizomycotina</td>
+<td>MycoCosm</td>
+<td>NCBI RefSeq</td>
 </tr>
 <tr>
-<td><em>Plasmodium falciparum</em> 3D7</td>
-<td>Protist</td>
-<td>PlasmoDB</td>
-<td>PlasmoDB-66</td>
+<td><em>Cryptococcus neoformans</em> JEC21</td>
+<td>Basidiomycota</td>
+<td>NCBI RefSeq</td>
+<td>NCBI RefSeq</td>
 </tr>
 </tbody>
 </table>
@@ -1996,7 +2126,7 @@
 <tbody>
 <tr>
 <td>MycoNote-CLI</td>
-<td>v0.2.0</td>
+<td>v0.5.1</td>
 <td>This manuscript</td>
 </tr>
 <tr>
@@ -2077,7 +2207,7 @@
 </li>
 </ol>
 <p>For maximum reproducibility, we recommend:
-1. Using the Docker container with the v0.2.0 tag
+1. Using the Docker container with the v0.5.1 tag
 2. Archiving your database files (not just version metadata)
 3. Documenting your hardware in publications
 4. Running multiple replicates and reporting variability</p>

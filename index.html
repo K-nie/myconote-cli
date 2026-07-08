@@ -494,6 +494,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multi-kingdom-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-kingdom note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1106,6 +1123,118 @@
   
   
     <li class="md-nav__item">
+      <a href="analysis/de-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    de-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="analysis/ase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="analysis/ase-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ase-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="analysis/go-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    go-template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="analysis/compare/" class="md-nav__link">
         
   
@@ -1493,6 +1622,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multi-kingdom-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-kingdom note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1554,7 +1700,8 @@
 
 
 <h1 id="myconote_cli">Myconote_CLI<a class="headerlink" href="#myconote_cli" title="Permanent link">&para;</a></h1>
-<p><strong>Blazing-fast genome annotation pipeline</strong> -- as genome sequencing becomes cheaper and long-read assemblies become routine, the bottleneck in genomics has shifted from sequencing to annotation. Existing pipelines are slow, narrowly scoped, and produce outputs that require extensive manual cleanup before submission. myconote-cli addresses this gap: a high-performance Rust CLI that takes a eukaryotic genome assembly from raw contigs to NCBI-ready submission, integrating 15 annotation sources across 5 kingdoms with built-in validation and reproducibility tracking.</p>
+<p><strong>Blazing-fast fungal genome annotation pipeline</strong> -- as fungal genome sequencing becomes cheaper and long-read assemblies routine, the bottleneck has shifted from sequencing to annotation. Existing pipelines are slow, fragile, and leave outputs that take days of manual cleanup before NCBI will accept them. myconote-cli addresses this gap: a high-performance Rust CLI that takes a fungal genome assembly from raw contigs to an NCBI-ready submission, integrating 15 annotation sources with built-in validation and reproducibility tracking.</p>
+<p>The tool runs on other eukaryotes, but defaults, benchmarks, and the <code>learn</code> tutorial are tuned for fungi.</p>
 <blockquote>
 <p>Developed by <strong>Benjamin Narh-Madey</strong> - Hittinger Lab, Laboratory of Genetics - UW-Madison</p>
 </blockquote>
@@ -1564,41 +1711,53 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Sort -&gt; Mask -&gt; Train -&gt; Predict -&gt; Update -&gt; Annotate -&gt; Submit
 </code></pre></div>
 <p>Each step is a separate subcommand, giving you full control over where to start, pause, or resume. All intermediate files use standard formats (GFF3, FASTA, GenBank) compatible with Proksee (web), IGV (desktop), and clinker (cross-species gene-cluster synteny) — the tools MycoNote hands off to rather than reimplementing.</p>
+<p>RNA-seq is a first-class input at four distinct points: <code>train</code> and <code>update</code> use reads as <em>evidence for gene models</em>; <code>quant</code> uses reads for <em>expression quantification</em> (salmon + decoy-aware index, tximport-ready outputs); <code>fetch-rna</code> pulls reads by SRA/ENA accession so the entire RNA-seq stack runs end-to-end from an accession list.</p>
 <hr />
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>23 CLI commands</strong> covering the full genome annotation lifecycle</li>
+<li><strong>23 CLI commands</strong> covering the full fungal genome annotation lifecycle</li>
 <li><strong>15 annotation sources</strong> -- MMseqs2, Pfam (hmmsearch), InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms, and more</li>
 <li><strong>Multi-tool gene prediction</strong> -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, configurable EVM consensus</li>
-<li><strong>AI-powered interpretation</strong> -- <code>myconote-cli explain</code> uses a local LLM (Ollama) to interpret results with grounded citations and command recommendations. No data leaves your machine.</li>
-<li><strong>Multi-genome batch mode</strong> -- <code>myconote-cli batch</code> annotates many genomes from a directory or sample sheet with HTCondor support, resume capability, and a live dashboard</li>
-<li><strong>18 NCBI genetic code tables</strong> -- Candida CTG clade, mitochondrial genomes, etc.</li>
+<li><strong>RNA-seq expression quantification</strong> -- <code>quant</code> wraps fastp + salmon with a decoy-aware index, emits tximport-ready <code>quant.sf</code> per sample plus wide count and TPM matrices</li>
+<li><strong>DESeq2 differential expression</strong> -- <code>de-template</code> emits a ready-to-run R script (tximport → DESeq2 → apeglm shrinkage → volcano + MA plots); no R runtime dependency in the CLI itself</li>
+<li><strong>SRA / ENA ingestion</strong> -- <code>fetch-rna</code> pulls public RNA-seq by run, study, BioProject, sample, or experiment accession; ENA REST default, sra-toolkit fallback</li>
+<li><strong>AI-powered interpretation</strong> -- <code>explain</code> uses a local LLM (Ollama) to interpret results with grounded citations and command recommendations. No data leaves your machine.</li>
+<li><strong>Multi-genome batch mode</strong> -- <code>batch</code> annotates many genomes from a directory or sample sheet with HTCondor support, resume capability, and a live dashboard</li>
+<li><strong>25 NCBI genetic code tables</strong> -- tables 1–6, 9–14, 16, 21–31, 33, every table verified against the NCBI reference. Critical for <em>Candida</em> CTG clade (Table 12) and other yeast-specific codes; includes caveats for context-dependent tables 27, 28, 31</li>
 <li><strong>NCBI submission prep</strong> -- GFF3 validation, .tbl generation, table2asn integration</li>
 <li><strong>Ploidy awareness</strong> -- allelic duplicate detection for polyploid genomes</li>
-<li><strong>Comparative genomics</strong> -- phylogenetics (IQ-TREE), N-genome orthology via OrthoFinder, Y1000+ functional placement</li>
-<li><strong>Y1000+ reference placement</strong> -- <code>myconote-cli place</code> compares a genome's KEGG-KO profile against 1,154 sequenced yeasts; auto-predicts codon table, C/N lifestyle, thermotolerance, and ecological niche when the relevant subsets are installed</li>
-<li><strong>15+ format conversions</strong> -- GFF3/GTF/BED/GenBank/FASTA/FASTQ/PHYLIP/NEXUS/VCF</li>
-<li><strong>Interactive tutorial</strong> -- <code>myconote-cli learn</code> (8 lessons, swirl-style)</li>
-<li><strong>5 kingdoms supported</strong> -- fungi, plants, animals, insects, protists</li>
-<li><strong>Reproducibility</strong> -- workflow reports (JSON), database version tracking, output validation</li>
+<li><strong>N-genome orthology</strong> -- <code>compare</code> wraps OrthoFinder with tiered genome-count caps tuned for fungal clades (5 fungi / 3 small plants / 2 large)</li>
+<li><strong>15+ format conversions</strong> -- GFF3/GTF/BED/GenBank/FASTA/FASTQ/PHYLIP/NEXUS/VCF, plus <code>convert --to cds</code> for spliced transcriptome extraction</li>
+<li><strong>Interactive tutorial</strong> -- <code>myconote-cli learn</code> (swirl-style, terminal-based)</li>
+<li><strong>Reproducibility</strong> -- workflow reports (JSON), per-run bundles for quant and explain, database version tracking, output validation</li>
 <li><strong>Docker + Singularity</strong> containers for HPC and cloud environments</li>
 <li><strong>CI/CD</strong> -- GitHub Actions (fmt, clippy, test, build, security audit)</li>
-<li><strong>332 tests</strong> passing on real genome data (<em>Brettanomyces bruxellensis</em>, <em>Candida tropicalis</em>)</li>
+<li><strong>390+ tests</strong> passing on real fungal genome data (<em>Brettanomyces bruxellensis</em>, <em>Candida tropicalis</em>)</li>
 </ul>
+<h3 id="multi-kingdom-note">Multi-kingdom note<a class="headerlink" href="#multi-kingdom-note" title="Permanent link">&para;</a></h3>
+<p><code>--kingdom plant|animal|insect|protist</code> continues to work because the non-fungal Augustus species lists, BUSCO lineages, and intron-size ranges are still registered in the code. They are <strong>not</strong> validated on large non-fungal genomes and are not a supported use case at this release. Treat them as experimental; for serious plant / animal annotation, BRAKER or MAKER are the right tools.</p>
 <hr />
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Install tools and databases</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>myconote-cli<span class="w"> </span>install<span class="w"> </span>--yes
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>myconote-cli<span class="w"> </span>setup
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Run the full pipeline</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Annotate a fungal genome end-to-end</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>assembly.fa<span class="w"> </span>--min-length<span class="w"> </span><span class="m">500</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>myconote-cli<span class="w"> </span>mask<span class="w"> </span>assembly_sorted.fa<span class="w"> </span>--engine<span class="w"> </span>repeatmodeler<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>assembly_masked.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--locus-prefix<span class="w"> </span>MYORG
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span>--fasta<span class="w"> </span>assembly.fa<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span>--trnascan<span class="w"> </span>--interproscan<span class="w"> </span>--email<span class="w"> </span>you@email.edu
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--fasta<span class="w"> </span>assembly.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span>--organism<span class="w"> </span><span class="s2">&quot;Genus species&quot;</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span>--organism<span class="w"> </span><span class="s2">&quot;Genus species&quot;</span><span class="w"> </span>--genetic-code<span class="w"> </span><span class="m">12</span><span class="w">  </span><span class="c1"># table 12 for Candida CTG clade</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Optional: quantify RNA-seq expression against the annotation</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotated.gff3<span class="w"> </span>--to<span class="w"> </span>cds<span class="w"> </span>--fasta<span class="w"> </span>assembly.fa<span class="w"> </span>-o<span class="w"> </span>cds.fa
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>myconote-cli<span class="w"> </span>fetch-rna<span class="w"> </span>SRR12345678<span class="w"> </span>SRR12345679<span class="w"> </span>-o<span class="w"> </span>rna/
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>myconote-cli<span class="w"> </span>quant<span class="w"> </span>cds.fa<span class="w"> </span>--samples<span class="w"> </span>rna/samples.tsv<span class="w"> </span>--genome<span class="w"> </span>assembly.fa
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>myconote-cli<span class="w"> </span>de-template<span class="w"> </span>--quant-dir<span class="w"> </span>quant_out<span class="w"> </span>--design<span class="w"> </span><span class="s1">&#39;~ condition&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">    </span>--contrast<span class="w"> </span><span class="s1">&#39;condition,treated,control&#39;</span><span class="w"> </span>-o<span class="w"> </span>analysis.R
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>Rscript<span class="w"> </span>analysis.R<span class="w">   </span><span class="c1"># needs R + tximport + DESeq2 + apeglm installed</span>
 </code></pre></div>
 <hr />
 <h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
@@ -1644,16 +1803,19 @@
 </tr>
 </tbody>
 </table>
-<p>Pfam uses hmmsearch instead of hmmscan for a ~6x speedup on large proteomes.</p>
+<p>Pfam uses hmmsearch instead of hmmscan for a ~6× speedup on large proteomes.</p>
 <hr />
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="installation/">Installation</a> -- Docker, Singularity, conda, or manual build</li>
 <li><a href="quickstart/">Quick Start</a> -- annotate a genome in under an hour</li>
 <li><a href="lesson/">Workshop Lesson</a> -- full tutorial (~3 hours)</li>
-<li><strong>Interactive tutorial</strong>: <code>myconote-cli learn</code> -- 8 self-paced lessons in your terminal</li>
+<li><strong>Interactive tutorial</strong>: <code>myconote-cli learn</code> -- self-paced lessons in your terminal</li>
 <li><a href="analysis/explain/">Explain (AI interpreter)</a> -- local LLM-powered result interpretation</li>
 <li><a href="analysis/batch/">Batch annotation</a> -- multi-genome annotation with HTCondor support</li>
+<li><a href="analysis/quant/">RNA-seq quantification</a> -- fastp + salmon + tximport</li>
+<li><a href="analysis/de-template/">DE analysis template</a> -- generates DESeq2 R script</li>
+<li><a href="analysis/fetch-rna/">SRA/ENA ingestion</a> -- download FASTQ by accession</li>
 </ul>
 
 

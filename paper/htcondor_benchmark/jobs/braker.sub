@@ -1,5 +1,5 @@
 # HTCondor submit file for BRAKER benchmark runs.
-# 24 jobs: 8 genomes x 3 replicates.
+# 18 jobs: 6 genomes x 3 replicates.
 
 universe       = vanilla
 executable     = $(BENCHMARK_DIR)/jobs/run_braker.sh

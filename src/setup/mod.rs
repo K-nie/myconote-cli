@@ -269,6 +269,35 @@ pub fn check_databases(db_dir: &Path) {
             continue;
         }
 
+        // Special handling for BUSCO. Lineage data are not stored under
+        // `db_dir/busco/` — BUSCO itself owns the cache and writes to a
+        // `busco_downloads/lineages/<lineage>/` directory relative to
+        // whichever working directory the last annotate run used, or under
+        // `~/busco_downloads/` when the user runs BUSCO directly. The
+        // legacy check that assumed `db_dir/busco/fungi_odb10` therefore
+        // reported "missing" even after successful annotate runs.  Fixes F4
+        // by checking every known cache location and, when none exist,
+        // labeling the entry as runtime-provisioned rather than missing.
+        if db.key == "busco" {
+            match locate_busco_lineage("fungi_odb10", db_dir) {
+                Some(p) => {
+                    println!(
+                        "  {:<14} \x1b[32m✓ present\x1b[0m  cached at {}",
+                        db.key,
+                        p.display()
+                    );
+                }
+                None => {
+                    println!(
+                        "  {:<14} \x1b[33m↻ runtime-provisioned\x1b[0m  BUSCO auto-downloads \
+                         lineages on first `annotate --busco`",
+                        db.key
+                    );
+                }
+            }
+            continue;
+        }
+
         let marker = db_dir.join(db.marker_file);
         if marker.exists() {
             let version_info =
@@ -282,6 +311,26 @@ pub fn check_databases(db_dir: &Path) {
         }
     }
     println!();
+}
+
+/// Search every known BUSCO cache location for a lineage directory. Returns
+/// the first match, mirroring how BUSCO itself resolves lineages at runtime.
+fn locate_busco_lineage(lineage: &str, db_dir: &Path) -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").ok().map(std::path::PathBuf::from);
+    let candidates: Vec<std::path::PathBuf> = [
+        Some(db_dir.join("busco").join(lineage)),
+        home.as_ref()
+            .map(|h| h.join("busco_downloads").join("lineages").join(lineage)),
+        home.as_ref()
+            .map(|h| h.join(".busco_downloads").join("lineages").join(lineage)),
+        std::env::current_dir()
+            .ok()
+            .map(|c| c.join("busco_downloads").join("lineages").join(lineage)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    candidates.into_iter().find(|p| p.exists())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

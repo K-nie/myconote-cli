@@ -6,6 +6,91 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-07-07
+
+### Fixed
+
+- **`batch --resume <dir>` now works.** The argument parser set
+  `config.resume = Some(dir)` but never populated `config.input`, so
+  `discover_genomes` fell through to its "input is not a file or directory"
+  branch and every resume invocation died with `'' is not a file or
+  directory`. Resume now calls a dedicated `discover_genomes_from_state`
+  that rebuilds the genome list from `status.json`, so the headline HPC
+  feature works end-to-end. (F6)
+
+- **`predict --glimmerhmm` no longer silently skipped.** The flag was
+  parsed and dispatched to a `progress::warn_spinner` call which is a
+  no-op in non-TTY (batch / cluster) runs; users piping stdout to a log
+  file could not see that GlimmerHMM had been requested, tried, and
+  skipped. The step now prints an unconditional `[+] GlimmerHMM…` header
+  with the training-dir outcome via `println!`, and auto-detects the
+  training dir via `glimmer::find_training_dir(default_species)` before
+  giving up. (F3d)
+
+- **Consensus GFF3 now spec-compliant for downstream tools.** The
+  EVM-style consensus emitter in `predict/evidence.rs` had three schema
+  issues that broke IGV, JBrowse2, NCBI `table2asn`, and GenBank
+  converters:
+  - No `exon` records — only `CDS`. Fixed by synthesising one `exon`
+    per CDS span when the source predictor emits CDS-only output
+    (Augustus with `--UTR=off`, SNAP). (F3a)
+  - Mixed `mRNA` and `transcript` labels for the same conceptual
+    feature depending on which predictor won the overlap contest.
+    Fixed by normalising `transcript` → `mRNA` at emission time. (F3b)
+  - Missing `start_codon` / `stop_codon` records for ~13 % of genes.
+    Fixed by deriving 3-bp codon markers from the outermost CDS bounds
+    (strand-aware) when the predictor did not carry them; synthesised
+    records carry `Note=synthesized_from_cds_bounds` so downstream
+    consumers know the record is coordinate-only and not FASTA-verified.
+    (F3c)
+
+- **`de-template --counts` accepts a minimal sample sheet.** Previously
+  the shared `quant::sample_sheet::parse_sheet` enforced `fastq_r1` even
+  in counts-mode where the FASTQ paths are irrelevant, blocking the
+  documented "fallback mode" workflow. Added a
+  `SheetMode { RequireFastq, MetadataOnly }` enum and a new
+  `parse_sheet_metadata_only` entry point; `de-template` uses the
+  metadata-only parser when `--counts` is set. (F2)
+
+- **`setup --check` now honest about BUSCO.** BUSCO lineage data are
+  stored by BUSCO itself in `busco_downloads/lineages/<lineage>/`
+  (per working directory, home, or `--download_path`), never under
+  `~/.myconote/dbs/busco/`, so the old marker-file check always
+  reported "missing" even when `annotate` had just finished a
+  successful BUSCO run. The check now searches the known cache
+  locations and, when none are present, labels the entry
+  `↻ runtime-provisioned` with an explanation instead of a false
+  `✗ missing`. (F4)
+
+- **`annotate` enumerates internal-stop-codon genes.** The
+  `⚠ N protein(s) have internal stop codons` warning previously only
+  reported the count. Users now get
+  `annotate_out/internal_stop_codon_genes.tsv` with `gene_id` and
+  comma-separated stop positions per gene, so pseudogene candidates
+  can be triaged without re-running validation. (F5)
+
+- **`stats` rejects unrecognised flags.** The `stats` arg-parser
+  silently swallowed unknown flags (including `-o <path>`, which is
+  not a documented option), letting users think an output file had
+  been written when it had not. Unknown flags now error with
+  `unknown flag '<flag>' for stats. Run --help.` (F1)
+
+### Notes
+
+- All 541 tests continue to pass (432 lib + 56 unit + 53 integration);
+  no regressions from the `sample_sheet::parse_sheet` API extension —
+  the public function keeps its old signature and calls the mode-aware
+  variant with `SheetMode::RequireFastq`.
+- Fresh *Brettanomyces anomalus* smoke run on the patched binary:
+  consensus GFF3 emits 7773 exon + 7773 CDS (parity), 6029 mRNA
+  (zero transcript), 6029 / 6029 start / stop_codon (of which 1588
+  carry `Note=synthesized_from_cds_bounds`). Structural pipeline wall
+  time 18:27 (sort 1 s + mask 3 s + predict 6:49 + annotate 11:34).
+  Annotation quality unchanged from v0.7.1: 68.2 % functional
+  annotation, 78.0 % Pfam, BUSCO 89.6 % (fungi_odb10).
+- Full audit + verification report at `smoke_2026-07-07/SMOKE_REPORT.md`
+  and dry-run confirmation at `smoke_dryrun_2026-07-07/`.
+
 ## [0.7.1] — 2026-04-25
 
 ### Fixed

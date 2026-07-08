@@ -785,13 +785,36 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     }
 
     // ── Validate output protein FASTA ────────────────────────────────────────
+    //
+    // When any protein carries an internal stop codon, emit both a printed
+    // summary and a per-gene TSV so users can act on the finding without
+    // re-running validation. Fixes F5: the previous message only reported
+    // the count, leaving users blind to *which* proteins were affected.
     match crate::utils::validation::validate_protein_fasta(&proteins_fa) {
         Ok(pval) => {
             if !pval.internal_stops.is_empty() {
-                println!(
-                    "  ⚠  {} protein(s) have internal stop codons",
-                    pval.internal_stops.len()
-                );
+                let list_path = config.out_dir.join("internal_stop_codon_genes.tsv");
+                if let Ok(mut f) = std::fs::File::create(&list_path) {
+                    use std::io::Write;
+                    let _ = writeln!(f, "gene_id\tinternal_stop_positions");
+                    for (gid, positions) in &pval.internal_stops {
+                        let pos_str: Vec<String> =
+                            positions.iter().map(|p| p.to_string()).collect();
+                        let _ = writeln!(f, "{}\t{}", gid, pos_str.join(","));
+                    }
+                    println!(
+                        "  ⚠  {} protein(s) have internal stop codons → {}",
+                        pval.internal_stops.len(),
+                        list_path.display()
+                    );
+                } else {
+                    println!(
+                        "  ⚠  {} protein(s) have internal stop codons \
+                         (could not write list to {})",
+                        pval.internal_stops.len(),
+                        list_path.display()
+                    );
+                }
             }
         }
         Err(_) => {}

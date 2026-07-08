@@ -99,12 +99,38 @@ pub struct SampleSheet {
     pub root_dir: PathBuf,
 }
 
-/// Parse a TSV sample sheet from disk. All fastq paths are resolved to
-/// absolute but *not* canonicalized (symlinks are preserved) and *not*
-/// checked for existence — the caller (quant dispatcher) runs the
-/// existence check after parsing so users see every missing file at
-/// once instead of one per re-run.
+/// Which schema variant to enforce on the sample sheet.
+///
+/// `RequireFastq` is the canonical `quant` schema: `sample_id` and
+/// `fastq_r1` must be present. `MetadataOnly` skips the fastq-column
+/// requirement and is used by consumers such as `de-template --counts`
+/// where the fastq paths are irrelevant — those callers already have a
+/// counts matrix and only need `sample_id` plus the design-formula
+/// variables (condition / batch / extras) from the sheet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SheetMode {
+    RequireFastq,
+    MetadataOnly,
+}
+
+/// Parse a TSV sample sheet from disk (canonical fastq-requiring schema).
+///
+/// All fastq paths are resolved to absolute but *not* canonicalized
+/// (symlinks are preserved) and *not* checked for existence — the caller
+/// (quant dispatcher) runs the existence check after parsing so users
+/// see every missing file at once instead of one per re-run.
 pub fn parse_sheet(path: &Path) -> Result<SampleSheet> {
+    parse_sheet_with_mode(path, SheetMode::RequireFastq)
+}
+
+/// Parse a TSV sample sheet with only `sample_id` required. Downstream
+/// R-script emitters (`de-template --counts`, GO enrichment scaffolds)
+/// use this because they never touch the fastq columns.
+pub fn parse_sheet_metadata_only(path: &Path) -> Result<SampleSheet> {
+    parse_sheet_with_mode(path, SheetMode::MetadataOnly)
+}
+
+fn parse_sheet_with_mode(path: &Path, mode: SheetMode) -> Result<SampleSheet> {
     let text = fs::read_to_string(path).map_err(|e| {
         MycoNoteError::QuantSheet(format!("failed to read {}: {}", path.display(), e))
     })?;
@@ -113,12 +139,21 @@ pub fn parse_sheet(path: &Path) -> Result<SampleSheet> {
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
 
-    parse_sheet_from_str(&text, &root_dir)
+    parse_sheet_from_str_with_mode(&text, &root_dir, mode)
 }
 
-/// Parse a sheet from an in-memory TSV. Factored out so unit tests can
-/// exercise the parser without touching disk.
+/// Parse a sheet from an in-memory TSV under the canonical quant schema.
+/// Factored out so unit tests can exercise the parser without touching disk.
 pub fn parse_sheet_from_str(text: &str, root_dir: &Path) -> Result<SampleSheet> {
+    parse_sheet_from_str_with_mode(text, root_dir, SheetMode::RequireFastq)
+}
+
+/// Parse a sheet from an in-memory TSV under the given `SheetMode`.
+pub fn parse_sheet_from_str_with_mode(
+    text: &str,
+    root_dir: &Path,
+    mode: SheetMode,
+) -> Result<SampleSheet> {
     let mut header: Option<Vec<String>> = None;
     let mut samples: Vec<Sample> = Vec::new();
     let mut seen_ids: HashSet<String> = HashSet::new();
@@ -141,7 +176,7 @@ pub fn parse_sheet_from_str(text: &str, root_dir: &Path) -> Result<SampleSheet> 
         if header.is_none() {
             // First non-blank / non-comment line is the header.
             let hdr: Vec<String> = cells.iter().map(|s| s.trim().to_string()).collect();
-            require_header(&hdr, line_num)?;
+            require_header(&hdr, line_num, mode)?;
             header = Some(hdr);
             continue;
         }
@@ -155,7 +190,7 @@ pub fn parse_sheet_from_str(text: &str, root_dir: &Path) -> Result<SampleSheet> 
             )));
         }
 
-        let sample = parse_row(hdr, &cells, root_dir, line_num)?;
+        let sample = parse_row(hdr, &cells, root_dir, line_num, mode)?;
 
         if !seen_ids.insert(sample.sample_id.clone()) {
             return Err(MycoNoteError::QuantSheet(format!(
@@ -183,7 +218,7 @@ pub fn parse_sheet_from_str(text: &str, root_dir: &Path) -> Result<SampleSheet> 
     })
 }
 
-fn require_header(hdr: &[String], line_num: usize) -> Result<()> {
+fn require_header(hdr: &[String], line_num: usize, mode: SheetMode) -> Result<()> {
     let mut seen = HashSet::new();
     for h in hdr {
         if !seen.insert(h.as_str()) {
@@ -192,17 +227,27 @@ fn require_header(hdr: &[String], line_num: usize) -> Result<()> {
             )));
         }
     }
-    for required in ["sample_id", "fastq_r1"] {
-        if !hdr.iter().any(|h| h == required) {
+    let required: &[&str] = match mode {
+        SheetMode::RequireFastq => &["sample_id", "fastq_r1"],
+        SheetMode::MetadataOnly => &["sample_id"],
+    };
+    for name in required {
+        if !hdr.iter().any(|h| h == *name) {
             return Err(MycoNoteError::QuantSheet(format!(
-                "header missing required column '{required}'"
+                "header missing required column '{name}'"
             )));
         }
     }
     Ok(())
 }
 
-fn parse_row(hdr: &[String], cells: &[&str], root_dir: &Path, line_num: usize) -> Result<Sample> {
+fn parse_row(
+    hdr: &[String],
+    cells: &[&str],
+    root_dir: &Path,
+    line_num: usize,
+    mode: SheetMode,
+) -> Result<Sample> {
     let get = |name: &str| -> Option<&str> {
         hdr.iter()
             .position(|h| h == name)
@@ -216,9 +261,18 @@ fn parse_row(hdr: &[String], cells: &[&str], root_dir: &Path, line_num: usize) -
         .to_string();
     require_filename_safe(&sample_id, line_num)?;
 
-    let fastq_r1_raw = get("fastq_r1")
-        .ok_or_else(|| MycoNoteError::QuantSheet(format!("line {line_num}: fastq_r1 is empty")))?;
-    let fastq_r1 = resolve_path(fastq_r1_raw, root_dir);
+    // fastq_r1 is only required in RequireFastq mode. Metadata-only callers
+    // (de-template --counts) never read fastq_r1 downstream, so leaving the
+    // path empty is safe.
+    let fastq_r1 = match get("fastq_r1") {
+        Some(raw) => resolve_path(raw, root_dir),
+        None if mode == SheetMode::RequireFastq => {
+            return Err(MycoNoteError::QuantSheet(format!(
+                "line {line_num}: fastq_r1 is empty"
+            )));
+        }
+        None => PathBuf::new(),
+    };
 
     let fastq_r2 = get("fastq_r2").map(|p| resolve_path(p, root_dir));
 

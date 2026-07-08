@@ -1051,6 +1051,12 @@ fn handle_stats(path: &str, args: &[String]) -> Result<()> {
                 primary_only = true;
                 i += 1;
             }
+            other if other.starts_with('-') => {
+                return Err(anyhow::anyhow!(
+                    "unknown flag '{}' for `stats`. Run `myconote-cli stats --help` for supported options.",
+                    other
+                ));
+            }
             _ => i += 1,
         }
     }

@@ -313,10 +313,35 @@ pub fn merge_predictions(
         let gene_id = locus_tag.clone();
         let mrna_id = format!("{}-mRNA1", locus_tag);
 
-        // Rewrite records with unique IDs per feature
+        // First pass: rewrite records + collect CDS spans and codon presence
+        // so we can synthesize the missing exon / start_codon / stop_codon
+        // records after the model's own records are emitted. Rationale:
+        //
+        //   * F3a — canonical GFF3 expects `exon` features; SNAP / Augustus
+        //     with `--UTR=off` emit CDS only, so downstream tools (IGV,
+        //     table2asn, JBrowse2) that read exons see empty transcripts.
+        //     We derive one exon per CDS span when no explicit exon
+        //     records exist.
+        //   * F3b — different predictors label the transcript feature
+        //     "mRNA" vs. "transcript"; normalize the emitted line to
+        //     "mRNA" so every consensus gene is SOFA-compliant.
+        //   * F3c — codon markers are optional in some predictor output
+        //     even though the underlying CDS is complete. Synthesize a
+        //     coordinate-only start_codon / stop_codon from the outermost
+        //     CDS span when the model does not carry one. The 3-bp span
+        //     is derived from the strand-aware 5' / 3' end of the CDS
+        //     union; we do not verify the FASTA (evidence.rs has no
+        //     genome handle), so the synthesized record is a placeholder
+        //     that fixes tool interop and does not assert biology.
         let mut cds_counter = 0usize;
         let mut exon_counter = 0usize;
         let mut other_counter = 0usize;
+
+        let mut cds_spans: Vec<(u64, u64, char)> = Vec::new(); // (start, end, strand)
+        let mut has_exon_records = false;
+        let mut has_start_codon = false;
+        let mut has_stop_codon = false;
+        let mut mrna_source: Option<String> = None;
 
         for rec in &model.records {
             let mut r = rec.clone();
@@ -327,20 +352,43 @@ pub fn merge_predictions(
                     r.attributes.insert("locus_tag".into(), locus_tag.clone());
                 }
                 "mRNA" | "transcript" => {
+                    // F3b: normalize whichever label the predictor used.
+                    r.feature_type = "mRNA".to_string();
                     r.attributes.insert("ID".into(), mrna_id.clone());
                     r.attributes.insert("Parent".into(), gene_id.clone());
+                    mrna_source = Some(r.source.clone());
                 }
                 "CDS" => {
                     cds_counter += 1;
                     r.attributes.insert("Parent".into(), mrna_id.clone());
                     r.attributes
                         .insert("ID".into(), format!("{}-CDS-{}", locus_tag, cds_counter));
+                    cds_spans.push((rec.start, rec.end, rec.strand));
                 }
                 "exon" => {
+                    has_exon_records = true;
                     exon_counter += 1;
                     r.attributes.insert("Parent".into(), mrna_id.clone());
                     r.attributes
                         .insert("ID".into(), format!("{}-exon-{}", locus_tag, exon_counter));
+                }
+                "start_codon" => {
+                    has_start_codon = true;
+                    other_counter += 1;
+                    r.attributes.insert("Parent".into(), mrna_id.clone());
+                    r.attributes.insert(
+                        "ID".into(),
+                        format!("{}-start_codon-{}", locus_tag, other_counter),
+                    );
+                }
+                "stop_codon" => {
+                    has_stop_codon = true;
+                    other_counter += 1;
+                    r.attributes.insert("Parent".into(), mrna_id.clone());
+                    r.attributes.insert(
+                        "ID".into(),
+                        format!("{}-stop_codon-{}", locus_tag, other_counter),
+                    );
                 }
                 "five_prime_UTR" | "three_prime_UTR" | "UTR" => {
                     r.attributes.insert("Parent".into(), mrna_id.clone());
@@ -365,6 +413,73 @@ pub fn merge_predictions(
 
             writeln!(out, "{}", r.to_gff3_line())
                 .map_err(crate::utils::error::MycoNoteError::Io)?;
+        }
+
+        // Synthesize missing exon / codon records.
+        if !cds_spans.is_empty() {
+            let source = mrna_source
+                .as_deref()
+                .unwrap_or(&model.source);
+
+            if !has_exon_records {
+                // F3a: one exon per CDS span; UTRs are absent, so exon
+                // coordinates equal CDS coordinates.
+                for (i, (s, e, strand)) in cds_spans.iter().enumerate() {
+                    exon_counter += 1;
+                    writeln!(
+                        out,
+                        "{}\t{}\texon\t{}\t{}\t.\t{}\t.\tID={}-exon-{};Parent={}",
+                        model.seqid,
+                        source,
+                        s,
+                        e,
+                        strand,
+                        locus_tag,
+                        i + 1,
+                        mrna_id
+                    )
+                    .map_err(crate::utils::error::MycoNoteError::Io)?;
+                }
+            }
+
+            // F3c: derive missing codon markers from the 5' / 3' extremes
+            // of the CDS union (strand-aware). Placeholder only — not FASTA-
+            // verified — so downstream tools that expect the record type
+            // are satisfied without falsely asserting the biology of the
+            // ATG / STOP nucleotides.
+            let cds_min = cds_spans.iter().map(|c| c.0).min().unwrap();
+            let cds_max = cds_spans.iter().map(|c| c.1).max().unwrap();
+            let strand = cds_spans[0].2;
+
+            if !has_start_codon {
+                let (s, e) = if strand == '-' {
+                    (cds_max.saturating_sub(2), cds_max)
+                } else {
+                    (cds_min, (cds_min + 2).max(cds_min))
+                };
+                other_counter += 1;
+                writeln!(
+                    out,
+                    "{}\t{}\tstart_codon\t{}\t{}\t.\t{}\t0\tID={}-start_codon-{};Parent={};Note=synthesized_from_cds_bounds",
+                    model.seqid, source, s, e, strand, locus_tag, other_counter, mrna_id
+                )
+                .map_err(crate::utils::error::MycoNoteError::Io)?;
+            }
+
+            if !has_stop_codon {
+                let (s, e) = if strand == '-' {
+                    (cds_min, (cds_min + 2).max(cds_min))
+                } else {
+                    (cds_max.saturating_sub(2), cds_max)
+                };
+                other_counter += 1;
+                writeln!(
+                    out,
+                    "{}\t{}\tstop_codon\t{}\t{}\t.\t{}\t0\tID={}-stop_codon-{};Parent={};Note=synthesized_from_cds_bounds",
+                    model.seqid, source, s, e, strand, locus_tag, other_counter, mrna_id
+                )
+                .map_err(crate::utils::error::MycoNoteError::Io)?;
+            }
         }
     }
 

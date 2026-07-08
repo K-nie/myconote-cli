@@ -322,7 +322,15 @@ pub fn run_de_template(args: &[String]) -> Result<()> {
     // Validate sample sheet early so contrast mistakes are caught
     // before we write any files.
     require_file(&cfg.samples_path, "--samples sheet")?;
-    let sheet = sample_sheet::parse_sheet(&cfg.samples_path)?;
+    // In --counts mode there are no fastq files to point at, so we relax
+    // the sheet schema to only require `sample_id` + the design variables
+    // that appear in contrasts. --quant-dir mode keeps the full quant
+    // schema because those callers really do need fastq_r1 downstream.
+    let sheet = if cfg.quant_dir.is_some() {
+        sample_sheet::parse_sheet(&cfg.samples_path)?
+    } else {
+        sample_sheet::parse_sheet_metadata_only(&cfg.samples_path)?
+    };
     validate_contrasts(&cfg, &sheet)?;
 
     if let Some(ref d) = cfg.quant_dir {

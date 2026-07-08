@@ -425,44 +425,66 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     }
 
     // ── 2a. GlimmerHMM (optional third ab-initio predictor) ─────────────────
-    // The audit found that `use_glimmerhmm` was parsed from the CLI and set
-    // on PredictConfig but never read here — the flag was a silent no-op.
-    // Now dispatched like SNAP: non-fatal on failure, merges into EVM as
-    // its own weighted source.
+    //
+    // Prior audit found that `use_glimmerhmm` was parsed from the CLI and
+    // set on PredictConfig but never read here — a silent no-op. The next
+    // audit (v0.7.2) found that even after the dispatch was wired, the
+    // outcome went through `progress::warn_spinner`, which is invisible in
+    // non-TTY (batch / cluster) runs. Callers piping stdout to a log file
+    // therefore had no way to see that GlimmerHMM was skipped or why.
+    //
+    // Current behavior: always emit a `println!` line for the step and its
+    // outcome so non-TTY logs make the decision visible, and auto-detect
+    // the training dir when the user did not pass `--glimmer-dir`.
     if config.use_glimmerhmm {
+        println!("  [+] GlimmerHMM (third ab-initio predictor)…");
         let glimmer_gff = config.out_dir.join("glimmerhmm.gff3");
-        let pb = progress::spinner("Running GlimmerHMM…");
-        match config.glimmer_dir.as_ref() {
-            Some(train_dir) if train_dir.exists() => {
+
+        // Resolve the training dir: prefer explicit --glimmer-dir; otherwise
+        // fall back to `find_training_dir(default_species_for_kingdom)`.
+        let resolved_dir: Option<std::path::PathBuf> = match config.glimmer_dir.as_ref() {
+            Some(p) if p.exists() => Some(p.clone()),
+            Some(p) => {
+                println!(
+                    "      ⚠ --glimmer-dir path does not exist: {}. \
+                     Trying auto-detect for kingdom={}.",
+                    p.display(),
+                    config.kingdom.display_name()
+                );
+                let species = glimmer::default_training_species(config.kingdom.display_name());
+                glimmer::find_training_dir(species)
+            }
+            None => {
+                let species = glimmer::default_training_species(config.kingdom.display_name());
+                glimmer::find_training_dir(species)
+            }
+        };
+
+        match resolved_dir {
+            Some(train_dir) => {
+                println!("      training dir: {}", train_dir.display());
                 match glimmer::run_glimmerhmm(
                     &config.masked_fasta,
-                    train_dir,
+                    &train_dir,
                     &glimmer_gff,
                     config.threads,
                 ) {
                     Ok(n) => {
-                        progress::finish_spinner(&pb, format!("GlimmerHMM: {} genes", n));
+                        println!("      GlimmerHMM finished → {} genes", n);
                         prediction_inputs.push((glimmer_gff, "GlimmerHMM", weights.glimmerhmm));
                     }
                     Err(e) => {
-                        progress::warn_spinner(
-                            &pb,
-                            format!("GlimmerHMM failed (non-fatal): {}", e),
-                        );
+                        println!("      ⚠ GlimmerHMM failed (non-fatal): {}", e);
                     }
                 }
             }
-            Some(train_dir) => {
-                progress::warn_spinner(
-                    &pb,
-                    format!("GlimmerHMM training dir not found: {}", train_dir.display()),
-                );
-            }
             None => {
-                progress::warn_spinner(
-                    &pb,
-                    "GlimmerHMM requested but no training dir. Pass --glimmer-dir <trained_dir> \
-                     (glimmerhmm ships example trainings under /usr/share/glimmerhmm/trained_dir)",
+                println!(
+                    "      ⚠ GlimmerHMM training dir not found. Pass \
+                     --glimmer-dir <trained_dir> explicitly. Common locations \
+                     that were checked: /usr/share/glimmerhmm/trained_dir, \
+                     /opt/conda/share/glimmerhmm/trained_dir, \
+                     /usr/local/share/glimmerhmm/trained_dir, ~/.myconote/glimmerhmm."
                 );
             }
         }

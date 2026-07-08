@@ -100,7 +100,16 @@ impl Default for BatchConfig {
 /// Entry point for the batch subcommand.
 pub fn run_batch(config: &BatchConfig) -> Result<()> {
     // ── 1. Discover genomes ──
-    let genomes = discover_genomes(config)?;
+    //
+    // In --resume mode the genome list comes from the batch state file
+    // (status.json), not from a fresh discovery pass. Reading `config.input`
+    // in that case is wrong: the CLI handler doesn't set it, so the check
+    // in discover_genomes would fail with "'' is not a file or directory".
+    let genomes = if let Some(ref resume_dir) = config.resume {
+        discover_genomes_from_state(resume_dir)?
+    } else {
+        discover_genomes(config)?
+    };
 
     if genomes.is_empty() {
         return Err(MycoNoteError::BatchError(
@@ -135,6 +144,51 @@ fn discover_genomes(config: &BatchConfig) -> Result<Vec<GenomeEntry>> {
             input.display()
         )))
     }
+}
+
+/// Rebuild the genome list from a previous run's `status.json`.
+///
+/// Used only in `--resume` mode. The original per-genome kingdom / species /
+/// genetic_code / locus_prefix overrides are not persisted per-genome in the
+/// state file — resuming inherits the batch-level settings from state.
+fn discover_genomes_from_state(resume_dir: &Path) -> Result<Vec<GenomeEntry>> {
+    let state_file = resume_dir.join("status.json");
+    if !state_file.exists() {
+        return Err(MycoNoteError::BatchError(format!(
+            "no status.json in {}. Nothing to resume — start a fresh run without --resume.",
+            resume_dir.display()
+        )));
+    }
+    let state = BatchState::load(&state_file)?;
+
+    let mut entries: Vec<GenomeEntry> = Vec::with_capacity(state.genomes.len());
+    for (name, gs) in &state.genomes {
+        // Fall back through the earliest FASTA-producing stages; the sorted
+        // FASTA is what downstream stages consume, so recovering it is enough.
+        let fasta = gs
+            .outputs
+            .get("sort")
+            .or_else(|| gs.outputs.get("mask"))
+            .map(PathBuf::from)
+            .ok_or_else(|| {
+                MycoNoteError::BatchError(format!(
+                    "genome '{}' has no sort/mask output on record — cannot resume without a starting FASTA. Start a fresh run instead.",
+                    name
+                ))
+            })?;
+
+        entries.push(GenomeEntry {
+            name: name.clone(),
+            fasta,
+            kingdom: state.settings.kingdom.clone(),
+            species: None,
+            genetic_code: 1,
+            locus_prefix: "GENE".to_string(),
+        });
+    }
+    // Deterministic order so `--resume` prints look stable across runs.
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(entries)
 }
 
 /// Parse a TSV sample sheet.

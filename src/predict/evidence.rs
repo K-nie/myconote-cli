@@ -417,9 +417,7 @@ pub fn merge_predictions(
 
         // Synthesize missing exon / codon records.
         if !cds_spans.is_empty() {
-            let source = mrna_source
-                .as_deref()
-                .unwrap_or(&model.source);
+            let source = mrna_source.as_deref().unwrap_or(&model.source);
 
             if !has_exon_records {
                 // F3a: one exon per CDS span; UTRs are absent, so exon

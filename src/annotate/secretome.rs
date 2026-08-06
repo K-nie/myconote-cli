@@ -95,9 +95,9 @@ fn signalp6_mode_for_install() -> &'static str {
             if let Some(env_root) = p.parent().and_then(|bin| bin.parent()) {
                 if let Ok(entries) = std::fs::read_dir(env_root.join("lib")) {
                     for entry in entries.flatten() {
-                        let candidate = entry
-                            .path()
-                            .join("site-packages/signalp/model_weights/distilled_model_signalp6.pt");
+                        let candidate = entry.path().join(
+                            "site-packages/signalp/model_weights/distilled_model_signalp6.pt",
+                        );
                         if candidate.exists() {
                             return "fast";
                         }

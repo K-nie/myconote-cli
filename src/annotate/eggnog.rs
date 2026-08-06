@@ -92,17 +92,15 @@ pub fn parse_emapper_results(path: &Path) -> Result<HashMap<String, EggNogHit>> 
         };
         // KEGG_Pathway is at fields[12] in v2.1; earlier code was
         // reading fields[11] which is KEGG_ko (a different column).
-        let kegg_paths: Vec<String> = if fields.len() <= 12
-            || fields[12] == "-"
-            || fields[12].is_empty()
-        {
-            vec![]
-        } else {
-            fields[12]
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .collect()
-        };
+        let kegg_paths: Vec<String> =
+            if fields.len() <= 12 || fields[12] == "-" || fields[12].is_empty() {
+                vec![]
+            } else {
+                fields[12]
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect()
+            };
 
         map.insert(
             query_id.clone(),

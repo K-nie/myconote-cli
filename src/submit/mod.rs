@@ -550,14 +550,26 @@ pub fn write_submission_template(output: &Path, config: &SubmitConfig) -> Result
     writeln!(f, "  contact {{").map_err(MycoNoteError::Io)?;
     writeln!(f, "    contact {{").map_err(MycoNoteError::Io)?;
     writeln!(f, "      name name {{").map_err(MycoNoteError::Io)?;
-    writeln!(f, "        last \"{}\",", escape_asn_string(&config.contact_last))
-        .map_err(MycoNoteError::Io)?;
-    writeln!(f, "        first \"{}\"", escape_asn_string(&config.contact_first))
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "        last \"{}\",",
+        escape_asn_string(&config.contact_last)
+    )
+    .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "        first \"{}\"",
+        escape_asn_string(&config.contact_first)
+    )
+    .map_err(MycoNoteError::Io)?;
     writeln!(f, "      }},").map_err(MycoNoteError::Io)?;
     writeln!(f, "      affil std {{").map_err(MycoNoteError::Io)?;
-    writeln!(f, "        affil \"{}\",", escape_asn_string(&config.institution))
-        .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "        affil \"{}\",",
+        escape_asn_string(&config.institution)
+    )
+    .map_err(MycoNoteError::Io)?;
     writeln!(f, "        email \"{}\"", escape_asn_string(&config.email))
         .map_err(MycoNoteError::Io)?;
     writeln!(f, "      }}").map_err(MycoNoteError::Io)?;

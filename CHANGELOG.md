@@ -6,6 +6,55 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.3] — 2026-08-06
+
+### Fixed
+
+- **`annotate --eggnog` parser rewired for emapper v2.1.** eggNOG-mapper
+  v2.1 (2022+) shipped a new `emapper.annotations` schema with 21
+  columns, but our parser still required ≥22 columns and read
+  cog_category / description / gene_name from indices 20–22. Every row
+  fell through the length guard, so `eggnog_hits.tsv` was written with
+  only its header despite emapper producing thousands of real
+  annotations. Now expects 12+ columns and reads: `best_og=fields[4]`,
+  `cog_cat=fields[6]`, `description=fields[7]`, `gene_name=fields[8]`,
+  `GOs=fields[9]`, `KEGG_Pathway=fields[12]`. Surfaced during the full
+  Tier 3 E2E on yHAB127 *Kazachstania bovina*, which lost the eggNOG
+  contribution to functional annotation even though the raw
+  `eggnog.emapper.annotations` had 5,056 valid hits. (F9)
+
+- **`annotate --secretome` SignalP 6 mode fallback.** SignalP 6's
+  default `--mode fast` requires `distilled_model_signalp6.pt` — a
+  weights file that DTU ships in the "fast + distilled" tarball but
+  NOT in the plain "fast" tarball most first-time users download.
+  Without it, the tool crashes with `FileNotFoundError: Fast mode
+  requires model to be installed at .../distilled_model_signalp6.pt`.
+  New `signalp6_mode_for_install()` probes the resolved signalp6
+  binary's env for the distilled weights and passes `--mode fast`
+  when present, `--mode slow_sequential` otherwise. Emits the chosen
+  mode to stderr so users can see the decision. (F10)
+
+- **`submit` template.sbt now populates required contact fields.**
+  Previously `write_submission_template` hard-coded empty strings for
+  `name.last`, `name.first`, and `affil.affil`, so table2asn rejected
+  the stub template with `Error loading template file` — turning a
+  full validate-passing submission into a cryptic downstream failure.
+  Added `--contact-first`, `--contact-last`, and `--institution` CLI
+  flags, threaded through `SubmitConfig` into the ASN.1 fields, and
+  emit a warning when any of the four required values (contact-first,
+  contact-last, institution, email) is missing. (F7)
+
+### Notes
+
+- F8 (from Tier 2 smoke report) turned out to be a false alarm —
+  `annotation.fsa` (14.5 MB) is produced correctly by the existing
+  `std::fs::copy` at `submit/mod.rs`. The earlier truncated ls
+  output missed it. No code change required.
+- 541 tests continue to pass (432 lib + 56 unit + 53 integration).
+- F9 + F10 fixes verified by re-running the full E2E annotate on
+  *Kazachstania bovina* — see `smoke_2026-07-07/SMOKE_REPORT.md`
+  and the GLBRC tier3_smoke/ artifacts directory.
+
 ## [0.7.2] — 2026-07-07
 
 ### Fixed

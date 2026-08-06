@@ -994,7 +994,10 @@ fn main() -> Result<()> {
                 println!("  --biosample <acc>           BioSample accession");
                 println!("  --locus-prefix <str>        Locus tag prefix (default: MYCO)");
                 println!("  --genetic-code <n>          Translation table (default: 1)");
-                println!("  --email <address>           Contact email");
+                println!("  --email <address>           Contact email (goes into template.sbt)");
+                println!("  --contact-first <name>      Submitter first name (template.sbt)");
+                println!("  --contact-last <name>       Submitter last name (template.sbt)");
+                println!("  --institution <name>        Submitter institution (template.sbt)");
                 println!("  --validate-only             Only validate, do not generate files");
                 println!("\nOutputs:");
                 println!("  annotation.tbl              NCBI feature table");
@@ -2793,6 +2796,18 @@ fn handle_submit(gff_path: &str, args: &[String]) -> Result<()> {
             }
             "--email" if i + 1 < args.len() => {
                 config.email = args[i + 1].clone();
+                i += 2;
+            }
+            "--contact-first" if i + 1 < args.len() => {
+                config.contact_first = args[i + 1].clone();
+                i += 2;
+            }
+            "--contact-last" if i + 1 < args.len() => {
+                config.contact_last = args[i + 1].clone();
+                i += 2;
+            }
+            "--institution" if i + 1 < args.len() => {
+                config.institution = args[i + 1].clone();
                 i += 2;
             }
             "--validate-only" => {

@@ -49,6 +49,12 @@ pub struct SubmitConfig {
     pub pipeline: String,
     /// Contact email
     pub email: String,
+    /// Submitter first name (goes into template.sbt name.first)
+    pub contact_first: String,
+    /// Submitter last name (goes into template.sbt name.last)
+    pub contact_last: String,
+    /// Submitter institution (goes into template.sbt affil.affil)
+    pub institution: String,
     /// Run table2asn validation
     pub validate: bool,
 }
@@ -69,6 +75,9 @@ impl Default for SubmitConfig {
             genetic_code: 1,
             pipeline: format!("myconote-cli v{}", env!("CARGO_PKG_VERSION")),
             email: String::new(),
+            contact_first: String::new(),
+            contact_last: String::new(),
+            institution: String::new(),
             validate: true,
         }
     }
@@ -510,25 +519,59 @@ fn emit_joined_feature<W: Write>(
 }
 
 /// Write NCBI submission template (.sbt) for table2asn.
+///
+/// The template needs a valid contact name, institution, and email or
+/// table2asn rejects the `.sbt` with `Error loading template file`
+/// (F7). We now wire the CLI values (`--contact-first`, `--contact-last`,
+/// `--institution`, `--email`) into the ASN.1 fields and emit a warning
+/// when any of them is missing so users know table2asn will fail on the
+/// stub before they discover it through a cryptic error.
 pub fn write_submission_template(output: &Path, config: &SubmitConfig) -> Result<()> {
+    let missing: Vec<&str> = [
+        ("--contact-first", &config.contact_first),
+        ("--contact-last", &config.contact_last),
+        ("--institution", &config.institution),
+        ("--email", &config.email),
+    ]
+    .iter()
+    .filter_map(|(flag, val)| if val.is_empty() { Some(*flag) } else { None })
+    .collect();
+    if !missing.is_empty() {
+        eprintln!(
+            "  ⚠ template.sbt: missing fields {} — table2asn will reject the stub. \
+             Provide via CLI flags to make submit work end-to-end.",
+            missing.join(", ")
+        );
+    }
+
     let mut f = std::fs::File::create(output).map_err(MycoNoteError::Io)?;
 
     writeln!(f, "Submit-block ::= {{").map_err(MycoNoteError::Io)?;
     writeln!(f, "  contact {{").map_err(MycoNoteError::Io)?;
     writeln!(f, "    contact {{").map_err(MycoNoteError::Io)?;
     writeln!(f, "      name name {{").map_err(MycoNoteError::Io)?;
-    writeln!(f, "        last \"\",").map_err(MycoNoteError::Io)?;
-    writeln!(f, "        first \"\"").map_err(MycoNoteError::Io)?;
+    writeln!(f, "        last \"{}\",", escape_asn_string(&config.contact_last))
+        .map_err(MycoNoteError::Io)?;
+    writeln!(f, "        first \"{}\"", escape_asn_string(&config.contact_first))
+        .map_err(MycoNoteError::Io)?;
     writeln!(f, "      }},").map_err(MycoNoteError::Io)?;
     writeln!(f, "      affil std {{").map_err(MycoNoteError::Io)?;
-    writeln!(f, "        affil \"\",").map_err(MycoNoteError::Io)?;
-    writeln!(f, "        email \"{}\"", config.email).map_err(MycoNoteError::Io)?;
+    writeln!(f, "        affil \"{}\",", escape_asn_string(&config.institution))
+        .map_err(MycoNoteError::Io)?;
+    writeln!(f, "        email \"{}\"", escape_asn_string(&config.email))
+        .map_err(MycoNoteError::Io)?;
     writeln!(f, "      }}").map_err(MycoNoteError::Io)?;
     writeln!(f, "    }}").map_err(MycoNoteError::Io)?;
     writeln!(f, "  }}").map_err(MycoNoteError::Io)?;
     writeln!(f, "}}").map_err(MycoNoteError::Io)?;
 
     Ok(())
+}
+
+/// Escape a string for embedding inside an ASN.1 double-quoted value.
+/// Doubles internal quotes, drops embedded newlines.
+fn escape_asn_string(s: &str) -> String {
+    s.replace('"', "\"\"").replace(['\n', '\r'], " ")
 }
 
 /// Run table2asn to generate .sqn file for NCBI submission.

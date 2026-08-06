@@ -62,33 +62,46 @@ pub fn parse_emapper_results(path: &Path) -> Result<HashMap<String, EggNogHit>> 
         }
 
         let fields: Vec<&str> = trimmed.split('\t').collect();
-        // emapper v2 output has at least 22 columns
-        if fields.len() < 22 {
+        // emapper v2.1+ output has 21 columns (post-2022 schema):
+        //   0=query, 1=seed_ortholog, 2=evalue, 3=score,
+        //   4=eggNOG_OGs, 5=max_annot_lvl, 6=COG_category,
+        //   7=Description, 8=Preferred_name, 9=GOs, 10=EC,
+        //   11=KEGG_ko, 12=KEGG_Pathway, 13=KEGG_Module,
+        //   14=KEGG_Reaction, 15=KEGG_rclass, 16=BRITE,
+        //   17=KEGG_TC, 18=CAZy, 19=BiGG_Reaction, 20=PFAMs
+        //
+        // The pre-2022 v2.0 layout had the annotation columns at
+        // fields[20]..[22]; the parser used to require ≥22 columns
+        // and pull cog_cat/description from there. With v2.1 that
+        // dropped every row silently (F9). We now target the v2.1
+        // layout directly — the last supported v2.0 emapper is 2021,
+        // which predates our published minimum bioconda pin.
+        if fields.len() < 12 {
             continue;
         }
 
         let query_id = fields[0].to_string();
-        let best_og = fields[1].to_string();
-        // fields[8] = GOs, fields[10] = KEGG pathways
-        let go_terms: Vec<String> = if fields[9] == "-" {
+        let best_og = fields[4].to_string();
+        let cog_cat = fields[6].to_string();
+        let description = fields[7].to_string();
+        let gene_name = fields[8].to_string();
+        let go_terms: Vec<String> = if fields[9] == "-" || fields[9].is_empty() {
             vec![]
         } else {
             fields[9].split(',').map(|s| s.trim().to_string()).collect()
         };
-        let kegg_paths: Vec<String> = if fields[11] == "-" {
+        // KEGG_Pathway is at fields[12] in v2.1; earlier code was
+        // reading fields[11] which is KEGG_ko (a different column).
+        let kegg_paths: Vec<String> = if fields.len() <= 12
+            || fields[12] == "-"
+            || fields[12].is_empty()
+        {
             vec![]
         } else {
-            fields[11]
+            fields[12]
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect()
-        };
-        let cog_cat = fields[20].to_string();
-        let description = fields[21].to_string();
-        let gene_name = if fields.len() > 22 {
-            fields[22].to_string()
-        } else {
-            String::new()
         };
 
         map.insert(

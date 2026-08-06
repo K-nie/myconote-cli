@@ -69,6 +69,46 @@ pub fn signalp_available() -> Option<String> {
     None
 }
 
+/// Select the SignalP 6 `--mode` value that matches what's installed.
+///
+/// Resolves the `signalp6` binary through `which`, walks up to its
+/// conda env prefix, and checks whether the distilled model weight
+/// file (`site-packages/signalp/model_weights/distilled_model_signalp6.pt`)
+/// exists. Fast mode requires that file; every other mode needs only
+/// the base weights that ship with every DTU download variant.
+///
+/// Returns `"fast"` when the distilled weights are present,
+/// `"slow_sequential"` otherwise.
+fn signalp6_mode_for_install() -> &'static str {
+    if let Ok(out) = Command::new("which").arg("signalp6").output() {
+        let bin_path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if !bin_path.is_empty() {
+            let mut p = PathBuf::from(&bin_path);
+            // Resolve symlink so `~/.conda/envs/myconote/bin/signalp6 ->
+            // ~/.conda/envs/myconote_signalp6/bin/signalp6` points at the
+            // real env, not the umbrella myconote env.
+            if let Ok(canon) = std::fs::canonicalize(&p) {
+                p = canon;
+            }
+            // signalp6 lives at <env>/bin/signalp6, so climb two dirs
+            // to reach <env> and probe every python3.* site-packages.
+            if let Some(env_root) = p.parent().and_then(|bin| bin.parent()) {
+                if let Ok(entries) = std::fs::read_dir(env_root.join("lib")) {
+                    for entry in entries.flatten() {
+                        let candidate = entry
+                            .path()
+                            .join("site-packages/signalp/model_weights/distilled_model_signalp6.pt");
+                        if candidate.exists() {
+                            return "fast";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    "slow_sequential"
+}
+
 pub fn run_signalp(
     protein_fasta: &Path,
     out_dir: &Path,
@@ -104,16 +144,36 @@ pub fn run_signalp(
         return Ok(out_file);
     }
 
-    // SignalP (licensed versions 4/5/6)
-    let status = Command::new(&tool)
-        .arg("--fastafile")
+    // SignalP (licensed versions 4/5/6).
+    //
+    // SignalP 6's default `--mode fast` requires a distilled model
+    // weights file (`distilled_model_signalp6.pt`) that DTU ships in
+    // the "fast + distilled" tarball, but NOT in the plain "fast"
+    // tarball that most first-time users download. Without it, the
+    // tool crashes with `FileNotFoundError: Fast mode requires model
+    // to be installed at .../distilled_model_signalp6.pt`. Fixes F10
+    // by preflighting the model file: when the distilled weights are
+    // present we pass `--mode fast`; otherwise we fall back to
+    // `--mode slow_sequential`, which works with the base weights
+    // that every SignalP 6 variant ships.
+    let mut cmd = Command::new(&tool);
+    cmd.arg("--fastafile")
         .arg(protein_fasta)
         .arg("--organism")
         .arg(organism)
         .arg("--output_dir")
         .arg(out_dir)
         .arg("--format")
-        .arg("txt")
+        .arg("txt");
+    if tool == "signalp6" {
+        let mode = signalp6_mode_for_install();
+        eprintln!(
+            "  SignalP 6: using --mode {} (distilled-model detection)",
+            mode
+        );
+        cmd.arg("--mode").arg(mode);
+    }
+    let status = cmd
         .status()
         .map_err(|e| MycoNoteError::ExternalTool(format!("signalp: {}", e)))?;
 

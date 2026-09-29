@@ -2089,7 +2089,7 @@
 </code></pre></div>
 <h3 id="paste-mode">Paste mode<a class="headerlink" href="#paste-mode" title="Permanent link">&para;</a></h3>
 <p>Reads from stdin and auto-detects the format:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ERROR: SEQ_FEAT.NoStop&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"ERROR: SEQ_FEAT.NoStop"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>cat<span class="w"> </span>predict_summary.txt<span class="w"> </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>head<span class="w"> </span>-5<span class="w"> </span>genes.gff3<span class="w"> </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
 </code></pre></div>
@@ -2142,8 +2142,8 @@
 <h3 id="config-file-myconoteconfigtoml">Config file (<code>~/.myconote/config.toml</code>)<a class="headerlink" href="#config-file-myconoteconfigtoml" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">[chat]</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                       </span><span class="c1"># false disables explain entirely</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">endpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://localhost:11434&quot;</span><span class="w">   </span><span class="c1"># Ollama endpoint</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mistral-small:22b&quot;</span><span class="w">          </span><span class="c1"># override auto-selected model</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">endpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"http://localhost:11434"</span><span class="w">   </span><span class="c1"># Ollama endpoint</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"mistral-small:22b"</span><span class="w">          </span><span class="c1"># override auto-selected model</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">timeout_s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">120</span><span class="w">                      </span><span class="c1"># LLM request timeout</span>
 </code></pre></div>
 <h3 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
@@ -2235,7 +2235,7 @@
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict<span class="w"> </span>--dry-run
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
 <a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Analyze an NCBI validation error</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ERROR: SEQ_FEAT.NoStop at feature lcl|scaffold_1:gene-MYORG_001234&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"ERROR: SEQ_FEAT.NoStop at feature lcl|scaffold_1:gene-MYORG_001234"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
 <a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
 <a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c1"># Rules only on a specific directory</span>

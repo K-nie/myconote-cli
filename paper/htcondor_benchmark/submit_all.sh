@@ -4,8 +4,8 @@
 # Submit benchmark jobs to HTCondor.
 #
 # Usage:
-#   bash submit_all.sh                  # all 4 tools (96 jobs)
-#   bash submit_all.sh --myconote-only  # MycoNote-CLI only (24 jobs)
+#   bash submit_all.sh                  # all 4 tools (72 jobs)
+#   bash submit_all.sh --myconote-only  # MycoNote-CLI only (18 jobs)
 #   bash submit_all.sh --tools m,f      # comma list: m=myconote f=funannotate
 #                                         #            b=braker    k=maker
 # ─────────────────────────────────────────────────────────────────────────────
@@ -92,12 +92,12 @@ total_jobs=0
 for tool in myconote funannotate braker maker; do
     if [[ ",$TOOLS_TO_SUBMIT," == *",$tool,"* ]]; then
         case "$tool" in
-            myconote)    submit_tool myconote 24 "MycoNote-CLI" ;;
-            funannotate) submit_tool funannotate 24 "funannotate" ;;
-            braker)      submit_tool braker 24 "BRAKER" ;;
-            maker)       submit_tool maker 24 "MAKER" ;;
+            myconote)    submit_tool myconote 18 "MycoNote-CLI" ;;
+            funannotate) submit_tool funannotate 18 "funannotate" ;;
+            braker)      submit_tool braker 18 "BRAKER" ;;
+            maker)       submit_tool maker 18 "MAKER" ;;
         esac
-        total_jobs=$((total_jobs + 24))
+        total_jobs=$((total_jobs + 18))
     fi
 done
 

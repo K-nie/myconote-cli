@@ -18,6 +18,14 @@ GENOME_DIR="$DATA_DIR/$GENOME_ID"
 GENOME_FA="$GENOME_DIR/genome.fa"
 REFERENCE_GFF="$GENOME_DIR/reference.gff3"
 
+# ── Database locations ─────────────────────────────────────────────────────
+# annotate DB-backed sources (--eggnog/--cazyme/--merops) plus Swiss-Prot and
+# Pfam auto-resolve from --db-dir. Default matches the tool's own default and
+# htcondor.conf; override MYCONOTE_DB_DIR (e.g. to shared storage) upstream.
+MYCONOTE_DB_DIR="${MYCONOTE_DB_DIR:-$HOME/.myconote/dbs}"
+# predict/train read Augustus species from this FIXED path (ignores --db-dir).
+export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.myconote/augustus_config}"
+
 OUT_DIR="$RESULTS_DIR/myconote/$GENOME_ID/rep$REP"
 mkdir -p "$OUT_DIR"
 
@@ -82,6 +90,10 @@ echo "[$(date +%T)] Step 3: predict"
     >> "$LOG" 2>&1
 
 # ── Step 4: Annotate ───────────────────────────────────────────────────────
+# Full functional-annotation suite, matched to funannotate's default workflow:
+# Swiss-Prot + Pfam (always on) plus EggNog COG/NOG, CAZyme (dbCAN), and MEROPS
+# protease families. All resolve from --db-dir. antiSMASH and InterProScan are
+# deliberately excluded — they require network access from execute nodes.
 echo "[$(date +%T)] Step 4: annotate"
 /usr/bin/time -v -o "$OUT_DIR/time_annotate.log" \
     myconote-cli annotate "$OUT_DIR/predict_out/consensus.gff3" \
@@ -90,6 +102,10 @@ echo "[$(date +%T)] Step 4: annotate"
     --kingdom "$KINGDOM" \
     --locus-prefix "$LOCUS_PREFIX" \
     --genetic-code "$GENETIC_CODE" \
+    --db-dir "$MYCONOTE_DB_DIR" \
+    --eggnog \
+    --cazyme \
+    --merops \
     --threads 8 \
     >> "$LOG" 2>&1
 

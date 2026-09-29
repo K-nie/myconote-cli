@@ -1663,6 +1663,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#myconote-cli-annotation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MycoNote-CLI Annotation Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hardware-requirements-per-job" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1747,7 +1758,7 @@
 <p>This package implements the comprehensive comparative benchmark requested by Reviewer #2 of the MycoNote-CLI manuscript.</p>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p><strong>Tools compared</strong>: 4 (MycoNote-CLI v0.2.0, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)</p>
+<p><strong>Tools compared</strong>: 4 (MycoNote-CLI v0.7.3, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)</p>
 <p><strong>Genomes</strong>: 6 fungal reference genomes spanning Saccharomycotina, Pezizomycotina, and Basidiomycota (Table 1). Non-fungal taxa are out of scope for this panel; the <code>--kingdom plant|animal|insect|protist</code> paths are experimental and not validated at this release.</p>
 <p><strong>Replicates</strong>: 3 per tool per genome</p>
 <p><strong>Total jobs</strong>: 72 (4 tools × 6 genomes × 3 replicates)</p>
@@ -1855,16 +1866,20 @@
 <h3 id="3-one-time-setup">3. One-time setup<a class="headerlink" href="#3-one-time-setup" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bash<span class="w"> </span>setup.sh
 </code></pre></div>
-<p>This downloads all six fungal reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, and verifies the setup.</p>
+<p>This downloads all six fungal reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, provisions the MycoNote-CLI reference databases (<code>myconote-cli setup</code>), and verifies the setup.</p>
+<p>The MycoNote-CLI database step downloads Swiss-Prot, Pfam, BUSCO, EggNog, dbCAN (CAZyme), and MEROPS into <code>MYCONOTE_DB_DIR</code> (default <code>~/.myconote/dbs</code>), plus the Augustus fungal species bundle into <code>~/.myconote/augustus_config</code>. These download once and are reused across all 18 MycoNote replicates. Before submitting, export both locations so the jobs (which inherit the shell via <code>getenv = true</code>) can find them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">source</span><span class="w"> </span>configs/htcondor.conf<span class="w">   </span><span class="c1"># sets MYCONOTE_DB_DIR and AUGUSTUS_CONFIG_PATH</span>
+</code></pre></div>
+<p>On a multi-node pool, point <code>MYCONOTE_DB_DIR</code> and <code>AUGUSTUS_CONFIG_PATH</code> at shared storage (e.g. <code>/staging/$USER/...</code>) so every execute node sees one copy rather than re-downloading per node.</p>
 <h3 id="4-submit-all-72-jobs">4. Submit all 72 jobs<a class="headerlink" href="#4-submit-all-72-jobs" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>bash<span class="w"> </span>submit_all.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>bash<span class="w"> </span>submit_all.sh
 </code></pre></div>
 <p>This submits all jobs to HTCondor. Jobs run in parallel as slots become available.</p>
 <h3 id="5-monitor-progress">5. Monitor progress<a class="headerlink" href="#5-monitor-progress" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>condor_q<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>condor_q<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span>
 </code></pre></div>
 <h3 id="6-collect-results-when-complete">6. Collect results when complete<a class="headerlink" href="#6-collect-results-when-complete" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>bash<span class="w"> </span>collect_results.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>bash<span class="w"> </span>collect_results.sh
 </code></pre></div>
 <p>This aggregates per-job metrics into manuscript-ready tables in <code>results/</code>.</p>
 <hr />
@@ -1912,6 +1927,17 @@
 <li>Multiple testing correction (Benjamini-Hochberg)</li>
 <li>Wilcoxon signed-rank as a non-parametric backup</li>
 </ul>
+<hr />
+<h2 id="myconote-cli-annotation-workflow">MycoNote-CLI Annotation Workflow<a class="headerlink" href="#myconote-cli-annotation-workflow" title="Permanent link">&para;</a></h2>
+<p>To keep the comparison fair, MycoNote-CLI's <code>annotate</code> step runs the full functional-annotation suite that matches funannotate's default workflow rather than a stripped-down configuration:</p>
+<ul>
+<li><strong>Swiss-Prot</strong> (MMseqs2) and <strong>Pfam</strong> (HMM) — always on; product names and protein domains.</li>
+<li><strong><code>--eggnog</code></strong> — EggNog-mapper COG/NOG categories and GO terms.</li>
+<li><strong><code>--cazyme</code></strong> — carbohydrate-active enzyme families (dbCAN / DIAMOND).</li>
+<li><strong><code>--merops</code></strong> — protease families (MEROPS / DIAMOND).</li>
+</ul>
+<p>All four resolve their databases from <code>--db-dir</code> (<code>$MYCONOTE_DB_DIR</code>). Gene prediction (<code>predict</code>) reads Augustus fungal species models from <code>AUGUSTUS_CONFIG_PATH</code>.</p>
+<p>Two sources that funannotate can also run are <strong>deliberately excluded</strong> here because they require network access from execute nodes, which the GLBRC pool does not grant to jobs: <strong>antiSMASH</strong> (secondary-metabolite BGC clusters) and <strong>InterProScan</strong> (EBI REST API). Excluding them keeps every replicate deterministic and network-free. <code>--secretome</code> and <code>--trnascan</code> are likewise omitted to avoid depending on external tool binaries (DeepSig/DeepTMHMM, tRNAscan-SE) on the execute nodes.</p>
 <hr />
 <h2 id="hardware-requirements-per-job">Hardware Requirements per Job<a class="headerlink" href="#hardware-requirements-per-job" title="Permanent link">&para;</a></h2>
 <table>

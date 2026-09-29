@@ -2657,13 +2657,13 @@
 <h3 id="challenge-31">Challenge 3.1<a class="headerlink" href="#challenge-31" title="Permanent link">&para;</a></h3>
 <p>After masking, calculate the repeat content:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Count lowercase (masked) bases</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="s2">seq = open(&#39;sorted.fa.masked&#39;).read()</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="s2">seq = &#39;&#39;.join(seq.split()[1::2] if &#39;&gt;&#39; in seq else [seq])</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="s2">seq = open('sorted.fa.masked').read()</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="s2">seq = ''.join(seq.split()[1::2] if '&gt;' in seq else [seq])</span>
 <a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="s2">total = sum(1 for c in seq if c.isalpha())</span>
 <a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="s2">masked = sum(1 for c in seq if c.islower())</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="s2">print(f&#39;Masked: {masked/total*100:.1f}%&#39;)</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="s2">&quot;</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="s2">print(f'Masked: {masked/total*100:.1f}%')</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="s2">"</span>
 </code></pre></div>
 <p>What percentage of your genome was masked? Is this typical for a fungal genome?</p>
 <blockquote>
@@ -2817,12 +2817,12 @@
 <hr />
 <h3 id="challenge-51">Challenge 5.1<a class="headerlink" href="#challenge-51" title="Permanent link">&para;</a></h3>
 <p>After annotation, examine the functional coverage:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotation/final.gff3<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotation/final.gff3<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
 <a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="s2">import json, sys</span>
 <a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="s2">d = json.load(sys.stdin)</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="s2">print(&#39;Total genes:&#39;, d[&#39;gene_count&#39;])</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="s2">print(&#39;Annotated (any function):&#39;, d.get(&#39;annotated_count&#39;, &#39;N/A&#39;))</span>
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="s2">&quot;</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="s2">print('Total genes:', d['gene_count'])</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="s2">print('Annotated (any function):', d.get('annotated_count', 'N/A'))</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="s2">"</span>
 </code></pre></div>
 <p>What percentage of predicted genes received at least one functional annotation? What does a low percentage suggest about the organism's novelty?</p>
 <hr />
@@ -2879,7 +2879,7 @@ Instead, export your annotation and hand off to:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>genes.gff3<span class="w"> </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span>--genetic-code<span class="w"> </span><span class="m">12</span>
 </code></pre></div>
 <h3 id="ncbi-submission-preparation">NCBI submission preparation<a class="headerlink" href="#ncbi-submission-preparation" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotated.gff3<span class="w"> </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span>--organism<span class="w"> </span><span class="s2">&quot;Genus species&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotated.gff3<span class="w"> </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span>--organism<span class="w"> </span><span class="s2">"Genus species"</span>
 </code></pre></div>
 <h3 id="protein-evidence-for-gene-prediction">Protein evidence for gene prediction<a class="headerlink" href="#protein-evidence-for-gene-prediction" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome.fa<span class="w"> </span>--protein-fasta<span class="w"> </span>swissprot.fasta<span class="w"> </span>--kingdom<span class="w"> </span>fungi

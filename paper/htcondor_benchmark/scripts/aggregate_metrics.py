@@ -108,8 +108,11 @@ def load_genomes(config_path: Path) -> list:
     with open(config_path) as f:
         next(f)  # skip header
         for line in f:
-            parts = line.strip().split('\t')
-            if parts:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue  # skip blank and comment lines
+            parts = line.split('\t')
+            if parts and parts[0]:
                 genomes.append(parts[0])
     return genomes
 

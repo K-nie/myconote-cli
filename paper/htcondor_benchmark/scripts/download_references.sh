@@ -133,6 +133,7 @@ size_mbs=()
 accs=()
 while IFS=$'\t' read -r id organism kingdom size_mb code busco acc; do
     [[ "$id" == "id" ]] && continue
+    [[ "$id" == \#* ]] && continue   # skip comment lines
     [[ -z "$id" ]] && continue
     ids+=("$id")
     organisms+=("$organism")

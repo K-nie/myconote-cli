@@ -203,6 +203,8 @@ total_genomes=0
 ok_genomes=0
 while IFS=$'\t' read -r id rest; do
     if [[ "$id" == "id" ]]; then continue; fi
+    if [[ "$id" == \#* ]]; then continue; fi   # skip comment lines
+    if [[ -z "$id" ]]; then continue; fi
     total_genomes=$((total_genomes + 1))
     if [[ -f "$DATA_DIR/$id/genome.fa" ]] && [[ -f "$DATA_DIR/$id/reference.gff3" ]]; then
         ok_genomes=$((ok_genomes + 1))

@@ -26,6 +26,24 @@ MYCONOTE_DB_DIR="${MYCONOTE_DB_DIR:-$HOME/.myconote/dbs}"
 # predict/train read Augustus species from this FIXED path (ignores --db-dir).
 export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.myconote/augustus_config}"
 
+# annotate --eggnog resolves the emapper.py DB from --eggnog-db, NOT --db-dir
+# (the tool never derives it from --db-dir). Point it at the copy provisioned
+# by setup.sh under $MYCONOTE_DB_DIR/eggnog.
+EGGNOG_DB_DIR="${EGGNOG_DB_DIR:-$MYCONOTE_DB_DIR/eggnog}"
+
+# annotate --eggnog shells out to emapper.py; it must be on PATH for the tool
+# to find it (emapper.py's own shebang pins its interpreter, so only the bin
+# dir is needed). Scope this to the annotate step so the eggnog env's python
+# does not shadow the system python3 used by the metrics scripts. Non-fatal:
+# annotate skips eggnog gracefully when emapper.py is absent.
+EGGNOG_BIN=""
+if ! command -v emapper.py &>/dev/null; then
+    for _e in "$HOME/.conda/envs/myconote_eggnog_mapper/bin" \
+              "/opt/bifxapps/miniconda3/envs/eggnog-mapper/bin"; do
+        if [[ -x "$_e/emapper.py" ]]; then EGGNOG_BIN="$_e"; break; fi
+    done
+fi
+
 OUT_DIR="$RESULTS_DIR/myconote/$GENOME_ID/rep$REP"
 mkdir -p "$OUT_DIR"
 
@@ -95,7 +113,8 @@ echo "[$(date +%T)] Step 3: predict"
 # protease families. All resolve from --db-dir. antiSMASH and InterProScan are
 # deliberately excluded — they require network access from execute nodes.
 echo "[$(date +%T)] Step 4: annotate"
-/usr/bin/time -v -o "$OUT_DIR/time_annotate.log" \
+env PATH="${EGGNOG_BIN:+$EGGNOG_BIN:}$PATH" \
+    /usr/bin/time -v -o "$OUT_DIR/time_annotate.log" \
     myconote-cli annotate "$OUT_DIR/predict_out/consensus.gff3" \
     --fasta "$OUT_DIR/masked.fa" \
     --output "$OUT_DIR/annotate_out" \
@@ -104,6 +123,7 @@ echo "[$(date +%T)] Step 4: annotate"
     --genetic-code "$GENETIC_CODE" \
     --db-dir "$MYCONOTE_DB_DIR" \
     --eggnog \
+    --eggnog-db "$EGGNOG_DB_DIR" \
     --cazyme \
     --merops \
     --threads 8 \

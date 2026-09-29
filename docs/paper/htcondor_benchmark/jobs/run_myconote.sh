@@ -31,17 +31,39 @@ export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.myconote/augustus_co
 # by setup.sh under $MYCONOTE_DB_DIR/eggnog.
 EGGNOG_DB_DIR="${EGGNOG_DB_DIR:-$MYCONOTE_DB_DIR/eggnog}"
 
-# annotate --eggnog shells out to emapper.py; it must be on PATH for the tool
-# to find it (emapper.py's own shebang pins its interpreter, so only the bin
-# dir is needed). Scope this to the annotate step so the eggnog env's python
-# does not shadow the system python3 used by the metrics scripts. Non-fatal:
-# annotate skips eggnog gracefully when emapper.py is absent.
-EGGNOG_BIN=""
-if ! command -v emapper.py &>/dev/null; then
-    for _e in "$HOME/.conda/envs/myconote_eggnog_mapper/bin" \
-              "/opt/bifxapps/miniconda3/envs/eggnog-mapper/bin"; do
-        if [[ -x "$_e/emapper.py" ]]; then EGGNOG_BIN="$_e"; break; fi
+# ── Runtime tool environment ───────────────────────────────────────────────
+# predict/annotate shell out to external binaries that MycoNote locates by a
+# bare PATH lookup (augustus, snap, diamond, hmmsearch, minimap2, run_dbcan,
+# emapper.py). These live in conda envs on this cluster, so put them on PATH:
+#   - base "myconote" env: snap, diamond, hmmsearch, minimap2, run_dbcan and
+#     emapper.py (all working). Its bundled augustus links the wrong boost, so
+#     we do NOT use it for augustus.
+#   - "myconote_augustus" env: a working augustus 3.3.3, prepended so it wins.
+# The metrics scripts (Steps 6-7) are stdlib-only, so the env's python3 is fine.
+MYCONOTE_ENV="${MYCONOTE_ENV:-myconote}"
+AUGUSTUS_ENV="${AUGUSTUS_ENV:-myconote_augustus}"
+if [[ -z "${CONDA_PROFILE:-}" ]]; then
+    for _p in "/opt/bifxapps/miniconda3/etc/profile.d/conda.sh" \
+              "$HOME/miniconda3/etc/profile.d/conda.sh" \
+              "$HOME/anaconda3/etc/profile.d/conda.sh"; do
+        [[ -f "$_p" ]] && CONDA_PROFILE="$_p" && break
     done
+fi
+if [[ -n "${CONDA_PROFILE:-}" && -f "$CONDA_PROFILE" ]]; then
+    # shellcheck source=/dev/null
+    source "$CONDA_PROFILE"
+    conda activate "$MYCONOTE_ENV" 2>/dev/null \
+        || conda activate "$HOME/.conda/envs/$MYCONOTE_ENV" 2>/dev/null \
+        || echo "WARN: could not activate conda env '$MYCONOTE_ENV'"
+fi
+# Prepend the working augustus (self-contained via its own RPATH-linked boost).
+for _aug in "$HOME/.conda/envs/$AUGUSTUS_ENV/bin" \
+            "/opt/bifxapps/miniconda3/envs/$AUGUSTUS_ENV/bin"; do
+    if [[ -x "$_aug/augustus" ]]; then export PATH="$_aug:$PATH"; break; fi
+done
+# Ensure the freshly built myconote-cli wins over anything the env put on PATH.
+if [[ -x "$HOME/.local/bin/myconote-cli" ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 OUT_DIR="$RESULTS_DIR/myconote/$GENOME_ID/rep$REP"
@@ -113,8 +135,7 @@ echo "[$(date +%T)] Step 3: predict"
 # protease families. All resolve from --db-dir. antiSMASH and InterProScan are
 # deliberately excluded — they require network access from execute nodes.
 echo "[$(date +%T)] Step 4: annotate"
-env PATH="${EGGNOG_BIN:+$EGGNOG_BIN:}$PATH" \
-    /usr/bin/time -v -o "$OUT_DIR/time_annotate.log" \
+/usr/bin/time -v -o "$OUT_DIR/time_annotate.log" \
     myconote-cli annotate "$OUT_DIR/predict_out/consensus.gff3" \
     --fasta "$OUT_DIR/masked.fa" \
     --output "$OUT_DIR/annotate_out" \

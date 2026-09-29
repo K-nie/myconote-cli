@@ -8,7 +8,6 @@ getenv         = true
 request_cpus   = 8
 request_memory = 16 GB
 request_disk   = 30 GB
-+RequestRuntime = 21600   # 6 hours per job
 
 log    = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).log
 output = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).out

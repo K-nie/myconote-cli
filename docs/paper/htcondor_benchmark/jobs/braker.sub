@@ -8,7 +8,6 @@ getenv         = true
 request_cpus   = 16
 request_memory = 64 GB
 request_disk   = 30 GB
-+RequestRuntime = 28800   # 8 hours per job
 
 log    = $(RESULTS_DIR)/braker/$(genome_id)_rep$(rep).log
 output = $(RESULTS_DIR)/braker/$(genome_id)_rep$(rep).out

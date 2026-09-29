@@ -21,9 +21,6 @@ request_cpus   = 8
 request_memory = 16 GB
 request_disk   = 10 GB
 
-# Allow up to 4 hours per job
-+RequestRuntime = 14400
-
 # Logging
 log    = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).log
 output = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).out

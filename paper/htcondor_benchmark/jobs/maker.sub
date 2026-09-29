@@ -8,7 +8,6 @@ getenv         = true
 request_cpus   = 8
 request_memory = 32 GB
 request_disk   = 30 GB
-+RequestRuntime = 43200   # 12 hours per job
 
 log    = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).log
 output = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).out

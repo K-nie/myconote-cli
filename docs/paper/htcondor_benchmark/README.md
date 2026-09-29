@@ -8,7 +8,7 @@ This package implements the comprehensive comparative benchmark requested by Rev
 
 ## Overview
 
-**Tools compared**: 4 (MycoNote-CLI v0.2.0, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
+**Tools compared**: 4 (MycoNote-CLI v0.7.3, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
 
 **Genomes**: 6 fungal reference genomes spanning Saccharomycotina, Pezizomycotina, and Basidiomycota (Table 1). Non-fungal taxa are out of scope for this panel; the `--kingdom plant|animal|insect|protist` paths are experimental and not validated at this release.
 
@@ -96,7 +96,15 @@ Edit `configs/htcondor.conf` to set:
 bash setup.sh
 ```
 
-This downloads all six fungal reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, and verifies the setup.
+This downloads all six fungal reference genomes and their curated annotations (~5 GB), creates conda environments for the comparison tools, provisions the MycoNote-CLI reference databases (`myconote-cli setup`), and verifies the setup.
+
+The MycoNote-CLI database step downloads Swiss-Prot, Pfam, BUSCO, EggNog, dbCAN (CAZyme), and MEROPS into `MYCONOTE_DB_DIR` (default `~/.myconote/dbs`), plus the Augustus fungal species bundle into `~/.myconote/augustus_config`. These download once and are reused across all 18 MycoNote replicates. Before submitting, export both locations so the jobs (which inherit the shell via `getenv = true`) can find them:
+
+```bash
+source configs/htcondor.conf   # sets MYCONOTE_DB_DIR and AUGUSTUS_CONFIG_PATH
+```
+
+On a multi-node pool, point `MYCONOTE_DB_DIR` and `AUGUSTUS_CONFIG_PATH` at shared storage (e.g. `/staging/$USER/...`) so every execute node sees one copy rather than re-downloading per node.
 
 ### 4. Submit all 72 jobs
 
@@ -173,6 +181,21 @@ This aggregates per-job metrics into manuscript-ready tables in `results/`.
 - Cohen's d effect sizes
 - Multiple testing correction (Benjamini-Hochberg)
 - Wilcoxon signed-rank as a non-parametric backup
+
+---
+
+## MycoNote-CLI Annotation Workflow
+
+To keep the comparison fair, MycoNote-CLI's `annotate` step runs the full functional-annotation suite that matches funannotate's default workflow rather than a stripped-down configuration:
+
+- **Swiss-Prot** (MMseqs2) and **Pfam** (HMM) — always on; product names and protein domains.
+- **`--eggnog`** — EggNog-mapper COG/NOG categories and GO terms.
+- **`--cazyme`** — carbohydrate-active enzyme families (dbCAN / DIAMOND).
+- **`--merops`** — protease families (MEROPS / DIAMOND).
+
+All four resolve their databases from `--db-dir` (`$MYCONOTE_DB_DIR`). Gene prediction (`predict`) reads Augustus fungal species models from `AUGUSTUS_CONFIG_PATH`.
+
+Two sources that funannotate can also run are **deliberately excluded** here because they require network access from execute nodes, which the GLBRC pool does not grant to jobs: **antiSMASH** (secondary-metabolite BGC clusters) and **InterProScan** (EBI REST API). Excluding them keeps every replicate deterministic and network-free. `--secretome` and `--trnascan` are likewise omitted to avoid depending on external tool binaries (DeepSig/DeepTMHMM, tRNAscan-SE) on the execute nodes.
 
 ---
 

@@ -29,22 +29,16 @@ queue genome_id, rep from (
     cal 1
     cal 2
     cal 3
+    ylp 1
+    ylp 2
+    ylp 3
     ani 1
     ani 2
     ani 3
+    ncr 1
+    ncr 2
+    ncr 3
     cne 1
     cne 2
     cne 3
-    ath 1
-    ath 2
-    ath 3
-    dme 1
-    dme 2
-    dme 3
-    cel 1
-    cel 2
-    cel 3
-    pfa 1
-    pfa 2
-    pfa 3
 )

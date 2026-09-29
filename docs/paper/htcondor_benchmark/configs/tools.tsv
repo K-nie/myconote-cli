@@ -1,5 +1,5 @@
 tool	version	release_date	install_method	citation
-myconote	0.1.0	2026-04-09	source (cargo install)	Narh-Madey et al. 2026 (this work)
+myconote	0.7.3	2026-08-06	source (cargo install)	Narh-Madey et al. 2026 (this work)
 funannotate	1.8.17	2024-06-11	conda (bioconda)	Palmer & Stajich 2020 (Zenodo)
 maker	3.01.04	2019-05-16	conda (bioconda)	Holt & Yandell 2011 BMC Bioinformatics
 braker	3.0.8	2024-09-03	conda (bioconda)	Gabriel et al. 2024 PNAS

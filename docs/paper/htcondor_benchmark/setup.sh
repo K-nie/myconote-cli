@@ -3,7 +3,7 @@
 # setup.sh
 # One-time setup for the MycoNote-CLI benchmark on HTCondor.
 #
-# - Downloads all 8 reference genomes and curated annotations
+# - Downloads all 6 fungal reference genomes and curated annotations
 # - Verifies that conda environments for funannotate, maker, braker exist
 # - Creates the results directory structure
 # - Reports any missing dependencies
@@ -153,6 +153,33 @@ if command -v myconote-cli &>/dev/null; then
 else
     echo "  ✗ myconote-cli NOT in PATH — install with:"
     echo "      curl -fsSL https://raw.githubusercontent.com/K-nie/myconote-cli/main/quick-install.sh | bash"
+fi
+echo ""
+
+# ── Step 2b: Provision MycoNote-CLI reference databases ────────────────────
+# annotate needs Swiss-Prot + Pfam (always) and the EggNog / dbCAN / MEROPS
+# databases for the --eggnog/--cazyme/--merops sources; predict needs the
+# Augustus fungal species bundle. These download once and are reused across
+# all 18 replicates, so provision them here rather than inside each job.
+echo "── Step 2b: Provisioning MycoNote-CLI databases ──"
+MYCONOTE_DB_DIR="${MYCONOTE_DB_DIR:-$HOME/.myconote/dbs}"
+if command -v myconote-cli &>/dev/null; then
+    echo "  DB dir: $MYCONOTE_DB_DIR"
+    # Functional-annotation databases (honour --db-dir).
+    myconote-cli setup \
+        --db-dir "$MYCONOTE_DB_DIR" \
+        --db swiss-prot pfam busco eggnog dbcan merops
+    # Augustus fungal species — installs to the FIXED ~/.myconote/augustus_config
+    # (ignores --db-dir); predict reads it via AUGUSTUS_CONFIG_PATH.
+    myconote-cli setup --db augustus-fungi
+    echo "  Verifying databases:"
+    myconote-cli setup --db-dir "$MYCONOTE_DB_DIR" --check || \
+        echo "  ⚠ Some databases failed verification — re-run 'myconote-cli setup --check'"
+    echo "  Remember to export before submitting:"
+    echo "      export MYCONOTE_DB_DIR=$MYCONOTE_DB_DIR"
+    echo "      export AUGUSTUS_CONFIG_PATH=\$HOME/.myconote/augustus_config"
+else
+    echo "  ⚠ Skipping DB provisioning — myconote-cli not in PATH."
 fi
 echo ""
 

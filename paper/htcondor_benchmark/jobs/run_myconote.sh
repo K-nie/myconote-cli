@@ -54,7 +54,19 @@ if [[ -n "${CONDA_PROFILE:-}" && -f "$CONDA_PROFILE" ]]; then
     source "$CONDA_PROFILE"
     conda activate "$MYCONOTE_ENV" 2>/dev/null \
         || conda activate "$HOME/.conda/envs/$MYCONOTE_ENV" 2>/dev/null \
-        || echo "WARN: could not activate conda env '$MYCONOTE_ENV'"
+        || echo "WARN: 'conda activate $MYCONOTE_ENV' failed; using bin PATH fallback"
+fi
+# Robust fallback: `conda activate` needs the base conda's profile.d/conda.sh,
+# which lives under /opt/bifxapps and is NOT mounted on every execute node — so
+# activation silently no-ops there, and then snap/mmseqs/hmmscan/run_dbcan/
+# emapper.py vanish from PATH (only augustus+diamond survive via the env prepend
+# below), which makes annotate skip Swiss-Prot/Pfam/eggnog/CAZyme and predict
+# fall back to Augustus-only. The env's bin dir is on shared cephfs and its
+# binaries are RPATH-linked to ../lib, so prepending it directly gives every
+# tool regardless of whether activation worked. Verified: mmseqs/hmmscan/snap/
+# run_dbcan/emapper.py all run correctly from bin alone.
+if [[ -d "$HOME/.conda/envs/$MYCONOTE_ENV/bin" ]]; then
+    export PATH="$HOME/.conda/envs/$MYCONOTE_ENV/bin:$PATH"
 fi
 # Prepend the working augustus (self-contained via its own RPATH-linked boost).
 for _aug in "$HOME/.conda/envs/$AUGUSTUS_ENV/bin" \

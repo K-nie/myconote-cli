@@ -2068,6 +2068,20 @@ on a different cluster will need the same fixes.</p>
   0.912 (loose), with nucleotide-level F1 0.985.</p>
 </li>
 <li>
+<p><strong>Per-genome Augustus species model.</strong> <code>predict --kingdom fungi</code> defaults the
+  Augustus species to <code>saccharomyces_cerevisiae_S288C</code> for <em>every</em> genome
+  (<code>src/predict/kingdom.rs</code>). That budding-yeast model is near-intron-less and
+  wrecks gene structure on intron-rich fungi — an early <code>cne</code> (<em>Cryptococcus</em>)
+  run under the default scored BUSCO 14.9 % and strict gene F1 ~0 despite
+  loose gene F1 0.87 (genes on the right loci, wrong exon/intron structure).
+  funannotate/BRAKER train species-specific models, so a fair comparison must
+  give MycoNote the matching model. The wrapper maps each genome to an installed
+  clade-appropriate Augustus species via <code>predict --species</code> (strain-exact where
+  available): sce→<code>saccharomyces_cerevisiae_S288C</code>, cal→<code>candida_albicans</code>,
+  ylp→<code>yarrowia_lipolytica</code>, ani→<code>aspergillus_nidulans</code>, ncr→<code>neurospora_crassa</code>,
+  cne→<code>cryptococcus_neoformans_neoformans_JEC21</code>.</p>
+</li>
+<li>
 <p><strong>EVM weighting is Augustus-dominant.</strong> With SNAP and Augustus both feeding
   EVidenceModeler, the consensus is Augustus-driven (5,465 genes on <em>S.
   cerevisiae</em>, deterministic). SNAP contributes little to the final gene set —

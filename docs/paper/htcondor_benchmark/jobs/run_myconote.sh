@@ -101,11 +101,30 @@ BUSCO_LINEAGE=$(echo "$GENOME_LINE" | cut -f6)
 
 LOCUS_PREFIX=$(echo "$GENOME_ID" | tr '[:lower:]' '[:upper:]')
 
+# ── Clade-appropriate Augustus species model ────────────────────────────────
+# predict defaults --kingdom fungi to saccharomyces_cerevisiae_S288C for EVERY
+# genome (src/predict/kingdom.rs). That budding-yeast model is near-intron-less,
+# so it wrecks gene structure on intron-rich fungi (e.g. Cryptococcus scored
+# BUSCO 14.9% / strict gene F1 ~0 under S288C). funannotate/BRAKER train
+# species-specific models, so a fair comparison must give MycoNote the matching
+# model too. Each name below is an installed Augustus species dir on this pool;
+# strain-exact where available (sce=S288C, cne=JEC21).
+case "$GENOME_ID" in
+    sce) AUGUSTUS_SPECIES="saccharomyces_cerevisiae_S288C" ;;
+    cal) AUGUSTUS_SPECIES="candida_albicans" ;;
+    ylp) AUGUSTUS_SPECIES="yarrowia_lipolytica" ;;
+    ani) AUGUSTUS_SPECIES="aspergillus_nidulans" ;;
+    ncr) AUGUSTUS_SPECIES="neurospora_crassa" ;;
+    cne) AUGUSTUS_SPECIES="cryptococcus_neoformans_neoformans_JEC21" ;;
+    *)   echo "ERROR: no Augustus species mapping for genome '$GENOME_ID'"; exit 1 ;;
+esac
+
 echo "════════════════════════════════════════════════════════"
 echo "MycoNote-CLI Benchmark"
 echo "Genome:     $ORGANISM ($GENOME_ID)"
 echo "Replicate:  $REP"
 echo "Kingdom:    $KINGDOM"
+echo "Species:    $AUGUSTUS_SPECIES"
 echo "Code:       $GENETIC_CODE"
 echo "Threads:    8"
 echo "Output:     $OUT_DIR"
@@ -142,6 +161,7 @@ echo "[$(date +%T)] Step 3: predict"
 /usr/bin/time -v -o "$OUT_DIR/time_predict.log" \
     myconote-cli predict "$OUT_DIR/masked.fa" \
     --kingdom "$KINGDOM" \
+    --species "$AUGUSTUS_SPECIES" \
     --locus-prefix "$LOCUS_PREFIX" \
     --output "$OUT_DIR/predict_out" \
     --threads 8 \

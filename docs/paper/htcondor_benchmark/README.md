@@ -227,6 +227,70 @@ Each submit file uses HTCondor's `getenv = true` to inherit the conda environmen
 
 ---
 
+## GLBRC Execute-Node Notes (from the actual run)
+
+These are the environment quirks the MycoNote arm hit on the GLBRC `scarcity`
+pool and how `jobs/run_myconote.sh` handles each. They are recorded here because
+they are not obvious from the tool docs and a reviewer re-running the benchmark
+on a different cluster will need the same fixes.
+
+- **Conda tool-env split.** `predict`/`annotate` shell out to external binaries
+  by bare `PATH` lookup (augustus, snap, diamond, mmseqs, hmmsearch/hmmscan,
+  minimap2, run_dbcan, emapper.py, busco). On this pool they live in two conda
+  envs: the `myconote` env has working snap/diamond/hmmer/mmseqs/minimap2/
+  run_dbcan/emapper.py/busco but a **broken augustus** (links the wrong boost);
+  the `myconote_augustus` env has a working augustus 3.3.3. The wrapper prepends
+  `myconote` env `bin`, then `myconote_augustus` `bin`, so each tool resolves to
+  a working copy.
+
+- **`conda activate` silently no-ops on execute nodes.** The base conda's
+  `profile.d/conda.sh` lives under `/opt/bifxapps`, which is **not mounted on
+  every execute node**. When activation no-ops, most tools vanish from `PATH`,
+  `annotate` skips Swiss-Prot/Pfam/EggNog/CAZyme, and `predict` falls back to
+  Augustus-only — producing a run that exits 0 but is ~0 % functionally
+  annotated. The fix is an **unconditional env-`bin` prepend** after the
+  activate attempt: the env `bin` is on shared cephfs and its binaries are
+  RPATH-linked to `../lib`, so prepending `bin` directly works whether or not
+  activation succeeded. Verified end-to-end: 97.9 % of genes carry a product,
+  96.5 % a GO term, 94.7 % a Pfam domain; BUSCO 96.4 % (fungi_odb10) on *S.
+  cerevisiae*.
+
+- **Augustus config skeleton.** `predict` reads Augustus species models from a
+  fixed `AUGUSTUS_CONFIG_PATH`, but Augustus also needs the standard config
+  skeleton (`model/`, `extrinsic/`, `profile/`, `cgp/`) alongside `species/`.
+  A `species/`-only directory fails immediately with
+  `Could not find config file .../model/states_shadow.cfg`. Copy the skeleton
+  from a working augustus env's `config/` into `AUGUSTUS_CONFIG_PATH`.
+
+- **`+RequestRuntime` removed from all `.sub` files.** GLBRC machines advertise
+  `Runtime = undefined`; HTCondor expands `+RequestRuntime` to
+  `TARGET.Runtime >= RequestRuntime`, which no slot satisfies, so jobs sit idle
+  forever. The requirement is dropped from `myconote.sub`, `funannotate.sub`,
+  `maker.sub`, and `braker.sub`.
+
+- **EggNog DB path.** `annotate --eggnog` resolves the emapper.py database from
+  `--eggnog-db`, **not** from `--db-dir` (the tool never derives it). The
+  wrapper points `--eggnog-db` at `$MYCONOTE_DB_DIR/eggnog` (eggNOG 5.0.2,
+  emapper 2.1.15).
+
+- **Seqid rename lift-over before scoring.** `sort` renames contigs to
+  `scaffold_N` (longest first) for NCBI-clean output, so the predicted GFF3 is
+  in the `scaffold_N` namespace while `reference.gff3` keeps original accessions
+  (e.g. `NC_001133.9`). `compare_annotations.py` matches features only on
+  identical seqids, so without a lift-over **every metric is 0**. The wrapper
+  now captures `sort --rename-table` and passes it to
+  `compare_annotations.py --rename-table`, which inverts it (`new_id →
+  original_id`) to lift predicted seqids back to the reference namespace before
+  comparison. On the *S. cerevisiae* smoke this took gene-level F1 from 0.000 to
+  0.912 (loose), with nucleotide-level F1 0.985.
+
+- **EVM weighting is Augustus-dominant.** With SNAP and Augustus both feeding
+  EVidenceModeler, the consensus is Augustus-driven (5,465 genes on *S.
+  cerevisiae*, deterministic). SNAP contributes little to the final gene set —
+  a MycoNote characteristic, not a benchmark artifact.
+
+---
+
 ## Expected Outcomes
 
 **For the manuscript**: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.

@@ -56,8 +56,34 @@ class Feature:
         return self.end - self.start + 1
 
 
-def parse_gff3(path: str) -> Dict[str, List[Feature]]:
-    """Parse a GFF3 file. Returns a dict of seqid -> list of gene features."""
+def load_rename_map(path: str) -> Dict[str, str]:
+    """Load a `myconote-cli sort --rename-table` TSV and return new_id -> original_id.
+
+    The sort step renames contigs to scaffold_N (longest first) for NCBI-clean
+    output, so the predicted GFF3 uses scaffold_N seqids while the reference GFF3
+    keeps the original accessions (e.g. NC_001133.9). This inverts the table
+    (columns: original_id, new_id, length) so predicted seqids can be lifted back
+    to the reference namespace before comparison.
+    """
+    mapping: Dict[str, str] = {}
+    with open(path) as f:
+        header = f.readline()  # original_id\tnew_id\tlength
+        for line in f:
+            parts = line.rstrip('\n').split('\t')
+            if len(parts) < 2:
+                continue
+            original_id, new_id = parts[0], parts[1]
+            mapping[new_id] = original_id
+    return mapping
+
+
+def parse_gff3(path: str, seqid_map: Dict[str, str] = None) -> Dict[str, List[Feature]]:
+    """Parse a GFF3 file. Returns a dict of seqid -> list of gene features.
+
+    If seqid_map is given, each column-1 seqid is translated through it (a seqid
+    absent from the map is left unchanged), so a renamed prediction can be
+    compared against a reference in the original namespace.
+    """
     features = []
     with open(path) as f:
         for line in f:
@@ -67,6 +93,8 @@ def parse_gff3(path: str) -> Dict[str, List[Feature]]:
             if len(parts) != 9:
                 continue
             seqid, source, ftype, start, end, score, strand, phase, attrs = parts
+            if seqid_map:
+                seqid = seqid_map.get(seqid, seqid)
             try:
                 start = int(start)
                 end = int(end)
@@ -432,10 +460,19 @@ def main():
     parser.add_argument('reference', help='Reference (gold standard) annotation GFF3')
     parser.add_argument('--output', '-o', help='Output JSON file (default: stdout)')
     parser.add_argument('--label', help='Label for this comparison (e.g., "myconote_vs_SGD")')
+    parser.add_argument('--rename-table',
+                        help='sort --rename-table TSV (original_id, new_id, length); '
+                             'lifts predicted seqids back to the reference namespace')
     args = parser.parse_args()
 
+    seqid_map = None
+    if args.rename_table:
+        seqid_map = load_rename_map(args.rename_table)
+        print(f'Loaded rename table: {len(seqid_map)} contigs '
+              f'(predicted seqids lifted to reference namespace)', file=sys.stderr)
+
     print(f'Parsing predicted annotation: {args.predicted}', file=sys.stderr)
-    pred = parse_gff3(args.predicted)
+    pred = parse_gff3(args.predicted, seqid_map=seqid_map)
     pred_summary = count_features(pred)
 
     print(f'Parsing reference annotation: {args.reference}', file=sys.stderr)

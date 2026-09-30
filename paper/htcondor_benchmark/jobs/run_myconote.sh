@@ -113,10 +113,16 @@ echo "════════════════════════�
 
 # ── Step 1: Sort ───────────────────────────────────────────────────────────
 echo "[$(date +%T)] Step 1: sort"
+# --rename-table records the original_id→scaffold_N contig mapping. sort renames
+# contigs to scaffold_N (longest first) for NCBI-clean output, so the predicted
+# GFF3 ends up in the scaffold_N namespace while reference.gff3 keeps the original
+# accessions (e.g. NC_001133.9). Step 6 uses this table to lift predicted seqids
+# back before comparing — without it every metric is 0 (no seqid overlaps).
 /usr/bin/time -v -o "$OUT_DIR/time_sort.log" \
     myconote-cli sort "$GENOME_FA" \
     --output "$OUT_DIR/sorted.fa" \
     --min-length 500 \
+    --rename-table "$OUT_DIR/rename_table.tsv" \
     >> "$LOG" 2>&1
 
 # ── Step 2: Mask ───────────────────────────────────────────────────────────
@@ -175,6 +181,7 @@ echo "[$(date +%T)] Step 6: comparing to reference annotation"
 python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
     "$OUT_DIR/annotate_out/annotated.gff3" \
     "$REFERENCE_GFF" \
+    --rename-table "$OUT_DIR/rename_table.tsv" \
     --label "myconote_${GENOME_ID}_rep${REP}" \
     --output "$METRICS_JSON" \
     2>> "$LOG"

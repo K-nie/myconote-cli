@@ -1696,6 +1696,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#glbrc-execute-node-notes-from-the-actual-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GLBRC Execute-Node Notes (from the actual run)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#expected-outcomes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1993,6 +2004,76 @@
 </ol>
 <p>This ensures that if compute time is limited, the most informative results (MycoNote-CLI accuracy) are obtained first.</p>
 <p>Each submit file uses HTCondor's <code>getenv = true</code> to inherit the conda environment, and <code>transfer_input_files</code> to bring the genome and reference annotation to the execute node.</p>
+<hr />
+<h2 id="glbrc-execute-node-notes-from-the-actual-run">GLBRC Execute-Node Notes (from the actual run)<a class="headerlink" href="#glbrc-execute-node-notes-from-the-actual-run" title="Permanent link">&para;</a></h2>
+<p>These are the environment quirks the MycoNote arm hit on the GLBRC <code>scarcity</code>
+pool and how <code>jobs/run_myconote.sh</code> handles each. They are recorded here because
+they are not obvious from the tool docs and a reviewer re-running the benchmark
+on a different cluster will need the same fixes.</p>
+<ul>
+<li>
+<p><strong>Conda tool-env split.</strong> <code>predict</code>/<code>annotate</code> shell out to external binaries
+  by bare <code>PATH</code> lookup (augustus, snap, diamond, mmseqs, hmmsearch/hmmscan,
+  minimap2, run_dbcan, emapper.py, busco). On this pool they live in two conda
+  envs: the <code>myconote</code> env has working snap/diamond/hmmer/mmseqs/minimap2/
+  run_dbcan/emapper.py/busco but a <strong>broken augustus</strong> (links the wrong boost);
+  the <code>myconote_augustus</code> env has a working augustus 3.3.3. The wrapper prepends
+  <code>myconote</code> env <code>bin</code>, then <code>myconote_augustus</code> <code>bin</code>, so each tool resolves to
+  a working copy.</p>
+</li>
+<li>
+<p><strong><code>conda activate</code> silently no-ops on execute nodes.</strong> The base conda's
+  <code>profile.d/conda.sh</code> lives under <code>/opt/bifxapps</code>, which is <strong>not mounted on
+  every execute node</strong>. When activation no-ops, most tools vanish from <code>PATH</code>,
+  <code>annotate</code> skips Swiss-Prot/Pfam/EggNog/CAZyme, and <code>predict</code> falls back to
+  Augustus-only — producing a run that exits 0 but is ~0 % functionally
+  annotated. The fix is an <strong>unconditional env-<code>bin</code> prepend</strong> after the
+  activate attempt: the env <code>bin</code> is on shared cephfs and its binaries are
+  RPATH-linked to <code>../lib</code>, so prepending <code>bin</code> directly works whether or not
+  activation succeeded. Verified end-to-end: 97.9 % of genes carry a product,
+  96.5 % a GO term, 94.7 % a Pfam domain; BUSCO 96.4 % (fungi_odb10) on <em>S.
+  cerevisiae</em>.</p>
+</li>
+<li>
+<p><strong>Augustus config skeleton.</strong> <code>predict</code> reads Augustus species models from a
+  fixed <code>AUGUSTUS_CONFIG_PATH</code>, but Augustus also needs the standard config
+  skeleton (<code>model/</code>, <code>extrinsic/</code>, <code>profile/</code>, <code>cgp/</code>) alongside <code>species/</code>.
+  A <code>species/</code>-only directory fails immediately with
+  <code>Could not find config file .../model/states_shadow.cfg</code>. Copy the skeleton
+  from a working augustus env's <code>config/</code> into <code>AUGUSTUS_CONFIG_PATH</code>.</p>
+</li>
+<li>
+<p><strong><code>+RequestRuntime</code> removed from all <code>.sub</code> files.</strong> GLBRC machines advertise
+  <code>Runtime = undefined</code>; HTCondor expands <code>+RequestRuntime</code> to
+  <code>TARGET.Runtime &gt;= RequestRuntime</code>, which no slot satisfies, so jobs sit idle
+  forever. The requirement is dropped from <code>myconote.sub</code>, <code>funannotate.sub</code>,
+  <code>maker.sub</code>, and <code>braker.sub</code>.</p>
+</li>
+<li>
+<p><strong>EggNog DB path.</strong> <code>annotate --eggnog</code> resolves the emapper.py database from
+  <code>--eggnog-db</code>, <strong>not</strong> from <code>--db-dir</code> (the tool never derives it). The
+  wrapper points <code>--eggnog-db</code> at <code>$MYCONOTE_DB_DIR/eggnog</code> (eggNOG 5.0.2,
+  emapper 2.1.15).</p>
+</li>
+<li>
+<p><strong>Seqid rename lift-over before scoring.</strong> <code>sort</code> renames contigs to
+  <code>scaffold_N</code> (longest first) for NCBI-clean output, so the predicted GFF3 is
+  in the <code>scaffold_N</code> namespace while <code>reference.gff3</code> keeps original accessions
+  (e.g. <code>NC_001133.9</code>). <code>compare_annotations.py</code> matches features only on
+  identical seqids, so without a lift-over <strong>every metric is 0</strong>. The wrapper
+  now captures <code>sort --rename-table</code> and passes it to
+  <code>compare_annotations.py --rename-table</code>, which inverts it (<code>new_id →
+  original_id</code>) to lift predicted seqids back to the reference namespace before
+  comparison. On the <em>S. cerevisiae</em> smoke this took gene-level F1 from 0.000 to
+  0.912 (loose), with nucleotide-level F1 0.985.</p>
+</li>
+<li>
+<p><strong>EVM weighting is Augustus-dominant.</strong> With SNAP and Augustus both feeding
+  EVidenceModeler, the consensus is Augustus-driven (5,465 genes on <em>S.
+  cerevisiae</em>, deterministic). SNAP contributes little to the final gene set —
+  a MycoNote characteristic, not a benchmark artifact.</p>
+</li>
+</ul>
 <hr />
 <h2 id="expected-outcomes">Expected Outcomes<a class="headerlink" href="#expected-outcomes" title="Permanent link">&para;</a></h2>
 <p><strong>For the manuscript</strong>: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.</p>

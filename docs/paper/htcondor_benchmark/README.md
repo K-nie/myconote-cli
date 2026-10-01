@@ -302,6 +302,62 @@ on a different cluster will need the same fixes.
   cerevisiae*, deterministic). SNAP contributes little to the final gene set —
   a MycoNote characteristic, not a benchmark artifact.
 
+- **Timing instrumentation (Step 7) fixed.** `run_myconote.sh` records per-stage
+  wall/CPU/RSS by parsing `/usr/bin/time -v` logs. The original parser matched
+  Elapsed with a regex requiring two colons *and* fractional seconds, so it
+  silently failed on both of GNU time's real forms — `m:ss.ss` (sort/mask/
+  predict) and `h:mm:ss` with integer seconds (annotate). The result was a
+  `total_wall_seconds` that dropped the `annotate` stage entirely (the dominant
+  one) and read 0 or mirrored a single stage. The parser now splits the trailing
+  token on `:` and sums 1/2/3 fields. `performance.json` also now reports
+  `total_cpu_seconds` (user+system) beside `total_wall_seconds`: wall time swings
+  2–3× between replicates of the same job on the contended `scarcity` pool (e.g.
+  `cne` 50–148 min) even with `request_cpus = 8` giving dedicated cores, because
+  the variance is node-level memory-bandwidth / I/O contention and EggNog DB
+  load, not CPU oversubscription. CPU-time is steadier but not perfectly
+  contention-invariant here (it tracks some real EggNog/hmmer thread-scaling
+  work), so the manuscript reports **median wall over the three replicates with
+  the range**, and peak RSS (stable at ~6.8–6.9 GB) as the memory figure.
+
+---
+
+## Results (completed MycoNote arm — HTCondor cluster 145093)
+
+All 18 jobs (6 genomes × 3 replicates) completed with exit 0 on every stage,
+each genome run with its clade-appropriate Augustus species model. Accuracy is
+deterministic across replicates (identical metrics in all three), following the
+Eilbeck et al. (2009) gene/exon/nucleotide sensitivity–specificity–F1 scheme;
+BUSCO run against the clade `odb10` lineage.
+
+| genome | Augustus model | loose gene F1 | strict gene F1 | nt F1 | BUSCO |
+|---|---|---|---|---|---|
+| sce | saccharomyces_cerevisiae_S288C | 0.912 | 0.838 | 0.985 | 96.4 % |
+| cal | candida_albicans | 0.951 | 0.845 | 0.986 | 95.3 % |
+| ylp | yarrowia_lipolytica | 0.913 | 0.740 | 0.974 | 97.8 % |
+| ani | aspergillus_nidulans | 0.919 | 0.318 | 0.943 | 98.2 % |
+| ncr | neurospora_crassa | 0.898 | 0.083 | 0.963 | 99.6 % |
+| cne | cryptococcus_neoformans_neoformans_JEC21 | 0.936 | 0.001 | 0.946 | 94.2 % |
+
+Strict gene-level F1 collapses for the intron-rich fungi (`ani`/`ncr`/`cne`)
+because strict matching demands exact start *and* stop coordinates, which is
+confounded by RefSeq UTR inclusion and multi-exon boundary conventions versus
+MycoNote's CDS-based bounds. Loose gene F1, nucleotide F1, and BUSCO are the
+cross-clade-trustworthy signals and all stay high (loose ≥ 0.90, nt ≥ 0.94,
+BUSCO ≥ 94 %).
+
+Timing/memory (8 threads; wall-clock summed from per-stage `/usr/bin/time -v`;
+median of 3 replicates with range; peak RSS dominated by the EggNog-mapper DB
+load in `annotate`):
+
+| genome | median wall | wall range | peak RSS |
+|---|---|---|---|
+| sce | 100.7 min | 72.1–114.6 | ~6.9 GB |
+| cal | 89.4 min | 76.8–99.5 | ~6.9 GB |
+| ylp | 75.2 min | 74.7–75.6 | ~6.8 GB |
+| ani | 105.4 min | 105.3–122.4 | ~6.8 GB |
+| ncr | 129.8 min | 118.9–134.9 | ~6.9 GB |
+| cne | 92.5 min | 50.3–148.0 | ~6.8 GB |
+
 ---
 
 ## Expected Outcomes

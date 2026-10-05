@@ -219,20 +219,6 @@ pub fn check_braker_conflicts(config: &PredictConfig) -> Result<()> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SNAP HMM defaults per kingdom
-// ─────────────────────────────────────────────────────────────────────────────
-
-fn default_snap_hmm(k: &Kingdom) -> &'static str {
-    match k {
-        Kingdom::Fungi => "fungal",
-        Kingdom::Plant => "worm", // closest available for plants
-        Kingdom::Animal => "human",
-        Kingdom::Insect => "fly",
-        Kingdom::Protist => "fungal",
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Pipeline entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -390,7 +376,7 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
                 &pb_aug,
                 format!("Augustus complete → {}", aug_gff.display()),
             );
-            prediction_inputs.push((aug_gff, "Augustus", weights.augustus));
+            prediction_inputs.push((aug_gff.clone(), "Augustus", weights.augustus));
         }
         Err(e) => {
             progress::warn_spinner(&pb_aug, format!("Augustus failed: {}", e));
@@ -399,27 +385,67 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     }
 
     // ── 2. SNAP (optional) ────────────────────────────────────────────────────
+    //
+    // SNAP needs an HMM parameter file and there is NO stock fungal HMM shipped
+    // with the `snap` conda package (its share/snap/HMM dir carries worm / fly /
+    // human / plant models, not a "fungal" one). The old code fell back to the
+    // literal string "fungal", which does not resolve, so SNAP errored and the
+    // error was swallowed by `warn_spinner` — invisible in non-TTY cluster logs.
+    // The whole benchmark therefore ran Augustus-only.
+    //
+    // New behaviour: an explicit --snap-hmm still wins. Otherwise self-train a
+    // genome-specific HMM from the Augustus first-pass calls (this is exactly
+    // what funannotate does) and feed that into SNAP. Every branch logs via
+    // println! so non-TTY logs show whether SNAP ran and why not.
     if config.use_snap {
+        println!("  [+] SNAP (secondary ab-initio predictor)…");
         let snap_gff = config.out_dir.join("snap.gff3");
-        let hmm = config
-            .snap_hmm
-            .as_deref()
-            .unwrap_or_else(|| default_snap_hmm(&config.kingdom));
 
-        let snap_cfg = snap::SnapConfig {
-            hmm: hmm.to_string(),
-            threads: config.threads,
+        let resolved_hmm: Option<String> = match config.snap_hmm.as_deref() {
+            Some(h) => {
+                println!("      using provided HMM: {}", h);
+                Some(h.to_string())
+            }
+            None => {
+                if !aug_gff.exists() {
+                    println!("      ⚠ SNAP skipped: no Augustus first-pass GFF to self-train on.");
+                    None
+                } else if !crate::train::snap_train::snap_available() {
+                    println!("      ⚠ SNAP skipped: `snap` not found on PATH.");
+                    None
+                } else {
+                    println!("      self-training SNAP HMM on Augustus first-pass calls…");
+                    match crate::train::snap_train::train_snap(
+                        &aug_gff,
+                        &config.masked_fasta,
+                        &config.out_dir,
+                    ) {
+                        Ok(hmm_path) => {
+                            println!("      SNAP HMM trained → {}", hmm_path.display());
+                            Some(hmm_path.to_string_lossy().into_owned())
+                        }
+                        Err(e) => {
+                            println!("      ⚠ SNAP self-training failed (non-fatal): {}", e);
+                            None
+                        }
+                    }
+                }
+            }
         };
 
-        progress::step(step_offset + 2, step_offset + 3, "SNAP gene prediction…");
-        let pb_snap = progress::spinner(format!("Running SNAP (hmm: {})…", hmm));
-        match snap::run(&config.masked_fasta, &snap_gff, &snap_cfg) {
-            Ok(()) => {
-                progress::finish_spinner(&pb_snap, "SNAP complete");
-                prediction_inputs.push((snap_gff, "SNAP", weights.snap));
-            }
-            Err(e) => {
-                progress::warn_spinner(&pb_snap, format!("SNAP failed (non-fatal): {}", e));
+        if let Some(hmm) = resolved_hmm {
+            let snap_cfg = snap::SnapConfig {
+                hmm,
+                threads: config.threads,
+            };
+            match snap::run(&config.masked_fasta, &snap_gff, &snap_cfg) {
+                Ok(()) => {
+                    println!("      SNAP complete → {}", snap_gff.display());
+                    prediction_inputs.push((snap_gff, "SNAP", weights.snap));
+                }
+                Err(e) => {
+                    println!("      ⚠ SNAP failed (non-fatal): {}", e);
+                }
             }
         }
     }
@@ -497,11 +523,29 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     // deprecated `--genemark` boolean, and the `--genemark-hints <gff>` path.
     // EP / ETP additionally require `--protein-fasta` because ProtHint needs
     // a protein database to convert into hints.
-    if let Some(mode) = resolve_genemark_mode(
+    // Resolve the GeneMark mode from the explicit flags, then fall back to a
+    // fungi default: GeneMark-ES self-trains with no external evidence and is a
+    // genuinely independent predictor (unlike SNAP, which we train off Augustus
+    // above), so for fungi we enable it by default whenever the GeneMark-ES
+    // suite is on PATH. It stays off (with an info line) when gmes is absent or
+    // the kingdom is non-fungal, so unprovisioned environments are unaffected.
+    let gm_mode = resolve_genemark_mode(
         config.genemark_mode,
         config.use_genemark,
         config.genemark_hints.as_deref(),
-    ) {
+    )
+    .or_else(|| {
+        if !matches!(config.kingdom, Kingdom::Fungi) {
+            None
+        } else if genemark::genemark_available() {
+            println!("  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).");
+            Some(GeneMarkMode::Es)
+        } else {
+            println!("  [i] GeneMark-ES not run: GeneMark-ES suite not found on PATH (optional).");
+            None
+        }
+    });
+    if let Some(mode) = gm_mode {
         let gm_dir = config.out_dir.join("genemark");
         let is_fungus = matches!(config.kingdom, Kingdom::Fungi);
         let pb = progress::spinner(format!("Running {}…", mode.long_name()));

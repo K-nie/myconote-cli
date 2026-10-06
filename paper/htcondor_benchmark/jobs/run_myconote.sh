@@ -78,6 +78,20 @@ if [[ -x "$HOME/.local/bin/myconote-cli" ]]; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# ── GeneMark-ES (independent ab-initio predictor) ──────────────────────────
+# MycoNote now enables GeneMark-ES by default for fungi when the GeneMark-ES
+# suite is on PATH (predict logs "[+] GeneMark-ES enabled by default"). The
+# suite is license-gated and not shipped via conda; it is provisioned under
+# ~/.myconote/tools with the academic key at ~/.gm_key (same layout the BRAKER
+# arm uses). Export GENEMARK_PATH and prepend its bin so gmes_petap.pl resolves.
+# If absent, predict logs an info line and proceeds with Augustus + SNAP.
+# This mirrors funannotate, which also runs GeneMark internally — so giving
+# MycoNote the same predictor keeps the comparison apples-to-apples.
+export GENEMARK_PATH="${GENEMARK_PATH:-$HOME/.myconote/tools/gmes_linux_64_4}"
+if [[ -d "$GENEMARK_PATH" ]]; then
+    export PATH="$GENEMARK_PATH:$PATH"
+fi
+
 OUT_DIR="$RESULTS_DIR/myconote/$GENOME_ID/rep$REP"
 mkdir -p "$OUT_DIR"
 

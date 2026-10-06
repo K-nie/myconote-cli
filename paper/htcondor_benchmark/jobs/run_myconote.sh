@@ -93,6 +93,11 @@ if [[ -d "$GENEMARK_PATH" ]]; then
 fi
 
 OUT_DIR="$RESULTS_DIR/myconote/$GENOME_ID/rep$REP"
+# Start each run from a clean OUT_DIR. A re-run into a dirty dir can score a
+# stale predict_out/annotate_out from an earlier binary (this bit us when a
+# v0.7.4 smoke's output was re-scored after the v0.7.5 rebuild), and leaves
+# predict stages ambiguous about whether they regenerated. Wipe → regenerate.
+rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 LOG="$OUT_DIR/run.log"

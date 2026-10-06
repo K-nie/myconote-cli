@@ -78,23 +78,42 @@ python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
 
 # ── Step 7: Performance ────────────────────────────────────────────────────
 python3 - << PYEOF > "$OUT_DIR/performance.json"
-import json, re
+import json
 
-def parse_time(path):
+def parse_time_log(path):
+    """Parse /usr/bin/time -v output.
+
+    GNU time writes Elapsed as h:mm:ss (integer seconds) once a stage runs an
+    hour or longer, and as m:ss.ss (one colon, fractional seconds) below that.
+    Split the trailing token on ':' and sum the fields: the old regex demanded
+    two colons AND a fractional seconds field, so it matched neither real form
+    and silently dropped any stage >=1h, under-reporting total wall. This parser
+    is byte-identical to the one in run_myconote.sh so every tool's wall and CPU
+    time are measured the same way (required for a fair speed comparison).
+    """
     data = {}
     try:
         with open(path) as f:
             for line in f:
+                line = line.strip()
                 if 'Elapsed' in line and 'wall clock' in line:
-                    m = re.search(r'(\d+):?(\d+):(\d+\.\d+)', line)
-                    if m:
-                        h, mm, ss = m.groups()
-                        if h:
-                            data['wall_seconds'] = int(h)*3600 + int(mm)*60 + float(ss)
-                        else:
-                            data['wall_seconds'] = int(mm)*60 + float(ss)
+                    tok = line.split()[-1]
+                    try:
+                        nums = [float(p) for p in tok.split(':')]
+                    except ValueError:
+                        nums = []
+                    if len(nums) == 3:
+                        data['wall_seconds'] = round(nums[0]*3600 + nums[1]*60 + nums[2], 2)
+                    elif len(nums) == 2:
+                        data['wall_seconds'] = round(nums[0]*60 + nums[1], 2)
+                    elif len(nums) == 1:
+                        data['wall_seconds'] = round(nums[0], 2)
                 elif 'Maximum resident set size' in line:
                     data['max_rss_kb'] = int(line.split(':')[1].strip())
+                elif 'User time' in line:
+                    data['user_seconds'] = float(line.split(':')[1].strip())
+                elif 'System time' in line:
+                    data['system_seconds'] = float(line.split(':')[1].strip())
     except FileNotFoundError:
         pass
     return data
@@ -104,17 +123,22 @@ result = {
     'genome': '$GENOME_ID',
     'replicate': $REP,
     'stages': {
-        'clean':    parse_time('$OUT_DIR/time_clean.log'),
-        'sort':     parse_time('$OUT_DIR/time_sort.log'),
-        'mask':     parse_time('$OUT_DIR/time_mask.log'),
-        'predict':  parse_time('$OUT_DIR/time_predict.log'),
-        'annotate': parse_time('$OUT_DIR/time_annotate.log'),
+        'clean':    parse_time_log('$OUT_DIR/time_clean.log'),
+        'sort':     parse_time_log('$OUT_DIR/time_sort.log'),
+        'mask':     parse_time_log('$OUT_DIR/time_mask.log'),
+        'predict':  parse_time_log('$OUT_DIR/time_predict.log'),
+        'annotate': parse_time_log('$OUT_DIR/time_annotate.log'),
     }
 }
 
 total_wall = sum(s.get('wall_seconds', 0) for s in result['stages'].values())
+total_user = sum(s.get('user_seconds', 0) for s in result['stages'].values())
+total_sys  = sum(s.get('system_seconds', 0) for s in result['stages'].values())
 max_rss = max((s.get('max_rss_kb', 0) for s in result['stages'].values()), default=0)
 result['total_wall_seconds'] = round(total_wall, 1)
+result['total_cpu_seconds'] = round(total_user + total_sys, 1)
+result['total_user_seconds'] = round(total_user, 1)
+result['total_system_seconds'] = round(total_sys, 1)
 result['peak_rss_mb'] = round(max_rss / 1024, 1)
 print(json.dumps(result, indent=2))
 PYEOF

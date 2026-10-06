@@ -1707,6 +1707,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#results-completed-myconote-arm-htcondor-cluster-145093" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results (completed MycoNote arm — HTCondor cluster 145093)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#expected-outcomes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1769,7 +1780,7 @@
 <p>This package implements the comprehensive comparative benchmark requested by Reviewer #2 of the MycoNote-CLI manuscript.</p>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p><strong>Tools compared</strong>: 4 (MycoNote-CLI v0.7.3, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)</p>
+<p><strong>Tools compared</strong>: 4 (MycoNote-CLI v0.7.4, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)</p>
 <p><strong>Genomes</strong>: 6 fungal reference genomes spanning Saccharomycotina, Pezizomycotina, and Basidiomycota (Table 1). Non-fungal taxa are out of scope for this panel; the <code>--kingdom plant|animal|insect|protist</code> paths are experimental and not validated at this release.</p>
 <p><strong>Replicates</strong>: 3 per tool per genome</p>
 <p><strong>Total jobs</strong>: 72 (4 tools × 6 genomes × 3 replicates)</p>
@@ -2087,7 +2098,164 @@ on a different cluster will need the same fixes.</p>
   cerevisiae</em>, deterministic). SNAP contributes little to the final gene set —
   a MycoNote characteristic, not a benchmark artifact.</p>
 </li>
+<li>
+<p><strong>Timing instrumentation (Step 7) fixed.</strong> <code>run_myconote.sh</code> records per-stage
+  wall/CPU/RSS by parsing <code>/usr/bin/time -v</code> logs. The original parser matched
+  Elapsed with a regex requiring two colons <em>and</em> fractional seconds, so it
+  silently failed on both of GNU time's real forms — <code>m:ss.ss</code> (sort/mask/
+  predict) and <code>h:mm:ss</code> with integer seconds (annotate). The result was a
+  <code>total_wall_seconds</code> that dropped the <code>annotate</code> stage entirely (the dominant
+  one) and read 0 or mirrored a single stage. The parser now splits the trailing
+  token on <code>:</code> and sums 1/2/3 fields. <code>performance.json</code> also now reports
+  <code>total_cpu_seconds</code> (user+system) beside <code>total_wall_seconds</code>: wall time swings
+  2–3× between replicates of the same job on the contended <code>scarcity</code> pool (e.g.
+  <code>cne</code> 50–148 min) even with <code>request_cpus = 8</code> giving dedicated cores, because
+  the variance is node-level memory-bandwidth / I/O contention and EggNog DB
+  load, not CPU oversubscription. CPU-time is steadier but not perfectly
+  contention-invariant here (it tracks some real EggNog/hmmer thread-scaling
+  work), so the manuscript reports <strong>median wall over the three replicates with
+  the range</strong>, and peak RSS (stable at ~6.8–6.9 GB) as the memory figure.</p>
+</li>
 </ul>
+<hr />
+<h2 id="results-completed-myconote-arm-htcondor-cluster-145093">Results (completed MycoNote arm — HTCondor cluster 145093)<a class="headerlink" href="#results-completed-myconote-arm-htcondor-cluster-145093" title="Permanent link">&para;</a></h2>
+<p>All 18 jobs (6 genomes × 3 replicates) completed with exit 0 on every stage,
+each genome run with its clade-appropriate Augustus species model. Accuracy is
+deterministic across replicates (identical metrics in all three), following the
+Eilbeck et al. (2009) gene/exon/nucleotide sensitivity–specificity–F1 scheme;
+BUSCO run against the clade <code>odb10</code> lineage.</p>
+<table>
+<thead>
+<tr>
+<th>genome</th>
+<th>Augustus model</th>
+<th>loose gene F1</th>
+<th>strict gene F1 †</th>
+<th>nt F1</th>
+<th>BUSCO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sce</td>
+<td>saccharomyces_cerevisiae_S288C</td>
+<td>0.912</td>
+<td>~~0.838~~ †</td>
+<td>0.985</td>
+<td>96.4 %</td>
+</tr>
+<tr>
+<td>cal</td>
+<td>candida_albicans</td>
+<td>0.951</td>
+<td>~~0.845~~ †</td>
+<td>0.986</td>
+<td>95.3 %</td>
+</tr>
+<tr>
+<td>ylp</td>
+<td>yarrowia_lipolytica</td>
+<td>0.913</td>
+<td>~~0.740~~ †</td>
+<td>0.974</td>
+<td>97.8 %</td>
+</tr>
+<tr>
+<td>ani</td>
+<td>aspergillus_nidulans</td>
+<td>0.919</td>
+<td>~~0.318~~ †</td>
+<td>0.943</td>
+<td>98.2 %</td>
+</tr>
+<tr>
+<td>ncr</td>
+<td>neurospora_crassa</td>
+<td>0.898</td>
+<td>~~0.083~~ †</td>
+<td>0.963</td>
+<td>99.6 %</td>
+</tr>
+<tr>
+<td>cne</td>
+<td>cryptococcus_neoformans_neoformans_JEC21</td>
+<td>0.936</td>
+<td>~~0.001~~ †</td>
+<td>0.946</td>
+<td>94.2 %</td>
+</tr>
+</tbody>
+</table>
+<p><strong>† The strict gene-F1 column is SUPERSEDED and must be re-scored — do not
+cite these values.</strong> They were computed with a comparator that matched the
+gene feature's <em>outer</em> start/end (<code>features_match_strict</code>). MycoNote reports
+CDS-bounded gene spans (no UTR); RefSeq gene/mRNA features for the filamentous
+and basidiomycete fungi (<code>ani</code>/<code>ncr</code>/<code>cne</code>) carry UTRs. The old metric
+therefore compared a coding span against a UTR-inclusive span — it measured
+UTR-annotation <em>convention</em>, not gene-structure accuracy, which is why strict
+F1 tracked UTR content (UTR-poor yeasts 0.74–0.845; UTR-bearing fungi
+0.001–0.318) rather than prediction quality. <code>compare_annotations.py</code> now
+defines a strict match as <em>identical ordered CDS structure</em> (<code>genes_match_strict</code>,
+CDS-to-CDS, same strand), the Eilbeck et al. (2009) exact-gene definition and
+apples-to-apples across annotation conventions (verified on four synthetic
+cases: UTR-extended-but-identical-CDS → match; shifted internal boundary,
+opposite strand, and non-coding ref → no match). These strict values predate
+BOTH that fix AND the SNAP-self-train / GeneMark-ES / consensus-scoring code
+changes (predict commit <code>6c4ba2c</code>), and cluster 145093's raw GFFs are not local,
+so the column stays struck until the re-run re-scores it. Loose gene F1,
+nucleotide F1, and BUSCO are unaffected by the comparator change and stay the
+cross-clade-trustworthy signals (loose ≥ 0.90, nt ≥ 0.94, BUSCO ≥ 94 %).</p>
+<p>Timing/memory (8 threads; wall-clock summed from per-stage <code>/usr/bin/time -v</code>;
+median of 3 replicates with range; peak RSS dominated by the EggNog-mapper DB
+load in <code>annotate</code>):</p>
+<table>
+<thead>
+<tr>
+<th>genome</th>
+<th>median wall</th>
+<th>wall range</th>
+<th>peak RSS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sce</td>
+<td>100.7 min</td>
+<td>72.1–114.6</td>
+<td>~6.9 GB</td>
+</tr>
+<tr>
+<td>cal</td>
+<td>89.4 min</td>
+<td>76.8–99.5</td>
+<td>~6.9 GB</td>
+</tr>
+<tr>
+<td>ylp</td>
+<td>75.2 min</td>
+<td>74.7–75.6</td>
+<td>~6.8 GB</td>
+</tr>
+<tr>
+<td>ani</td>
+<td>105.4 min</td>
+<td>105.3–122.4</td>
+<td>~6.8 GB</td>
+</tr>
+<tr>
+<td>ncr</td>
+<td>129.8 min</td>
+<td>118.9–134.9</td>
+<td>~6.9 GB</td>
+</tr>
+<tr>
+<td>cne</td>
+<td>92.5 min</td>
+<td>50.3–148.0</td>
+<td>~6.8 GB</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="expected-outcomes">Expected Outcomes<a class="headerlink" href="#expected-outcomes" title="Permanent link">&para;</a></h2>
 <p><strong>For the manuscript</strong>: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.</p>

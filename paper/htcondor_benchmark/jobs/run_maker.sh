@@ -54,27 +54,52 @@ python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
 
 # Performance summary
 python3 - << PYEOF > "$OUT_DIR/performance.json"
-import json, re
-data = {}
-try:
-    with open('$OUT_DIR/time_maker.log') as f:
-        for line in f:
-            if 'Elapsed' in line and 'wall clock' in line:
-                m = re.search(r'(\d+):?(\d+):(\d+\.\d+)', line)
-                if m:
-                    h, mm, ss = m.groups()
-                    data['wall_seconds'] = (int(h)*3600 if h else 0) + int(mm)*60 + float(ss)
-            elif 'Maximum resident set size' in line:
-                data['max_rss_kb'] = int(line.split(':')[1].strip())
-except FileNotFoundError:
-    pass
+import json
 
+def parse_time_log(path):
+    """Parse /usr/bin/time -v output. Byte-identical Elapsed/CPU parsing to
+    run_myconote.sh so every tool's wall and CPU time are measured the same
+    way. The old regex required fractional seconds and so dropped any stage
+    >=1h (h:mm:ss, integer seconds), under-reporting wall. Split the trailing
+    token on ':' and sum 1/2/3 fields instead.
+    """
+    data = {}
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if 'Elapsed' in line and 'wall clock' in line:
+                    tok = line.split()[-1]
+                    try:
+                        nums = [float(p) for p in tok.split(':')]
+                    except ValueError:
+                        nums = []
+                    if len(nums) == 3:
+                        data['wall_seconds'] = round(nums[0]*3600 + nums[1]*60 + nums[2], 2)
+                    elif len(nums) == 2:
+                        data['wall_seconds'] = round(nums[0]*60 + nums[1], 2)
+                    elif len(nums) == 1:
+                        data['wall_seconds'] = round(nums[0], 2)
+                elif 'Maximum resident set size' in line:
+                    data['max_rss_kb'] = int(line.split(':')[1].strip())
+                elif 'User time' in line:
+                    data['user_seconds'] = float(line.split(':')[1].strip())
+                elif 'System time' in line:
+                    data['system_seconds'] = float(line.split(':')[1].strip())
+    except FileNotFoundError:
+        pass
+    return data
+
+s = parse_time_log('$OUT_DIR/time_maker.log')
 result = {
     'tool': 'maker',
     'genome': '$GENOME_ID',
     'replicate': $REP,
-    'total_wall_seconds': round(data.get('wall_seconds', 0), 1),
-    'peak_rss_mb': round(data.get('max_rss_kb', 0) / 1024, 1),
+    'total_wall_seconds': round(s.get('wall_seconds', 0), 1),
+    'total_cpu_seconds': round(s.get('user_seconds', 0) + s.get('system_seconds', 0), 1),
+    'total_user_seconds': round(s.get('user_seconds', 0), 1),
+    'total_system_seconds': round(s.get('system_seconds', 0), 1),
+    'peak_rss_mb': round(s.get('max_rss_kb', 0) / 1024, 1),
 }
 print(json.dumps(result, indent=2))
 PYEOF

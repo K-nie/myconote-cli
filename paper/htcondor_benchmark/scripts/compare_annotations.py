@@ -187,11 +187,38 @@ def overlap_fraction(query: Feature, target: Feature) -> float:
     return ov / query.length
 
 
-def features_match_strict(f1: Feature, f2: Feature) -> bool:
-    """Two features match exactly (same start, end, strand)."""
-    return (f1.strand == f2.strand
-            and f1.start == f2.start
-            and f1.end == f2.end)
+def cds_interval_set(gene: Feature) -> Tuple[Tuple[int, int], ...]:
+    """The gene's ordered set of CDS intervals as (start, end) tuples.
+
+    This is the coding structure of the gene, independent of any UTR the
+    source annotation does or does not attach to the gene/mRNA feature.
+    """
+    return tuple((c.start, c.end) for c in get_cds_features(gene))
+
+
+def genes_match_strict(pred: Feature, ref: Feature) -> bool:
+    """Exact gene-level match in the Eilbeck et al. (2009) sense: the two
+    genes share a strand and have the *identical ordered CDS structure*
+    (every coding exon boundary coincides).
+
+    We compare the CDS interval set, NOT the gene feature's outer start/end.
+    MycoNote reports CDS-bounded gene spans (no UTR); RefSeq gene/mRNA
+    features for filamentous and basidiomycete fungi carry UTRs, so an
+    outer-bound comparison measures UTR-annotation convention rather than
+    gene-structure accuracy and collapses strict F1 to ~0 for exactly the
+    UTR-bearing references (ncr, cne). Comparing coding structure makes the
+    strict metric apples-to-apples across annotation conventions and, per
+    Eilbeck et al., is the correct definition of an exact gene match.
+    """
+    if pred.strand != ref.strand:
+        return False
+    pred_cds = cds_interval_set(pred)
+    ref_cds = cds_interval_set(ref)
+    # A gene with no CDS (e.g. a non-coding feature) cannot strict-match a
+    # coding gene; two empty sets are not a meaningful exact match either.
+    if not pred_cds or not ref_cds:
+        return False
+    return pred_cds == ref_cds
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -204,7 +231,9 @@ def compute_gene_metrics(predicted_genes: Dict[str, List[Feature]],
     Compute gene-level sensitivity, specificity, F1 at three stringency levels:
         loose:    any overlap on the same strand
         moderate: >=50% reciprocal overlap
-        strict:   exact start AND stop coordinates match
+        strict:   identical ordered CDS structure (Eilbeck et al. exact
+                  gene match), compared CDS-to-CDS so UTR-annotation
+                  conventions do not confound the result
     """
     results = {}
 
@@ -244,7 +273,7 @@ def compute_gene_metrics(predicted_genes: Dict[str, List[Feature]],
                             matched_refs[seqid].add(i)
                             break
                     elif stringency == 'strict':
-                        if features_match_strict(pred, ref):
+                        if genes_match_strict(pred, ref):
                             found_match = True
                             matched_refs[seqid].add(i)
                             break

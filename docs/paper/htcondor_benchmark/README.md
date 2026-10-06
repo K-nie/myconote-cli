@@ -8,7 +8,7 @@ This package implements the comprehensive comparative benchmark requested by Rev
 
 ## Overview
 
-**Tools compared**: 4 (MycoNote-CLI v0.7.4, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
+**Tools compared**: 4 (MycoNote-CLI v0.7.5, funannotate v1.8.17, MAKER v3.01.04, BRAKER v3.0.8)
 
 **Genomes**: 6 fungal reference genomes spanning Saccharomycotina, Pezizomycotina, and Basidiomycota (Table 1). Non-fungal taxa are out of scope for this panel; the `--kingdom plant|animal|insect|protist` paths are experimental and not validated at this release.
 

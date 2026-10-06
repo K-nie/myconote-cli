@@ -58,6 +58,10 @@ GENOME_FA="$GENOME_DIR/genome.fa"
 REFERENCE_GFF="$GENOME_DIR/reference.gff3"
 
 OUT_DIR="$RESULTS_DIR/braker/$GENOME_ID/rep$REP"
+# braker.pl aborts if its --workingdir already holds its subdirs (e.g. a stale
+# GeneMark-ES/ from a prior run): "Failed to create directory .../GeneMark-ES!".
+# Wipe the dir first so re-runs are idempotent; first-time runs are unaffected.
+rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 cd "$OUT_DIR"
 

@@ -438,7 +438,15 @@ pub fn merge_predictions(
         let mut has_stop_codon = false;
         let mut mrna_source: Option<String> = None;
 
-        for rec in &model.records {
+        // Fold the stop codon into the terminal CDS (and its exon) before we
+        // emit anything, matching NCBI / RefSeq convention. Doing it here means
+        // the CDS spans collected below — and therefore any synthesized exon —
+        // already carry the stop-codon 3 bp. A model is one transcript, so the
+        // whole record set belongs to a single mRNA.
+        let mut norm_records = model.records.clone();
+        crate::parser::gff::include_stop_codon_in_cds(&mut norm_records);
+
+        for rec in &norm_records {
             let mut r = rec.clone();
 
             match rec.feature_type.as_str() {
@@ -647,5 +655,94 @@ mod tests {
         let kept = resolve_overlaps(vec![c]);
         assert_eq!(kept.len(), 1);
         assert_eq!((kept[0].start, kept[0].end), (150, 260));
+    }
+
+    // Pull the (start, end) of the single CDS row for a given locus tag out of
+    // an emitted GFF3, so the stop-codon fold can be asserted on real output.
+    fn cds_bounds(gff: &str, locus_tag: &str) -> (u64, u64) {
+        for line in gff.lines() {
+            let f: Vec<&str> = line.split('\t').collect();
+            if f.len() == 9 && f[2] == "CDS" && f[8].contains(locus_tag) {
+                return (f[3].parse().unwrap(), f[4].parse().unwrap());
+            }
+        }
+        panic!("no CDS row for {}", locus_tag);
+    }
+
+    fn count_feature(gff: &str, feature: &str) -> usize {
+        gff.lines()
+            .filter(|l| {
+                let f: Vec<&str> = l.split('\t').collect();
+                f.len() == 9 && f[2] == feature
+            })
+            .count()
+    }
+
+    // End-to-end: a + strand and a - strand gene, each with the stop codon as a
+    // separate 3-bp feature outside the CDS (exactly what Augustus emits), run
+    // through the real consensus writer. The emitted terminal CDS must now
+    // swallow the stop codon to match NCBI / RefSeq.
+    #[test]
+    fn merge_predictions_folds_stop_codon_into_cds_both_strands() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // + strand gene: CDS 1802-2950, stop_codon 2951-2953.
+        // - strand gene: CDS 4000-5000, stop_codon 3997-3999.
+        let input = dir.path().join("in.gff3");
+        std::fs::write(
+            &input,
+            "##gff-version 3\n\
+chrA\tAugustus\tgene\t1802\t2953\t.\t+\t.\tID=gP\n\
+chrA\tAugustus\tmRNA\t1802\t2953\t.\t+\t.\tID=gP.t1;Parent=gP\n\
+chrA\tAugustus\tCDS\t1802\t2950\t.\t+\t0\tID=gP.cds;Parent=gP.t1\n\
+chrA\tAugustus\texon\t1802\t2950\t.\t+\t.\tID=gP.exon;Parent=gP.t1\n\
+chrA\tAugustus\tstop_codon\t2951\t2953\t.\t+\t0\tID=gP.stop;Parent=gP.t1\n\
+chrA\tAugustus\tgene\t3997\t5000\t.\t-\t.\tID=gM\n\
+chrA\tAugustus\tmRNA\t3997\t5000\t.\t-\t.\tID=gM.t1;Parent=gM\n\
+chrA\tAugustus\tCDS\t4000\t5000\t.\t-\t0\tID=gM.cds;Parent=gM.t1\n\
+chrA\tAugustus\texon\t4000\t5000\t.\t-\t.\tID=gM.exon;Parent=gM.t1\n\
+chrA\tAugustus\tstop_codon\t3997\t3999\t.\t-\t0\tID=gM.stop;Parent=gM.t1\n",
+        )
+        .unwrap();
+
+        let out = dir.path().join("consensus.gff3");
+        let inputs: Vec<(&Path, &str, f64)> = vec![(input.as_path(), "augustus", 10.0)];
+        let n = merge_predictions(&inputs, &out, "TEST").unwrap();
+        assert_eq!(n, 2, "two genes in, two genes out");
+
+        let gff = std::fs::read_to_string(&out).unwrap();
+
+        // Locus tags are assigned by genomic order: TEST_000001 (+), TEST_000002 (-).
+        let plus = cds_bounds(&gff, "TEST_000001");
+        assert_eq!(plus.1, 2953, "+ strand CDS end extends through stop codon");
+        assert_eq!(plus, (1802, 2953));
+
+        let minus = cds_bounds(&gff, "TEST_000002");
+        assert_eq!(minus.0, 3997, "- strand CDS start extends through stop codon");
+        assert_eq!(minus, (3997, 5000));
+
+        // The informational stop_codon rows are preserved as-is (one per gene).
+        assert_eq!(count_feature(&gff, "stop_codon"), 2, "stop_codon rows kept");
+        assert!(
+            gff.lines().any(|l| l.contains("\tstop_codon\t2951\t2953\t")),
+            "+ strand stop_codon row preserved unchanged"
+        );
+        assert!(
+            gff.lines().any(|l| l.contains("\tstop_codon\t3997\t3999\t")),
+            "- strand stop_codon row preserved unchanged"
+        );
+
+        // The exon coincident with each terminal CDS must track the extension,
+        // keeping exon ⊇ CDS (what RefSeq single-exon genes look like).
+        assert!(
+            gff.lines()
+                .any(|l| l.contains("\texon\t1802\t2953\t") && l.contains("TEST_000001")),
+            "+ strand exon extended through stop codon"
+        );
+        assert!(
+            gff.lines()
+                .any(|l| l.contains("\texon\t3997\t5000\t") && l.contains("TEST_000002")),
+            "- strand exon extended through stop codon"
+        );
     }
 }

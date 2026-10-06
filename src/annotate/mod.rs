@@ -1104,17 +1104,44 @@ fn write_annotated_gff(
     output_gff: &Path,
     results: &AnnotationResults,
 ) -> Result<()> {
-    use crate::parser::gff::GFFReader;
+    use crate::parser::gff::{include_stop_codon_in_cds, GFFReader};
+    use std::collections::BTreeMap;
+
+    // Buffer the whole GFF so we can fold stop codons into their terminal CDS
+    // per transcript before writing. `annotate` is a file-in / file-out stage,
+    // not a streaming pipe, so holding the records is fine. The fold is
+    // idempotent: when the input already carries stop-inclusive CDS (the usual
+    // case, since `predict` now emits it that way) nothing changes here.
+    let mut records: Vec<crate::parser::gff::GFFRecord> = Vec::new();
+    for rec_res in GFFReader::from_path(input_gff)? {
+        if let Ok(r) = rec_res {
+            records.push(r);
+        }
+    }
+
+    // Group the coding/exon/stop rows by transcript (their Parent) and run the
+    // fold on each group, then write the corrected coordinates back in place.
+    let mut by_parent: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    for (i, r) in records.iter().enumerate() {
+        if matches!(r.feature_type.as_str(), "CDS" | "exon" | "stop_codon") {
+            if let Some(parent) = r.parent() {
+                by_parent.entry(parent.clone()).or_default().push(i);
+            }
+        }
+    }
+    for idxs in by_parent.values() {
+        let mut group: Vec<crate::parser::gff::GFFRecord> =
+            idxs.iter().map(|&i| records[i].clone()).collect();
+        include_stop_codon_in_cds(&mut group);
+        for (k, &i) in idxs.iter().enumerate() {
+            records[i] = group[k].clone();
+        }
+    }
 
     let mut out = std::fs::File::create(output_gff).map_err(MycoNoteError::Io)?;
     writeln!(out, "##gff-version 3").map_err(MycoNoteError::Io)?;
 
-    for rec_res in GFFReader::from_path(input_gff)? {
-        let mut rec = match rec_res {
-            Ok(r) => r,
-            Err(_) => continue,
-        };
-
+    for mut rec in records {
         if rec.feature_type == "gene" {
             let locus_tag = rec
                 .attributes

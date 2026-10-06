@@ -225,3 +225,187 @@ impl Iterator for GFFReader {
         }
     }
 }
+
+/// Fold a transcript's stop codon into its terminal CDS (and coincident exon).
+///
+/// Ab initio predictors (Augustus, SNAP, GeneMark) emit the stop codon as its
+/// own 3-bp feature sitting just *outside* the CDS — e.g. on `+` strand a CDS
+/// ending at 2950 with a `stop_codon` at 2951-2953. NCBI / GenBank / RefSeq
+/// instead run the terminal CDS *through* the stop codon, so a RefSeq CDS for
+/// that gene would end at 2953. A comparator that scores exact CDS structure
+/// against RefSeq therefore marks every one of our genes wrong by 3 bp at its
+/// 3' end. This folds those 3 bp back in so our emitted CDS matches the
+/// convention the reference uses.
+///
+/// `records` must be the feature rows of a single transcript (its CDS, exon,
+/// stop_codon, …). The call is idempotent: if the CDS already runs through the
+/// stop codon (the adjacency test below fails) nothing changes, so it is safe
+/// to run on output we have already corrected. A model with no `stop_codon`
+/// row — a partial / edge gene — is left untouched; we never invent coding
+/// bases or push past where a stop was actually called.
+pub fn include_stop_codon_in_cds(records: &mut [GFFRecord]) {
+    // The stop codon this transcript carries. A split stop codon (straddling
+    // an intron) would appear as two rows; we take the one that is adjacent to
+    // the terminal CDS below and leave the rest alone.
+    let stop = match records.iter().find(|r| r.feature_type == "stop_codon") {
+        Some(s) => (s.start, s.end),
+        None => return,
+    };
+    let (stop_start, stop_end) = stop;
+
+    // Read the strand off the CDS, not the stop codon, so a mislabelled stop
+    // row can't flip our logic.
+    let strand = match records.iter().find(|r| r.feature_type == "CDS") {
+        Some(c) => c.strand,
+        None => return,
+    };
+
+    if strand == '-' {
+        // Translation runs high→low coordinate, so the terminal (stop-bearing)
+        // CDS segment is the one with the smallest start, and the stop sits
+        // immediately below it: stop_end == cds_start - 1.
+        let term_start = records
+            .iter()
+            .filter(|r| r.feature_type == "CDS")
+            .map(|r| r.start)
+            .min();
+        if let Some(cds_start) = term_start {
+            if stop_start < cds_start && stop_end + 1 == cds_start {
+                for r in records.iter_mut() {
+                    // Extend the terminal CDS segment and the exon coincident
+                    // with it (UTR-off predictors give exon.start == cds.start
+                    // at that boundary); internal segments are left alone.
+                    if (r.feature_type == "CDS" || r.feature_type == "exon")
+                        && r.start == cds_start
+                    {
+                        r.start = stop_start;
+                    }
+                }
+            }
+        }
+    } else {
+        // '+' (and unknown '.') — translation runs low→high coordinate, so the
+        // terminal CDS segment has the largest end and the stop sits just above
+        // it: stop_start == cds_end + 1.
+        let term_end = records
+            .iter()
+            .filter(|r| r.feature_type == "CDS")
+            .map(|r| r.end)
+            .max();
+        if let Some(cds_end) = term_end {
+            if stop_start == cds_end + 1 && stop_end > cds_end {
+                for r in records.iter_mut() {
+                    if (r.feature_type == "CDS" || r.feature_type == "exon") && r.end == cds_end {
+                        r.end = stop_end;
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rec(feature_type: &str, start: u64, end: u64, strand: char) -> GFFRecord {
+        GFFRecord {
+            seqid: "chr1".into(),
+            source: "test".into(),
+            feature_type: feature_type.into(),
+            start,
+            end,
+            score: None,
+            strand,
+            phase: Some(0),
+            attributes: HashMap::new(),
+        }
+    }
+
+    fn find(records: &[GFFRecord], feature_type: &str) -> (u64, u64) {
+        let r = records
+            .iter()
+            .find(|r| r.feature_type == feature_type)
+            .expect("feature present");
+        (r.start, r.end)
+    }
+
+    #[test]
+    fn plus_strand_folds_stop_into_terminal_cds_and_exon() {
+        // The real-run gene: CDS 1802-2950, stop_codon 2951-2953.
+        let mut records = vec![
+            rec("CDS", 1802, 2950, '+'),
+            rec("exon", 1802, 2950, '+'),
+            rec("stop_codon", 2951, 2953, '+'),
+        ];
+        include_stop_codon_in_cds(&mut records);
+        assert_eq!(find(&records, "CDS"), (1802, 2953), "CDS end == stop end");
+        assert_eq!(find(&records, "exon"), (1802, 2953), "exon follows CDS");
+        assert_eq!(find(&records, "stop_codon"), (2951, 2953), "stop kept as-is");
+    }
+
+    #[test]
+    fn minus_strand_folds_stop_into_terminal_cds_and_exon() {
+        // Mirror image: translation 3' end is the low coordinate, stop below it.
+        let mut records = vec![
+            rec("CDS", 1802, 2950, '-'),
+            rec("exon", 1802, 2950, '-'),
+            rec("stop_codon", 1799, 1801, '-'),
+        ];
+        include_stop_codon_in_cds(&mut records);
+        assert_eq!(find(&records, "CDS"), (1799, 2950), "CDS start == stop start");
+        assert_eq!(find(&records, "exon"), (1799, 2950), "exon follows CDS");
+    }
+
+    #[test]
+    fn multi_exon_plus_extends_only_terminal_segment() {
+        let mut records = vec![
+            rec("CDS", 100, 200, '+'),
+            rec("exon", 100, 200, '+'),
+            rec("CDS", 300, 450, '+'),
+            rec("exon", 300, 450, '+'),
+            rec("stop_codon", 451, 453, '+'),
+        ];
+        include_stop_codon_in_cds(&mut records);
+        // First segment untouched; last (max-end) segment extended by the codon.
+        assert_eq!(records[0].end, 200);
+        assert_eq!(records[1].end, 200);
+        assert_eq!(records[2].end, 453);
+        assert_eq!(records[3].end, 453);
+    }
+
+    #[test]
+    fn idempotent_when_cds_already_includes_stop() {
+        // Second pass over already-corrected output must be a no-op: the stop
+        // now lies inside the CDS, so the adjacency test fails.
+        let mut records = vec![
+            rec("CDS", 1802, 2953, '+'),
+            rec("exon", 1802, 2953, '+'),
+            rec("stop_codon", 2951, 2953, '+'),
+        ];
+        include_stop_codon_in_cds(&mut records);
+        assert_eq!(find(&records, "CDS"), (1802, 2953));
+        assert_eq!(find(&records, "exon"), (1802, 2953));
+    }
+
+    #[test]
+    fn no_stop_codon_leaves_partial_gene_untouched() {
+        let mut records = vec![rec("CDS", 100, 200, '+'), rec("exon", 100, 200, '+')];
+        include_stop_codon_in_cds(&mut records);
+        assert_eq!(find(&records, "CDS"), (100, 200));
+    }
+
+    #[test]
+    fn non_adjacent_stop_is_not_folded_in() {
+        // A stop codon that is not flush against the terminal CDS (e.g. a split
+        // stop across an intron, or a malformed model) is left alone rather
+        // than swallowing the intervening bases.
+        let mut records = vec![
+            rec("CDS", 100, 200, '+'),
+            rec("exon", 100, 200, '+'),
+            rec("stop_codon", 260, 262, '+'),
+        ];
+        include_stop_codon_in_cds(&mut records);
+        assert_eq!(find(&records, "CDS"), (100, 200));
+    }
+}

@@ -6,6 +6,42 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.5] — 2026-10-06
+
+### Fixed
+
+- **Emitted CDS now runs through the stop codon (NCBI / RefSeq convention).**
+  The *ab initio* predictors (Augustus, SNAP, GeneMark) emit the stop codon as
+  its own 3-bp feature *outside* the CDS — e.g. a `+` strand CDS ending at 2950
+  with a separate `stop_codon` at 2951–2953. RefSeq and every comparator tool
+  (funannotate, MAKER, BRAKER) instead fold those 3 bp into the terminal CDS,
+  so our coordinates were short by one codon at every gene's 3' end. Against a
+  strict comparator that scores exact CDS structure this collapsed gene-level
+  F1 to ~0.007 (vs 0.80–0.87 for the competitors) and left `submit`/table2asn
+  output non-GenBank-compliant. The consensus writer (`predict`) and the
+  `annotate` GFF writer now extend the terminal CDS segment — and its coincident
+  exon — through the stop codon: `+` strand extends the 3'-most CDS end up to
+  the stop end, `-` strand extends the 5'-most-in-coordinate CDS start down to
+  the stop start. Strand-aware, phase-preserving (a whole codon is added, so the
+  reading frame is unchanged), and idempotent (output already carrying a
+  stop-inclusive CDS is left untouched). Genes with no called stop codon
+  (partial / edge models) are left as-is. The informational `stop_codon` row is
+  still emitted. Shared helper `include_stop_codon_in_cds` in `parser::gff`.
+
+- **SNAP self-training no longer emits a bogus `snap -train` call.** The
+  previous wrapper invoked `snap -train`, an option this `snap` build does not
+  have — it logged `zoeParseOptions: unknown option (-train)` and, being a
+  non-fatal fallback, contributed nothing. SNAP self-training now runs the real
+  MAKER/funannotate chain: GFF3 → ZFF (`.ann`), then `fathom -categorize`,
+  `fathom -export -plus`, `forge`, and `hmm-assembler.pl` to build a
+  genome-specific HMM. The companion tools ship with the bioconda `snap`
+  package; when any of `fathom` / `forge` / `hmm-assembler.pl` is absent, the
+  step now skips cleanly and loudly-but-non-fatally ("SNAP self-training
+  unavailable …; skipping SNAP") so the pipeline falls back to Augustus +
+  GeneMark instead of surfacing a confusing ZOE error. Added a correct,
+  unit-tested GFF3→ZFF converter (`Einit`/`Exon`/`Eterm`/`Esngl` labels,
+  strand-aware 5'→3' coordinate order).
+
 ## [0.7.4] — 2026-10-05
 
 ### Changed

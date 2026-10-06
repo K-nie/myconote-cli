@@ -6,6 +6,33 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.4] — 2026-10-05
+
+### Changed
+
+- **Overlap resolution now uses agreement-weighted consensus scoring.** When
+  multiple predictors call the same locus, the kept model is chosen by
+  `score(x) = weight(x) + Σ_{y≠x} weight(y)·cds_jaccard(x, y)` rather than by
+  raw source weight, so a locus several predictors agree on at the coding-base
+  level outranks a lone high-weight call, and the emitted model carries the
+  consensus exon boundaries (the lever for exact-match / strict gene accuracy).
+  Ties fall back to raw weight, then to longer total CDS, for determinism.
+
+### Fixed
+
+- **SNAP now runs instead of silently failing.** The old code passed the
+  literal `"fungal"` HMM, which does not resolve (no stock fungal HMM ships
+  with the `snap` package), and the error was swallowed by the non-TTY spinner
+  — so SNAP never contributed and pipelines ran effectively Augustus-only.
+  SNAP now self-trains a genome-specific HMM from the Augustus first pass
+  (funannotate-style) and logs every branch to stdout.
+
+### Added
+
+- **GeneMark-ES enabled by default for fungi** when the GeneMark-ES suite is on
+  `PATH`, as an independent self-training *ab initio* predictor. Stays off with
+  an info line when `gmes` is absent or the kingdom is non-fungal.
+
 ## [0.7.3] — 2026-08-06
 
 ### Fixed

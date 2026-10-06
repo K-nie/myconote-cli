@@ -718,17 +718,22 @@ chrA\tAugustus\tstop_codon\t3997\t3999\t.\t-\t0\tID=gM.stop;Parent=gM.t1\n",
         assert_eq!(plus, (1802, 2953));
 
         let minus = cds_bounds(&gff, "TEST_000002");
-        assert_eq!(minus.0, 3997, "- strand CDS start extends through stop codon");
+        assert_eq!(
+            minus.0, 3997,
+            "- strand CDS start extends through stop codon"
+        );
         assert_eq!(minus, (3997, 5000));
 
         // The informational stop_codon rows are preserved as-is (one per gene).
         assert_eq!(count_feature(&gff, "stop_codon"), 2, "stop_codon rows kept");
         assert!(
-            gff.lines().any(|l| l.contains("\tstop_codon\t2951\t2953\t")),
+            gff.lines()
+                .any(|l| l.contains("\tstop_codon\t2951\t2953\t")),
             "+ strand stop_codon row preserved unchanged"
         );
         assert!(
-            gff.lines().any(|l| l.contains("\tstop_codon\t3997\t3999\t")),
+            gff.lines()
+                .any(|l| l.contains("\tstop_codon\t3997\t3999\t")),
             "- strand stop_codon row preserved unchanged"
         );
 

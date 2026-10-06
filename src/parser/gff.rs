@@ -275,8 +275,7 @@ pub fn include_stop_codon_in_cds(records: &mut [GFFRecord]) {
                     // Extend the terminal CDS segment and the exon coincident
                     // with it (UTR-off predictors give exon.start == cds.start
                     // at that boundary); internal segments are left alone.
-                    if (r.feature_type == "CDS" || r.feature_type == "exon")
-                        && r.start == cds_start
+                    if (r.feature_type == "CDS" || r.feature_type == "exon") && r.start == cds_start
                     {
                         r.start = stop_start;
                     }
@@ -341,7 +340,11 @@ mod tests {
         include_stop_codon_in_cds(&mut records);
         assert_eq!(find(&records, "CDS"), (1802, 2953), "CDS end == stop end");
         assert_eq!(find(&records, "exon"), (1802, 2953), "exon follows CDS");
-        assert_eq!(find(&records, "stop_codon"), (2951, 2953), "stop kept as-is");
+        assert_eq!(
+            find(&records, "stop_codon"),
+            (2951, 2953),
+            "stop kept as-is"
+        );
     }
 
     #[test]
@@ -353,7 +356,11 @@ mod tests {
             rec("stop_codon", 1799, 1801, '-'),
         ];
         include_stop_codon_in_cds(&mut records);
-        assert_eq!(find(&records, "CDS"), (1799, 2950), "CDS start == stop start");
+        assert_eq!(
+            find(&records, "CDS"),
+            (1799, 2950),
+            "CDS start == stop start"
+        );
         assert_eq!(find(&records, "exon"), (1799, 2950), "exon follows CDS");
     }
 

@@ -209,7 +209,11 @@ fn records_to_zff(records: &[GFFRecord]) -> String {
                     "Exon"
                 };
                 // 5'→3' coordinate order: plus = (lo, hi); minus = (hi, lo).
-                let (c1, c2) = if strand == '-' { (*hi, *lo) } else { (*lo, *hi) };
+                let (c1, c2) = if strand == '-' {
+                    (*hi, *lo)
+                } else {
+                    (*lo, *hi)
+                };
                 out.push_str(&format!("{}\t{}\t{}\t{}\n", label, c1, c2, name));
             }
         }

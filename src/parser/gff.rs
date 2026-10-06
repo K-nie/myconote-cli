@@ -244,41 +244,59 @@ impl Iterator for GFFReader {
 /// row — a partial / edge gene — is left untouched; we never invent coding
 /// bases or push past where a stop was actually called.
 pub fn include_stop_codon_in_cds(records: &mut [GFFRecord]) {
-    // The stop codon this transcript carries. A split stop codon (straddling
-    // an intron) would appear as two rows; we take the one that is adjacent to
-    // the terminal CDS below and leave the rest alone.
-    let stop = match records.iter().find(|r| r.feature_type == "stop_codon") {
-        Some(s) => (s.start, s.end),
-        None => return,
-    };
-    let (stop_start, stop_end) = stop;
+    // Must have both a CDS to extend and at least one stop codon to fold in.
+    // A model with no stop (partial / edge gene) is left untouched — we never
+    // invent coding bases.
+    if !records.iter().any(|r| r.feature_type == "CDS") {
+        return;
+    }
+    if !records.iter().any(|r| r.feature_type == "stop_codon") {
+        return;
+    }
 
-    // Read the strand off the CDS, not the stop codon, so a mislabelled stop
-    // row can't flip our logic.
-    let strand = match records.iter().find(|r| r.feature_type == "CDS") {
-        Some(c) => c.strand,
-        None => return,
-    };
+    // Strand drives which end is the 3' (translation) end. Prefer the CDS's
+    // strand; fall back to the stop codon, then to any record, so a '.' on the
+    // CDS row (seen from some converters) can't silently flip us onto the wrong
+    // branch.
+    let strand = records
+        .iter()
+        .find(|r| r.feature_type == "CDS")
+        .map(|r| r.strand)
+        .filter(|&s| s == '+' || s == '-')
+        .or_else(|| {
+            records
+                .iter()
+                .find(|r| r.feature_type == "stop_codon")
+                .map(|r| r.strand)
+                .filter(|&s| s == '+' || s == '-')
+        })
+        .unwrap_or('+');
 
     if strand == '-' {
         // Translation runs high→low coordinate, so the terminal (stop-bearing)
         // CDS segment is the one with the smallest start, and the stop sits
-        // immediately below it: stop_end == cds_start - 1.
-        let term_start = records
+        // immediately below it: stop_end == cds_start - 1. Scan ALL stop rows
+        // for the one that is actually flush against that boundary rather than
+        // trusting the first stop_codon encountered (multi-segment / multi-
+        // isoform models can carry more than one).
+        let cds_start = records
             .iter()
             .filter(|r| r.feature_type == "CDS")
             .map(|r| r.start)
-            .min();
-        if let Some(cds_start) = term_start {
-            if stop_start < cds_start && stop_end + 1 == cds_start {
-                for r in records.iter_mut() {
-                    // Extend the terminal CDS segment and the exon coincident
-                    // with it (UTR-off predictors give exon.start == cds.start
-                    // at that boundary); internal segments are left alone.
-                    if (r.feature_type == "CDS" || r.feature_type == "exon") && r.start == cds_start
-                    {
-                        r.start = stop_start;
-                    }
+            .min()
+            .unwrap();
+        let fold_to = records
+            .iter()
+            .filter(|r| r.feature_type == "stop_codon")
+            .find(|s| s.start < cds_start && s.end + 1 == cds_start)
+            .map(|s| s.start);
+        if let Some(new_start) = fold_to {
+            for r in records.iter_mut() {
+                // Extend the terminal CDS segment and the exon coincident with
+                // it (UTR-off predictors give exon.start == cds.start at that
+                // boundary); internal segments are left alone.
+                if (r.feature_type == "CDS" || r.feature_type == "exon") && r.start == cds_start {
+                    r.start = new_start;
                 }
             }
         }
@@ -286,17 +304,21 @@ pub fn include_stop_codon_in_cds(records: &mut [GFFRecord]) {
         // '+' (and unknown '.') — translation runs low→high coordinate, so the
         // terminal CDS segment has the largest end and the stop sits just above
         // it: stop_start == cds_end + 1.
-        let term_end = records
+        let cds_end = records
             .iter()
             .filter(|r| r.feature_type == "CDS")
             .map(|r| r.end)
-            .max();
-        if let Some(cds_end) = term_end {
-            if stop_start == cds_end + 1 && stop_end > cds_end {
-                for r in records.iter_mut() {
-                    if (r.feature_type == "CDS" || r.feature_type == "exon") && r.end == cds_end {
-                        r.end = stop_end;
-                    }
+            .max()
+            .unwrap();
+        let fold_to = records
+            .iter()
+            .filter(|r| r.feature_type == "stop_codon")
+            .find(|s| s.start == cds_end + 1 && s.end > cds_end)
+            .map(|s| s.end);
+        if let Some(new_end) = fold_to {
+            for r in records.iter_mut() {
+                if (r.feature_type == "CDS" || r.feature_type == "exon") && r.end == cds_end {
+                    r.end = new_end;
                 }
             }
         }

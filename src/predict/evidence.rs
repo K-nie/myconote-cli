@@ -750,4 +750,55 @@ chrA\tAugustus\tstop_codon\t3997\t3999\t.\t-\t0\tID=gM.stop;Parent=gM.t1\n",
             "- strand exon extended through stop codon"
         );
     }
+
+    // Faithful reproduction of the REAL cluster run: Augustus emits the
+    // transcript as `transcript` (not `mRNA`), the start_codon/CDS/stop_codon
+    // children carry only a Parent (no ID), ids follow the c0_g1 / c0_g1.t1
+    // scheme, AND a second predictor (GeneMark) calls the same locus so
+    // resolve_overlaps actually runs and picks a winner. This is the shape the
+    // synthetic test above failed to capture.
+    #[test]
+    fn merge_predictions_folds_stop_codon_real_augustus_shape() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let aug = dir.path().join("augustus.gff3");
+        std::fs::write(
+            &aug,
+            "##gff-version 3\n\
+scaffold_001\tAUGUSTUS\tgene\t1802\t2953\t1\t+\t.\tID=c0_g1\n\
+scaffold_001\tAUGUSTUS\ttranscript\t1802\t2953\t1\t+\t.\tID=c0_g1.t1;Parent=c0_g1\n\
+scaffold_001\tAUGUSTUS\tstart_codon\t1802\t1804\t.\t+\t0\tParent=c0_g1.t1\n\
+scaffold_001\tAUGUSTUS\tCDS\t1802\t2950\t1\t+\t0\tID=c0_g1.t1.cds;Parent=c0_g1.t1\n\
+scaffold_001\tAUGUSTUS\tstop_codon\t2951\t2953\t.\t+\t0\tParent=c0_g1.t1\n",
+        )
+        .unwrap();
+
+        // GeneMark calls the same locus with slightly different boundaries.
+        let gm = dir.path().join("genemark.gff3");
+        std::fs::write(
+            &gm,
+            "##gff-version 3\n\
+scaffold_001\tGeneMark.hmm\tgene\t1805\t2953\t.\t+\t.\tID=gm_1\n\
+scaffold_001\tGeneMark.hmm\tmRNA\t1805\t2953\t.\t+\t.\tID=gm_1.t1;Parent=gm_1\n\
+scaffold_001\tGeneMark.hmm\tCDS\t1805\t2950\t.\t+\t0\tID=gm_1.cds;Parent=gm_1.t1\n\
+scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
+        )
+        .unwrap();
+
+        let out = dir.path().join("consensus.gff3");
+        let inputs: Vec<(&Path, &str, f64)> = vec![
+            (aug.as_path(), "augustus", 10.0),
+            (gm.as_path(), "genemark", 5.0),
+        ];
+        let n = merge_predictions(&inputs, &out, "SCE").unwrap();
+        assert_eq!(n, 1, "one consensus gene for the shared locus");
+
+        let gff = std::fs::read_to_string(&out).unwrap();
+        let cds = cds_bounds(&gff, "SCE_000001");
+        assert_eq!(
+            cds.1, 2953,
+            "real-shape consensus CDS must fold the stop codon (got {:?})\n{}",
+            cds, gff
+        );
+    }
 }

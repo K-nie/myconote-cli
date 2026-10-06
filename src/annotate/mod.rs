@@ -1299,3 +1299,91 @@ fn write_report(path: &Path, config: &AnnotateConfig, results: &AnnotationResult
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cds_end_for(gff: &str, locus_contains: &str) -> u64 {
+        for line in gff.lines() {
+            let f: Vec<&str> = line.split('\t').collect();
+            if f.len() == 9 && f[2] == "CDS" && f[8].contains(locus_contains) {
+                return f[4].parse().unwrap();
+            }
+        }
+        panic!("no CDS row containing {}", locus_contains);
+    }
+
+    fn cds_start_for(gff: &str, locus_contains: &str) -> u64 {
+        for line in gff.lines() {
+            let f: Vec<&str> = line.split('\t').collect();
+            if f.len() == 9 && f[2] == "CDS" && f[8].contains(locus_contains) {
+                return f[3].parse().unwrap();
+            }
+        }
+        panic!("no CDS row containing {}", locus_contains);
+    }
+
+    // annotate is the final writer the benchmark scores (annotated.gff3). Even
+    // if it is handed a consensus whose CDS still excludes the stop codon (e.g.
+    // a stale predict_out), the annotated output must come out stop-inclusive.
+    #[test]
+    fn write_annotated_gff_folds_stop_codon_into_cds() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("consensus.gff3");
+        std::fs::write(
+            &input,
+            "##gff-version 3\n\
+scaffold_001\tmyconote\tgene\t1802\t2953\t.\t+\t.\tID=SCE_000001;locus_tag=SCE_000001\n\
+scaffold_001\tmyconote\tmRNA\t1802\t2953\t.\t+\t.\tID=SCE_000001-mRNA1;Parent=SCE_000001\n\
+scaffold_001\tmyconote\tCDS\t1802\t2950\t.\t+\t0\tID=SCE_000001-CDS-1;Parent=SCE_000001-mRNA1\n\
+scaffold_001\tmyconote\texon\t1802\t2950\t.\t+\t.\tID=SCE_000001-exon-1;Parent=SCE_000001-mRNA1\n\
+scaffold_001\tmyconote\tstop_codon\t2951\t2953\t.\t+\t0\tID=SCE_000001-stop_codon-2;Parent=SCE_000001-mRNA1\n\
+scaffold_001\tmyconote\tgene\t3997\t5000\t.\t-\t.\tID=SCE_000002;locus_tag=SCE_000002\n\
+scaffold_001\tmyconote\tmRNA\t3997\t5000\t.\t-\t.\tID=SCE_000002-mRNA1;Parent=SCE_000002\n\
+scaffold_001\tmyconote\tCDS\t4000\t5000\t.\t-\t0\tID=SCE_000002-CDS-1;Parent=SCE_000002-mRNA1\n\
+scaffold_001\tmyconote\tstop_codon\t3997\t3999\t.\t-\t0\tID=SCE_000002-stop_codon-2;Parent=SCE_000002-mRNA1\n",
+        )
+        .unwrap();
+
+        let out = dir.path().join("annotated.gff3");
+        let results = AnnotationResults::default();
+        write_annotated_gff(&input, &out, &results).unwrap();
+
+        let gff = std::fs::read_to_string(&out).unwrap();
+        assert_eq!(
+            cds_end_for(&gff, "SCE_000001"),
+            2953,
+            "+ strand annotated CDS folds stop codon\n{}",
+            gff
+        );
+        assert_eq!(
+            cds_start_for(&gff, "SCE_000002"),
+            3997,
+            "- strand annotated CDS folds stop codon\n{}",
+            gff
+        );
+    }
+
+    // Idempotency through annotate: an already-folded consensus is passed
+    // through unchanged (no double-extension).
+    #[test]
+    fn write_annotated_gff_is_idempotent_on_folded_input() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("consensus.gff3");
+        std::fs::write(
+            &input,
+            "##gff-version 3\n\
+scaffold_001\tmyconote\tgene\t1802\t2953\t.\t+\t.\tID=SCE_000001;locus_tag=SCE_000001\n\
+scaffold_001\tmyconote\tmRNA\t1802\t2953\t.\t+\t.\tID=SCE_000001-mRNA1;Parent=SCE_000001\n\
+scaffold_001\tmyconote\tCDS\t1802\t2953\t.\t+\t0\tID=SCE_000001-CDS-1;Parent=SCE_000001-mRNA1\n\
+scaffold_001\tmyconote\tstop_codon\t2951\t2953\t.\t+\t0\tID=SCE_000001-stop_codon-2;Parent=SCE_000001-mRNA1\n",
+        )
+        .unwrap();
+
+        let out = dir.path().join("annotated.gff3");
+        write_annotated_gff(&input, &out, &AnnotationResults::default()).unwrap();
+        let gff = std::fs::read_to_string(&out).unwrap();
+        assert_eq!(cds_end_for(&gff, "SCE_000001"), 2953);
+    }
+}

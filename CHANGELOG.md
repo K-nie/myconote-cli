@@ -6,6 +6,28 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.6] — 2026-10-06
+
+### Fixed
+
+- **Stop-codon CDS fold hardened and re-verified end-to-end (follow-up to
+  v0.7.5).** A cluster re-smoke of v0.7.5 reported the S. cerevisiae consensus
+  CDS still ending at the pre-stop coordinate (strict gene F1 ≈ 0.0076), so the
+  fold was re-exercised through the exact real input shape — two predictors
+  (Augustus + GeneMark) merged via `merge_predictions`, Augustus emitting the
+  transcript as `transcript` with unlabelled `start_codon` / `stop_codon`
+  children and the `c0_g1` / `c0_g1.t1` id scheme — and through the compiled
+  `annotate` binary on a split-CDS GFF. Both paths fold correctly (`+` CDS
+  1802→2953, `-` CDS start 4000→3997). `include_stop_codon_in_cds` was made
+  robust to real-data variation: it now scans *all* `stop_codon` rows for the
+  one flush against the terminal CDS (rather than trusting the first row, which
+  matters for multi-segment / multi-isoform models) and derives strand from the
+  CDS with a fallback to the stop codon then `+`, so a `.` strand on a converted
+  row can't silently route it onto the wrong branch. Added faithful regression
+  tests through both entry points (`merge_predictions` with two predictors in
+  the real Augustus shape; `write_annotated_gff` direct) plus an idempotency
+  test on already-folded input.
+
 ## [0.7.5] — 2026-10-06
 
 ### Fixed

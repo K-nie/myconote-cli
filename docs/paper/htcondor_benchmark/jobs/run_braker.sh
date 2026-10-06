@@ -4,6 +4,8 @@
 # Wrapper for BRAKER3 benchmark runs.
 # Note: BRAKER works best with RNA-seq evidence; for this benchmark we use
 # BRAKER3 in protein-only mode (BRAKER2-style) using OrthoDB.
+# BRAKER trains its own Augustus/GeneMark models de novo per genome, so there
+# is no --augustus_species to set — this is the fair, as-designed workflow.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -14,8 +16,42 @@ BENCHMARK_DIR="$3"
 DATA_DIR="$4"
 RESULTS_DIR="$5"
 
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate braker
+# ── Conda env ────────────────────────────────────────────────────────────
+# BRAKER3 is installed as the `myconote_braker3` env on this pool (not `braker`).
+# Source the base conda profile from wherever it lives, activate, and also
+# prepend the env bin so braker.pl resolves even if activation no-ops.
+BRAKER_ENV="${BRAKER_ENV:-myconote_braker3}"
+for _p in "/opt/bifxapps/miniconda3/etc/profile.d/conda.sh" \
+          "$HOME/miniconda3/etc/profile.d/conda.sh" \
+          "$HOME/anaconda3/etc/profile.d/conda.sh"; do
+    [[ -f "$_p" ]] && source "$_p" && break
+done
+conda activate "$BRAKER_ENV" 2>/dev/null \
+    || conda activate "$HOME/.conda/envs/$BRAKER_ENV" 2>/dev/null \
+    || echo "WARN: 'conda activate $BRAKER_ENV' failed; relying on bin PATH"
+if [[ -d "$HOME/.conda/envs/$BRAKER_ENV/bin" ]]; then
+    export PATH="$HOME/.conda/envs/$BRAKER_ENV/bin:$PATH"
+fi
+
+# ── GeneMark ─────────────────────────────────────────────────────────────
+# BRAKER's protein pipeline (GeneMark-EP+) requires the GeneMark-ES suite,
+# which is license-gated and not shipped via conda. It is provisioned under
+# ~/.myconote/tools with the academic key at ~/.gm_key. Export GENEMARK_PATH
+# and prepend its bin so braker.pl resolves gmes_petap.pl.
+export GENEMARK_PATH="${GENEMARK_PATH:-$HOME/.myconote/tools/gmes_linux_64_4}"
+if [[ -d "$GENEMARK_PATH" ]]; then
+    export PATH="$GENEMARK_PATH:$PATH"
+fi
+if [[ ! -s "$HOME/.gm_key" ]]; then
+    echo "ERROR: GeneMark key not found at ~/.gm_key" >&2
+    exit 1
+fi
+# ProtHint feeds protein splice hints into GeneMark-EP+; it ships inside the
+# GeneMark-ES suite. braker.pl needs PROTHINT_PATH and prothint.py on PATH.
+export PROTHINT_PATH="${PROTHINT_PATH:-$GENEMARK_PATH/ProtHint/bin}"
+if [[ -d "$PROTHINT_PATH" ]]; then
+    export PATH="$PROTHINT_PATH:$PATH"
+fi
 
 GENOME_DIR="$DATA_DIR/$GENOME_ID"
 GENOME_FA="$GENOME_DIR/genome.fa"
@@ -27,19 +63,30 @@ cd "$OUT_DIR"
 
 LOG="$OUT_DIR/run.log"
 
-# Use OrthoDB protein database appropriate for the kingdom
+# Per-job writable Augustus config. BRAKER trains a new Augustus species into
+# AUGUSTUS_CONFIG_PATH/species and aborts if that species dir already exists
+# (e.g. a prior run of this same genome×rep). Pointing every job at the shared
+# env config also races when the 18-job panel runs in parallel. Give each job
+# its own fresh copy under OUT_DIR so training writes are isolated and reruns
+# are clean. --fresh ensures a stale copy from an aborted run is replaced.
+export AUGUSTUS_CONFIG_PATH="$OUT_DIR/augustus_config"
+rm -rf "$AUGUSTUS_CONFIG_PATH"
+cp -r "$HOME/.conda/envs/$BRAKER_ENV/config" "$AUGUSTUS_CONFIG_PATH"
+rm -rf "$AUGUSTUS_CONFIG_PATH/species/braker_${GENOME_ID}_rep${REP}"
+
+# OrthoDB protein partition (odb11). /staging is execute-node scratch and is not
+# present on every node, so the partition is provisioned on cephfs home instead.
+PROTEIN_DB="${BRAKER_PROTEIN_DB:-$HOME/.myconote/dbs/orthodb/Fungi.fa}"
 CONFIG="$BENCHMARK_DIR/configs/genomes.tsv"
 KINGDOM=$(awk -F'\t' -v id="$GENOME_ID" '$1==id {print $3}' "$CONFIG")
-
-case "$KINGDOM" in
-    fungi)   PROTEIN_DB="/staging/braker/odb11/Fungi.fa" ;;
-    # Non-fungal kingdoms intentionally omitted — the benchmark panel
-    # (configs/genomes.tsv) is fungi-only. If a future release validates
-    # the --kingdom plant|animal|insect|protist paths, restore these
-    # cases: Viridiplantae.fa, Metazoa.fa, Arthropoda.fa, Eukaryota.fa.
-    *)       echo "ERROR: unsupported kingdom '$KINGDOM' for this benchmark panel" >&2
-             exit 1 ;;
-esac
+if [[ "$KINGDOM" != "fungi" ]]; then
+    echo "ERROR: unsupported kingdom '$KINGDOM' for this benchmark panel" >&2
+    exit 1
+fi
+if [[ ! -s "$PROTEIN_DB" ]]; then
+    echo "ERROR: OrthoDB protein partition not found: $PROTEIN_DB" >&2
+    exit 1
+fi
 
 /usr/bin/time -v -o "$OUT_DIR/time_braker.log" \
     braker.pl \
@@ -48,12 +95,13 @@ esac
     --species=braker_${GENOME_ID}_rep${REP} \
     --workingdir="$OUT_DIR" \
     --threads=16 \
-    --useexisting \
     >> "$LOG" 2>&1
 
 PREDICTED_GFF="$OUT_DIR/braker.gff3"
 [[ -f "$PREDICTED_GFF" ]] || PREDICTED_GFF=$(find "$OUT_DIR" -name "*.gff3" -print -quit 2>/dev/null || true)
 
+# BRAKER runs on the raw genome, so predicted seqids keep the original
+# accessions (NC_...) and match reference.gff3 directly — no rename lift-over.
 python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
     "$PREDICTED_GFF" \
     "$REFERENCE_GFF" \
@@ -61,27 +109,45 @@ python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
     --output "$OUT_DIR/metrics.json"
 
 python3 - << PYEOF > "$OUT_DIR/performance.json"
-import json, re
-data = {}
-try:
-    with open('$OUT_DIR/time_braker.log') as f:
-        for line in f:
+import json
+
+def parse_time(path):
+    data = {}
+    try:
+        for line in open(path):
+            line = line.strip()
             if 'Elapsed' in line and 'wall clock' in line:
-                m = re.search(r'(\d+):?(\d+):(\d+\.\d+)', line)
-                if m:
-                    h, mm, ss = m.groups()
-                    data['wall_seconds'] = (int(h)*3600 if h else 0) + int(mm)*60 + float(ss)
+                tok = line.split()[-1]
+                try:
+                    nums = [float(p) for p in tok.split(':')]
+                except ValueError:
+                    nums = []
+                if len(nums) == 3:
+                    data['wall_seconds'] = round(nums[0]*3600 + nums[1]*60 + nums[2], 2)
+                elif len(nums) == 2:
+                    data['wall_seconds'] = round(nums[0]*60 + nums[1], 2)
+                elif len(nums) == 1:
+                    data['wall_seconds'] = round(nums[0], 2)
             elif 'Maximum resident set size' in line:
                 data['max_rss_kb'] = int(line.split(':')[1].strip())
-except FileNotFoundError:
-    pass
+            elif 'User time' in line:
+                data['user_seconds'] = float(line.split(':')[1].strip())
+            elif 'System time' in line:
+                data['system_seconds'] = float(line.split(':')[1].strip())
+    except FileNotFoundError:
+        pass
+    return data
 
+t = parse_time('$OUT_DIR/time_braker.log')
 print(json.dumps({
     'tool': 'braker3',
     'genome': '$GENOME_ID',
     'replicate': $REP,
-    'total_wall_seconds': round(data.get('wall_seconds', 0), 1),
-    'peak_rss_mb': round(data.get('max_rss_kb', 0) / 1024, 1),
+    'total_wall_seconds': round(t.get('wall_seconds', 0), 1),
+    'total_cpu_seconds': round(t.get('user_seconds', 0) + t.get('system_seconds', 0), 1),
+    'total_user_seconds': round(t.get('user_seconds', 0), 1),
+    'total_system_seconds': round(t.get('system_seconds', 0), 1),
+    'peak_rss_mb': round(t.get('max_rss_kb', 0) / 1024, 1),
 }, indent=2))
 PYEOF
 

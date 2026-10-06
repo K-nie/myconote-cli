@@ -5,7 +5,12 @@
 ///
 ///   1. Parsing all predictions into a unified model
 ///   2. Grouping overlapping predictions on the same strand
-///   3. Scoring each model: weight × number of supporting predictors
+///   3. Scoring each model by agreement-weighted support: its own source
+///      weight plus, for every other model in the group, that model's
+///      weight scaled by how much their coding bases agree (CDS Jaccard).
+///      A locus two high-weight predictors call identically therefore
+///      outranks one high-weight predictor calling it alone, and the
+///      winner is the model whose boundaries the evidence most agrees on.
 ///   4. For each overlap group, emitting the highest-scoring model
 ///   5. Renaming genes with a clean sequential locus tag
 ///
@@ -198,8 +203,72 @@ fn collect_children(parent_id: &str, all: &[GFFRecord], out: &mut Vec<GFFRecord>
 // Overlap resolution
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Extract this model's CDS intervals (1-based inclusive), sorted by start.
+/// Falls back to the gene span when a model carries no CDS (e.g. a tRNA
+/// gene from tRNAscan), so coding-base agreement is always defined.
+fn cds_intervals(m: &GeneModel) -> Vec<(u64, u64)> {
+    let mut iv: Vec<(u64, u64)> = m
+        .records
+        .iter()
+        .filter(|r| r.feature_type == "CDS")
+        .map(|r| (r.start, r.end))
+        .collect();
+    if iv.is_empty() {
+        iv.push((m.start, m.end));
+    }
+    iv.sort_by_key(|&(s, _)| s);
+    iv
+}
+
+/// Overlapping coding bases between two start-sorted interval lists.
+fn interval_overlap_bp(a: &[(u64, u64)], b: &[(u64, u64)]) -> u64 {
+    let (mut i, mut j, mut total) = (0usize, 0usize, 0u64);
+    while i < a.len() && j < b.len() {
+        let lo = a[i].0.max(b[j].0);
+        let hi = a[i].1.min(b[j].1);
+        if lo <= hi {
+            total += hi - lo + 1;
+        }
+        if a[i].1 < b[j].1 {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+    total
+}
+
+/// Jaccard of covered coding nucleotides: |A∩B| / |A∪B|. 1.0 means the two
+/// models call exactly the same coding bases (identical boundaries); 0.0
+/// means they share none. This is the agreement term in the consensus score.
+fn cds_jaccard(a: &[(u64, u64)], b: &[(u64, u64)]) -> f64 {
+    let inter = interval_overlap_bp(a, b);
+    if inter == 0 {
+        return 0.0;
+    }
+    let len: fn(&[(u64, u64)]) -> u64 = |iv| iv.iter().map(|&(s, e)| e.saturating_sub(s) + 1).sum();
+    let union = len(a) + len(b) - inter;
+    if union == 0 {
+        0.0
+    } else {
+        inter as f64 / union as f64
+    }
+}
+
 /// For a set of models on the same sequence, group overlapping models and
-/// keep the highest-scoring one per overlap group.
+/// keep the single best-supported one per overlap group.
+///
+/// The winner is chosen by an agreement-weighted consensus score rather than
+/// by raw source weight. For a candidate model `x` in a group, the score is
+///
+///   score(x) = weight(x) + Σ_{y≠x in group} weight(y) · cds_jaccard(x, y)
+///
+/// so a model that several predictors (each by their own weight) agree with
+/// at the coding-base level outranks a lone high-weight call. Because the
+/// Jaccard term peaks when boundaries coincide, the emitted model tends to
+/// carry the consensus exon boundaries — the lever for exact-match (strict)
+/// gene accuracy. Ties fall back to raw source weight, then to the longer
+/// total CDS, so the ordering is deterministic.
 fn resolve_overlaps(mut models: Vec<GeneModel>) -> Vec<GeneModel> {
     // Sort by start coordinate
     models.sort_by(|a, b| a.start.cmp(&b.start).then(a.seqid.cmp(&b.seqid)));
@@ -236,14 +305,40 @@ fn resolve_overlaps(mut models: Vec<GeneModel>) -> Vec<GeneModel> {
             used[idx] = true;
         }
 
-        // Keep highest-scoring model in the group
-        if let Some(best) = group.into_iter().max_by(|&a, &b| {
-            models[a]
-                .score
-                .partial_cmp(&models[b].score)
+        // Precompute CDS intervals once per group member, then score each by
+        // agreement-weighted consensus and keep the best.
+        let cds: Vec<Vec<(u64, u64)>> = group
+            .iter()
+            .map(|&idx| cds_intervals(&models[idx]))
+            .collect();
+
+        let consensus_score = |x: usize| -> f64 {
+            let mut s = models[group[x]].score;
+            for y in 0..group.len() {
+                if y == x {
+                    continue;
+                }
+                s += models[group[y]].score * cds_jaccard(&cds[x], &cds[y]);
+            }
+            s
+        };
+
+        let cds_len =
+            |x: usize| -> u64 { cds[x].iter().map(|&(s, e)| e.saturating_sub(s) + 1).sum() };
+
+        if let Some(best) = (0..group.len()).max_by(|&a, &b| {
+            consensus_score(a)
+                .partial_cmp(&consensus_score(b))
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then(
+                    models[group[a]]
+                        .score
+                        .partial_cmp(&models[group[b]].score)
+                        .unwrap_or(std::cmp::Ordering::Equal),
+                )
+                .then(cds_len(a).cmp(&cds_len(b)))
         }) {
-            kept.push(models[best].clone());
+            kept.push(models[group[best]].clone());
         }
     }
 
@@ -482,4 +577,75 @@ pub fn merge_predictions(
     }
 
     Ok(total)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn gene_model(start: u64, end: u64, score: f64, cds: &[(u64, u64)]) -> GeneModel {
+        let mut records = Vec::new();
+        for &(s, e) in cds {
+            records.push(GFFRecord {
+                seqid: "chr1".into(),
+                source: "test".into(),
+                feature_type: "CDS".into(),
+                start: s,
+                end: e,
+                score: None,
+                strand: '+',
+                phase: Some(0),
+                attributes: HashMap::new(),
+            });
+        }
+        GeneModel {
+            seqid: "chr1".into(),
+            start,
+            end,
+            strand: '+',
+            score,
+            source: "test".into(),
+            records,
+        }
+    }
+
+    #[test]
+    fn cds_jaccard_identical_is_one() {
+        let a = [(100u64, 200u64)];
+        assert!((cds_jaccard(&a, &a) - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn cds_jaccard_disjoint_is_zero() {
+        assert_eq!(cds_jaccard(&[(100, 200)], &[(300, 400)]), 0.0);
+    }
+
+    // Two low-weight predictors that agree on identical boundaries must beat a
+    // single higher-weight predictor with different boundaries. Under the old
+    // raw-weight rule the lone score-10 model won; the agreement-weighted
+    // consensus flips the winner to the score-6 pair's boundaries.
+    #[test]
+    fn agreement_outranks_lone_higher_weight() {
+        let a = gene_model(100, 200, 6.0, &[(100, 200)]);
+        let b = gene_model(100, 200, 6.0, &[(100, 200)]);
+        let c = gene_model(150, 260, 10.0, &[(150, 260)]);
+
+        let kept = resolve_overlaps(vec![a, b, c]);
+        assert_eq!(kept.len(), 1, "one locus → one gene");
+        let w = &kept[0];
+        assert_eq!(
+            (w.start, w.end),
+            (100, 200),
+            "consensus should keep the agreed-upon boundaries, not the lone higher-weight model"
+        );
+    }
+
+    // Sanity: raw max-weight would have kept (150, 260) here.
+    #[test]
+    fn lone_model_passes_through_unchanged() {
+        let c = gene_model(150, 260, 10.0, &[(150, 260)]);
+        let kept = resolve_overlaps(vec![c]);
+        assert_eq!(kept.len(), 1);
+        assert_eq!((kept[0].start, kept[0].end), (150, 260));
+    }
 }

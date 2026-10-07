@@ -34,8 +34,7 @@ should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
 
 # Notification
-notification = Error
-notify_user  = narhmadey@wisc.edu
+notification = Never
 
 # Submit one job per (genome, replicate) combination.
 # 6 genomes x 3 replicates = 18 jobs total.

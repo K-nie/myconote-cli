@@ -18,8 +18,7 @@ arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
 should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
 
-notification = Error
-notify_user  = narhmadey@wisc.edu
+notification = Never
 
 queue genome_id, rep from (
     sce 1

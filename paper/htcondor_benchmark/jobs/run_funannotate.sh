@@ -32,6 +32,13 @@ conda activate "$FUN_ENV" 2>/dev/null \
 if [[ -d "$HOME/.conda/envs/$FUN_ENV/bin" ]]; then
     export PATH="$HOME/.conda/envs/$FUN_ENV/bin:$PATH"
 fi
+# Same augustus shared-lib fix as the braker arm: on some execute nodes
+# funannotate's `augustus --proteinprofile` test fails ("compilation error")
+# because the env's libs aren't on the loader path — this sank all 3 cne reps.
+# Prepend the env lib so augustus runs everywhere.
+if [[ -d "$HOME/.conda/envs/$FUN_ENV/lib" ]]; then
+    export LD_LIBRARY_PATH="$HOME/.conda/envs/$FUN_ENV/lib:${LD_LIBRARY_PATH:-}"
+fi
 
 # Augustus writes trained species into its config tree, so AUGUSTUS_CONFIG_PATH
 # must point at a writable copy; the funannotate env ships one under config/.

@@ -50,6 +50,9 @@ GENOME_FA="$GENOME_DIR/genome.fa"
 REFERENCE_GFF="$GENOME_DIR/reference.gff3"
 
 OUT_DIR="$RESULTS_DIR/funannotate/$GENOME_ID/rep$REP"
+# funannotate predict aborts if predict_out/ already exists; wipe OUT_DIR so
+# re-runs are idempotent and don't collide with a prior run's output.
+rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 LOG="$OUT_DIR/run.log"

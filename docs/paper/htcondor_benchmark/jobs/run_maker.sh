@@ -35,6 +35,9 @@ GENOME_FA="$GENOME_DIR/genome.fa"
 REFERENCE_GFF="$GENOME_DIR/reference.gff3"
 
 OUT_DIR="$RESULTS_DIR/maker/$GENOME_ID/rep$REP"
+# Wipe OUT_DIR so re-runs are idempotent and don't reuse a prior run's MAKER
+# output directory (keeps every (genome, rep) pristine for the full matrix).
+rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 cd "$OUT_DIR"
 

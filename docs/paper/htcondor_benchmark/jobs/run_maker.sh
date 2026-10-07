@@ -65,7 +65,14 @@ maker -CTL >> "$LOG" 2>&1
 # benchmark panel is repeat-poor ascomycete/basidiomycete genomes, so skipping
 # repeat masking has minimal impact on de-novo gene prediction, and it keeps the
 # MAKER arm reproducible without a curated Dfam/RepBase partition.
-sed -i "s|^genome=.*|genome=$GENOME_FA|" maker_opts.ctl
+# MAKER 3.01.04 rejects IUPAC ambiguity codes [RYKMSWBDHV] in the genome
+# ("contains ... unsupported characters" — cal and cne carry them) and aborts.
+# The other arms accept the raw genome; convert ambiguity codes to N for MAKER's
+# input ONLY (N is how ambiguous bases are treated downstream regardless).
+# Sequence lines only — headers left intact.
+GENOME_MAKER="$OUT_DIR/genome.maker_input.fa"
+awk '/^>/{print;next}{gsub(/[RYKMSWBDHVrykmswbdhv]/,"N");print}' "$GENOME_FA" > "$GENOME_MAKER"
+sed -i "s|^genome=.*|genome=$GENOME_MAKER|" maker_opts.ctl
 sed -i "s|^model_org=.*|model_org=|" maker_opts.ctl
 sed -i "s|^augustus_species=.*|augustus_species=$AUGUSTUS_SPECIES|" maker_opts.ctl
 sed -i "s|^cpus=.*|cpus=8|" maker_opts.ctl

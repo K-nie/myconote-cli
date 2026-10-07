@@ -32,6 +32,13 @@ conda activate "$BRAKER_ENV" 2>/dev/null \
 if [[ -d "$HOME/.conda/envs/$BRAKER_ENV/bin" ]]; then
     export PATH="$HOME/.conda/envs/$BRAKER_ENV/bin:$PATH"
 fi
+# The env's augustus (3.5.0) is reported "not executable on this machine" by
+# braker.pl on some execute nodes — a missing shared lib (it runs fine on nodes
+# that have it), not a bad binary. Prepend the env's lib so augustus resolves
+# its libs everywhere. Without this, all 18 braker jobs failed at braker.pl:2551.
+if [[ -d "$HOME/.conda/envs/$BRAKER_ENV/lib" ]]; then
+    export LD_LIBRARY_PATH="$HOME/.conda/envs/$BRAKER_ENV/lib:${LD_LIBRARY_PATH:-}"
+fi
 
 # ── GeneMark ─────────────────────────────────────────────────────────────
 # BRAKER's protein pipeline (GeneMark-EP+) requires the GeneMark-ES suite,

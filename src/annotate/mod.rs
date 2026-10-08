@@ -79,6 +79,11 @@ pub struct AnnotateConfig {
     pub eggnog_db: Option<PathBuf>,
     /// Pre-computed emapper.annotations file (skip running emapper)
     pub eggnog_results: Option<PathBuf>,
+    /// Run emapper's diamond with `--iterate` (slow). Default false: an A/B on a
+    /// fungal proteome showed `--dmnd_iterate no` is ~4.4x faster (202→46 min)
+    /// with identical recall (9736/10655 annotated either way), so the iterative
+    /// re-search is off by default. Set true (`--eggnog-iterate`) to restore it.
+    pub eggnog_iterate: bool,
 
     /// Run CAZyme annotation (dbCAN / DIAMOND vs dbCAN database)
     pub run_cazyme: bool,
@@ -136,6 +141,7 @@ impl Default for AnnotateConfig {
             run_eggnog: false,
             eggnog_db: None,
             eggnog_results: None,
+            eggnog_iterate: false,
 
             run_cazyme: false,
             cazyme_db: None,
@@ -500,6 +506,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 &eggnog_dir,
                 config.eggnog_db.as_deref(),
                 config.threads,
+                config.eggnog_iterate,
             ) {
                 Ok(p) => Some(p),
                 Err(e) => {

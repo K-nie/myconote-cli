@@ -6,6 +6,12 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.8] — 2026-10-08
+
+### Changed
+
+- **EggNog-mapper runs with `--dmnd_iterate no` by default (~4.4x faster, identical recall).** A same-node A/B on a 10,655-protein fungal proteome: iterate-on 3h22m vs iterate-off 46m, both annotating the identical 9,736 proteins. The iterative diamond re-search adds no recall for well-represented fungi. Restore it with `--eggnog-iterate`. (src/annotate/eggnog.rs run_emapper; AnnotateConfig.eggnog_iterate)
+
 ## [0.7.7] — 2026-10-08
 
 ### Added

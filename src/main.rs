@@ -317,6 +317,7 @@ fn main() -> Result<()> {
                 println!("  --eggnog                    Run EggNog-mapper (COG/NOG categories)");
                 println!("  --eggnog-db <dir>           EggNog-mapper database directory");
                 println!("  --eggnog-results <file>     Pre-computed emapper.annotations file");
+                println!("  --eggnog-iterate            Restore emapper's slow --dmnd_iterate (off by default: ~4.4x slower, same recall)");
                 println!("  --cazyme                    Run CAZyme annotation (dbCAN / DIAMOND)");
                 println!("  --cazyme-db <file>          dbCAN DIAMOND database (.dmnd)");
                 println!("  --secretome                 Run secretome prediction (DeepSig + DeepTMHMM)");
@@ -2188,6 +2189,12 @@ fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
             // ── EggNog ────────────────────────────────────────────────────
             "--eggnog" | "--eggnog-mapper" => {
                 config.run_eggnog = true;
+                i += 1;
+            }
+            "--eggnog-iterate" => {
+                // Restore emapper's slow iterative diamond re-search (off by
+                // default: ~4.4x slower for identical recall on fungal proteomes).
+                config.eggnog_iterate = true;
                 i += 1;
             }
             "--eggnog-db" if i + 1 < args.len() => {

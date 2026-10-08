@@ -9,6 +9,15 @@ request_cpus   = 8
 request_memory = 16 GB
 request_disk   = 30 GB
 
+# funannotate's augustus (env funannotate, 3.5.0) is AVX2-compiled, like the
+# BRAKER arm's. On a non-AVX2 node (x86_64-v2, e.g. scarcity-10) its config-time
+# "augustus --proteinprofile" BUSCO self-test fails ("likely a compilation
+# error") and funannotate aborts before prediction. The first full run's
+# funannotate completion was partly luck-of-the-node; gate to AVX2-capable nodes
+# so every job's augustus runs. (MycoNote's augustus 3.3.3 is NOT AVX2-compiled
+# and needs no such gate.)
+requirements   = (TARGET.has_avx2 =?= true)
+
 log    = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).log
 output = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).out
 error  = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).err

@@ -41,6 +41,10 @@ pub struct PredictConfig {
     pub kingdom: Kingdom,
     /// Augustus species override (None = use kingdom default)
     pub augustus_species: Option<String>,
+    /// Fungal clade hint for Augustus model selection (`--clade`). Drives the
+    /// clade-aware default when `augustus_species` is not set. `None` with no
+    /// `--species` triggers the S288C fallback guard warning for fungi.
+    pub clade: Option<kingdom::FungalClade>,
     /// Use SNAP in addition to Augustus
     pub use_snap: bool,
     /// SNAP HMM parameter file (None = use kingdom default)
@@ -127,6 +131,7 @@ impl Default for PredictConfig {
             out_dir: PathBuf::from("predict_out"),
             kingdom: Kingdom::Fungi,
             augustus_species: None,
+            clade: None,
             use_snap: true,
             snap_hmm: None,
             protein_evidence: None,
@@ -366,11 +371,22 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
 
     // ── 1. Augustus ───────────────────────────────────────────────────────────
     let aug_gff = config.out_dir.join("augustus.gff3");
-    // Use trained species if available, otherwise configured/default species
-    let aug_species_owned = trained_species
-        .clone()
-        .or_else(|| config.augustus_species.clone())
-        .unwrap_or_else(|| config.kingdom.default_augustus_species().to_string());
+    // Species selection precedence: a self-trained model first, otherwise the
+    // clade-aware resolver (explicit --species > --clade default > guarded
+    // S288C fallback for fungi / kingdom default otherwise).
+    let aug_species_owned = if let Some(t) = trained_species.clone() {
+        t
+    } else {
+        let (sp, warn) = kingdom::resolve_augustus_species(
+            &config.kingdom,
+            config.augustus_species.as_deref(),
+            config.clade,
+        );
+        if let Some(w) = warn {
+            eprintln!("{}", w);
+        }
+        sp
+    };
     let aug_species = aug_species_owned.as_str();
 
     // ── Augustus extrinsic hints ─────────────────────────────────────────────
@@ -826,15 +842,20 @@ fn run_self_training(config: &PredictConfig) -> Result<String> {
     let train_dir = config.out_dir.join("training");
     std::fs::create_dir_all(&train_dir).map_err(MycoNoteError::Io)?;
 
-    let default_species = config
-        .augustus_species
-        .as_deref()
-        .unwrap_or_else(|| config.kingdom.default_augustus_species());
+    // Seed the first-pass model with the clade-aware default so a basidiomycete
+    // self-train bootstraps from a basidiomycete model rather than S288C. The
+    // guard warning is suppressed here: self-training is itself the recommended
+    // escape hatch, so there is nothing to warn about.
+    let (default_species, _warn) = kingdom::resolve_augustus_species(
+        &config.kingdom,
+        config.augustus_species.as_deref(),
+        config.clade,
+    );
 
     // First-pass Augustus prediction for training material
     let first_pass_gff = train_dir.join("first_pass.gff3");
     let aug_cfg = augustus::AugustusConfig {
-        species: default_species.to_string(),
+        species: default_species.clone(),
         threads: config.threads,
         utr: false, // no UTR for training pass
         hints_file: None,

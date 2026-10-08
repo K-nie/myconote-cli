@@ -6,6 +6,63 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Added
+
+- **Clade-aware default Augustus species (`--clade`).** `predict` no longer
+  silently defaults every fungus to `saccharomyces_cerevisiae_S288C`. A
+  curated registry (`predict::kingdom::FUNGAL_SPECIES_CLADES`) maps each
+  pre-trained Augustus fungal model to its clade (Saccharomycotina /
+  Pezizomycotina / Basidiomycota / other) with a per-clade default:
+  Saccharomycotina → `saccharomyces_cerevisiae_S288C`, Pezizomycotina →
+  `aspergillus_nidulans`, Basidiomycota →
+  `cryptococcus_neoformans_neoformans_JEC21`. `--clade <name>` (alias
+  `--taxon`) selects the clade-appropriate model; explicit `--species` still
+  wins. When neither is given for a fungal run, Augustus still uses S288C
+  (back-compat preserved) but now emits a prominent stderr warning that S288C
+  is a poor default off-Saccharomycotina (where BUSCO completeness can fall
+  below 15 %) and recommends `--clade` / `--species` /
+  `--augustus-training self`. The self-training first pass also seeds from the
+  clade default. Runs that pass `--species` (including the benchmark) are
+  byte-for-byte unchanged. (src/predict/kingdom.rs,
+  `resolve_augustus_species`; `PredictConfig.clade`)
+- **Structural pre-validation and repair in `submit` (`--fix-structure`).**
+  `submit` now walks the GFF3 feature graph before invoking `table2asn` and
+  reports every structural problem with its feature type and location —
+  orphan `Parent` references (the "N features reference missing parents" /
+  "CDS not in mRNA" class), CDS/exon or mRNA with no Parent, an mRNA parented
+  to a non-gene, missing gene/mRNA IDs, and CDS intervals that fall outside
+  their mRNA. Default is report-and-continue (nothing rewritten; `table2asn`
+  still gives its own verdict). `--fix-structure` repairs the safe,
+  unambiguous cases by synthesising the missing `gene`/`mRNA` parents that
+  orphan CDS need and writing a corrected `structure_fixed.gff3` — **child
+  coordinates are never altered**; CDS-outside-mRNA and non-gene mRNA parents
+  are flagged, not guessed. `--validate-only` runs the structure check too.
+  (src/submit/structure.rs; `SubmitConfig.fix_structure`)
+
+### Changed
+
+- **`sort` preserves original contig seqids by default; renaming is now
+  opt-in (`--ncbi-clean` / `--rename-contigs`).** Previously `sort` always
+  renamed contigs to `scaffold_N`, so predict/annotate/GFF3 output lost the
+  user's original accessions and a lift-back table was needed. The default is
+  now lossless: original seqids pass through end-to-end. `--ncbi-clean`
+  reproduces the historical `<prefix>_N` renaming plus the `--rename-table`
+  emission, which is what the NCBI `submit` path wants (see below).
+  (src/sort/mod.rs; `SortConfig.rename_contigs`)
+- **`submit` validation warns on over-long contig names.**
+  `validate_for_ncbi` now flags any seqid longer than
+  `submit::NCBI_MAX_SEQID_LEN` (16 chars) — the kind preserved by the new
+  `sort` default — and points the user at `sort --ncbi-clean`, rather than
+  letting `table2asn` fail later on a long local ID. This is a warning, not an
+  error, so a submission is never silently broken. (src/submit/mod.rs)
+
+### Notes
+
+- The 6-genome HTCondor benchmark's `run_*.sh` rely on `sort` renaming contigs
+  to `scaffold_N` and emitting a `--rename-table`. With the new default those
+  scripts must add `--ncbi-clean` to reproduce prior behaviour; the scoring /
+  lift-back steps are otherwise unchanged.
+
 ## [0.7.8] — 2026-10-08
 
 ### Changed

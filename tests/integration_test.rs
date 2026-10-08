@@ -417,12 +417,11 @@ fn test_sort_basic() {
     // Should still have all 24 sequences
     let n = content.lines().filter(|l| l.starts_with('>')).count();
     assert_eq!(n, 24, "Expected 24 sequences, got {}", n);
-    // First sequence should start with "scaffold_" (default prefix)
-    let first_header = content.lines().find(|l| l.starts_with('>')).unwrap();
+    // New default (v0.7.9): original seqids are PRESERVED — no scaffold_N
+    // renaming happens unless --ncbi-clean is passed.
     assert!(
-        first_header.contains("scaffold"),
-        "Unexpected first header: {}",
-        first_header
+        !content.lines().any(|l| l.starts_with(">scaffold_")),
+        "sort must preserve original seqids by default (no scaffold_ renaming)"
     );
 }
 
@@ -431,10 +430,12 @@ fn test_sort_custom_prefix() {
     let tmp = TempDir::new().unwrap();
     let out = tmp.path().join("sorted_chr.fa");
 
+    // --ncbi-clean opts into the scaffold_N-style renaming; --prefix sets the
+    // prefix. Without --ncbi-clean the prefix is inert (names are preserved).
     bin()
         .arg("sort")
         .arg(fasta())
-        .args(["--prefix", "chr", "-o"])
+        .args(["--ncbi-clean", "--prefix", "chr", "-o"])
         .arg(&out)
         .assert()
         .success();
@@ -476,7 +477,7 @@ fn test_sort_rename_table() {
     bin()
         .arg("sort")
         .arg(fasta())
-        .args(["--rename-table"])
+        .args(["--ncbi-clean", "--rename-table"])
         .arg(&table)
         .arg("-o")
         .arg(&out)

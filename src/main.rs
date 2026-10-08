@@ -157,19 +157,23 @@ fn main() -> Result<()> {
         "sort" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
                 println!("Usage: myconote-cli sort <genome.fa> [options]");
-                println!("\nSorts contigs by length (longest first) and renames headers to");
-                println!("clean sequential IDs (scaffold_1, scaffold_2, ...).  Run this");
-                println!("before masking to ensure consistent identifiers throughout the pipeline.");
+                println!("\nSorts contigs by length (longest first). By DEFAULT the original");
+                println!("FASTA seqids are preserved, so predict/annotate/GFF3 keep your own");
+                println!("accessions and no lift-back is needed.  Run this before masking to");
+                println!("ensure consistent ordering throughout the pipeline.");
                 println!("\nOptions:");
                 println!("  --output <file>      Output FASTA (default: <input>_sorted.fa)");
-                println!("  --prefix <str>       Contig ID prefix (default: scaffold)");
+                println!("  --ncbi-clean         Rename contigs to <prefix>_N (scaffold_1, ...) for");
+                println!("                       NCBI's short-name requirement. Alias: --rename-contigs.");
+                println!("                       Default OFF — original seqids are kept.");
+                println!("  --prefix <str>       Contig ID prefix when --ncbi-clean (default: scaffold)");
                 println!("  --min-length <bp>    Discard contigs shorter than this (default: 0)");
-                println!("  --rename-table <f>   Write old→new ID table to TSV file");
+                println!("  --rename-table <f>   Write old→new ID table to TSV file (useful with --ncbi-clean)");
                 println!("  --keep-desc          Keep original description after ID (default: strip)");
                 println!("  --sort-by-name       Sort alphabetically instead of by length");
                 println!("\nExamples:");
                 println!("  myconote-cli sort assembly.fa --min-length 500");
-                println!("  myconote-cli sort assembly.fa --prefix chr --rename-table rename.tsv");
+                println!("  myconote-cli sort assembly.fa --ncbi-clean --prefix chr --rename-table rename.tsv");
                 return Ok(());
             }
             let path = &args[2];
@@ -234,7 +238,11 @@ fn main() -> Result<()> {
                 println!("\nOptions:");
                 println!("  --output <dir>              Output directory (default: predict_out)");
                 println!("  --kingdom <kingdom>         fungi|plant|animal|insect|protist (default: fungi)");
-                println!("  --species <augustus-species> Override Augustus species model");
+                println!("  --species <augustus-species> Override Augustus species model (highest precedence)");
+                println!("  --clade <fungal-clade>      saccharomycotina|pezizomycotina|basidiomycota|other");
+                println!("                              Picks a clade-appropriate default Augustus model.");
+                println!("                              Without --species or --clade a fungal run warns that");
+                println!("                              the S288C default is a poor fit off-Saccharomycotina.");
                 println!("  --no-snap                   Disable SNAP (use only Augustus)");
                 println!("  --snap-hmm <hmm>            SNAP HMM model (default: auto from kingdom)");
                 println!("  --protein-evidence <blast>  BLAST tabular fmt6 protein hits for hints");
@@ -1010,12 +1018,18 @@ fn main() -> Result<()> {
                 println!("  --contact-first <name>      Submitter first name (template.sbt)");
                 println!("  --contact-last <name>       Submitter last name (template.sbt)");
                 println!("  --institution <name>        Submitter institution (template.sbt)");
-                println!("  --validate-only             Only validate, do not generate files");
+                println!("  --validate-only             Only validate (incl. structure), do not generate files");
+                println!("  --fix-structure             Repair safe structural problems before table2asn:");
+                println!("                              synthesise missing gene/mRNA parents for orphan");
+                println!("                              CDS (funannotate #290 'CDS not in mRNA'). Default");
+                println!("                              OFF = report-and-continue (nothing rewritten).");
+                println!("                              Never alters child coordinates.");
                 println!("\nOutputs:");
                 println!("  annotation.tbl              NCBI feature table");
                 println!("  annotation.fsa              Genome FASTA copy");
                 println!("  annotation.sqn              Sequin file (if table2asn available)");
                 println!("  template.sbt                Submission template");
+                println!("  structure_fixed.gff3        Repaired GFF3 (only when --fix-structure applied repairs)");
                 println!("\nExamples:");
                 println!("  myconote-cli submit genes.gff3 --fasta genome.fa --organism 'Aspergillus niger'");
                 println!("  myconote-cli submit genes.gff3 --fasta genome.fa --organism 'Candida albicans' --genetic-code 12");
@@ -1913,6 +1927,19 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                 config.augustus_species = Some(args[i + 1].clone());
                 i += 2;
             }
+            "--clade" | "--taxon" if i + 1 < args.len() => {
+                match predict::kingdom::FungalClade::from_str(&args[i + 1]) {
+                    Some(c) => config.clade = Some(c),
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --clade {:?}. Expected one of: \
+                             saccharomycotina | pezizomycotina | basidiomycota | other",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
             "--no-snap" => {
                 config.use_snap = false;
                 i += 1;
@@ -2382,6 +2409,10 @@ fn handle_sort(input: &str, args: &[String]) -> Result<()> {
             }
             "--sort-by-name" => {
                 config.sort_by_name = true;
+                i += 1;
+            }
+            "--ncbi-clean" | "--rename-contigs" => {
+                config.rename_contigs = true;
                 i += 1;
             }
             _ => i += 1,
@@ -2878,6 +2909,10 @@ fn handle_submit(gff_path: &str, args: &[String]) -> Result<()> {
                 validate_only = true;
                 i += 1;
             }
+            "--fix-structure" => {
+                config.fix_structure = true;
+                i += 1;
+            }
             _ => i += 1,
         }
     }
@@ -2890,7 +2925,11 @@ fn handle_submit(gff_path: &str, args: &[String]) -> Result<()> {
 
     if validate_only {
         println!("── NCBI Submission Validation ───────────────────────────────");
-        let result = submit::validate_for_ncbi(&config.gff, &config.fasta)
+        // Structural pre-validation (and repair if --fix-structure); the path
+        // returned is what the NCBI-compliance validator then checks.
+        let gff_path =
+            submit::prevalidate_structure(&config).map_err(|e| anyhow::anyhow!("{}", e))?;
+        let result = submit::validate_for_ncbi(&gff_path, &config.fasta)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
         result.print_summary();
     } else {

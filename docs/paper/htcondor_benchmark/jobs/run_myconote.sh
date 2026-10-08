@@ -161,10 +161,15 @@ echo "[$(date +%T)] Step 1: sort"
 # back before comparing — without it every metric is 0 (no seqid overlaps).
 /usr/bin/time -v -o "$OUT_DIR/time_sort.log" \
     myconote-cli sort "$GENOME_FA" \
+    --ncbi-clean \
     --output "$OUT_DIR/sorted.fa" \
     --min-length 500 \
     --rename-table "$OUT_DIR/rename_table.tsv" \
     >> "$LOG" 2>&1
+# --ncbi-clean: as of v0.7.9 `sort` preserves original seqids by default; this
+# flag restores the scaffold_N renaming the benchmark relies on (the comparator
+# lifts predicted seqids back via --rename-table). Without it the predicted GFF
+# would keep NCBI accessions and the rename-table lift-over would be a no-op.
 
 # ── Step 2: Mask ───────────────────────────────────────────────────────────
 # Use the default SelfAlign engine: pure-Rust tandem-repeat finder plus

@@ -34,6 +34,12 @@ pub struct SortConfig {
     pub rename_table: Option<PathBuf>,
     /// If true, sort by name instead of by length
     pub sort_by_name: bool,
+    /// Rename contigs to clean sequential IDs (`<prefix>_N`). Default `false`:
+    /// the original FASTA seqids are preserved end-to-end so downstream
+    /// predict/annotate/GFF3 carry the user's own accessions and no lift-back
+    /// table is needed. Opt in with `--ncbi-clean` / `--rename-contigs` when
+    /// short, submission-safe names are required (e.g. before `submit`).
+    pub rename_contigs: bool,
 }
 
 impl Default for SortConfig {
@@ -46,6 +52,7 @@ impl Default for SortConfig {
             strip_desc: true,
             rename_table: None,
             sort_by_name: false,
+            rename_contigs: false,
         }
     }
 }
@@ -132,10 +139,19 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
     }
 
     // ── Build rename map ──────────────────────────────────────────────────
+    // Default (`rename_contigs == false`): identity map — every contig keeps
+    // its original seqid, so predict/annotate output carries the user's own
+    // accessions and no lift-back is required. Opt-in renaming reproduces the
+    // historical `<prefix>_N` behaviour (and is what `submit` wants for NCBI's
+    // short-name requirement).
     let pad = records.len().to_string().len().max(3);
     let mut rename_map: HashMap<String, String> = HashMap::new();
     for (i, rec) in records.iter().enumerate() {
-        let new_id = format!("{}_{:0>width$}", config.prefix, i + 1, width = pad);
+        let new_id = if config.rename_contigs {
+            format!("{}_{:0>width$}", config.prefix, i + 1, width = pad)
+        } else {
+            rec.original_id.clone()
+        };
         rename_map.insert(rec.original_id.clone(), new_id);
     }
 
@@ -207,6 +223,14 @@ pub fn run_sort(config: &SortConfig) -> Result<HashMap<String, String>> {
     println!("  Total assembly: {} bp", total_bp);
     println!("  Longest contig: {} bp", longest);
     println!("  Shortest kept:  {} bp", shortest);
+    if config.rename_contigs {
+        println!(
+            "  Seqids:         renamed to {}_N (--ncbi-clean)",
+            config.prefix
+        );
+    } else {
+        println!("  Seqids:         preserved (original accessions kept)");
+    }
     println!("  Output:         {}", config.output.display());
     if let Some(ref t) = config.rename_table {
         println!("  Rename table:   {}", t.display());
@@ -251,4 +275,167 @@ pub fn liftover_gff3(
     }
 
     Ok(updated)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write as _;
+
+    fn tmp(label: &str, ext: &str) -> PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!(
+            "myconote_sort_test_{}_{}.{}",
+            std::process::id(),
+            label,
+            ext
+        ));
+        p
+    }
+
+    /// Two contigs with real-looking accessions; the second is longer so a
+    /// by-length sort would reorder them (letting us tell preserve from rename).
+    fn write_input(label: &str) -> PathBuf {
+        let p = tmp(label, "fa");
+        let mut f = std::fs::File::create(&p).unwrap();
+        writeln!(f, ">NODE_7_length_30 some description").unwrap();
+        writeln!(f, "ACGTACGTAC").unwrap();
+        writeln!(f, ">CP012345.1 chromosome 1").unwrap();
+        writeln!(f, "ACGTACGTACGTACGTACGT").unwrap();
+        p
+    }
+
+    fn output_headers(path: &Path) -> Vec<String> {
+        std::fs::read_to_string(path)
+            .unwrap()
+            .lines()
+            .filter(|l| l.starts_with('>'))
+            .map(|l| l[1..].split_whitespace().next().unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn default_preserves_original_seqids_through_sort() {
+        let input = write_input("preserve");
+        let out = tmp("preserve", "out.fa");
+        let config = SortConfig {
+            input: input.clone(),
+            output: out.clone(),
+            ..SortConfig::default()
+        };
+        let map = run_sort(&config).unwrap();
+
+        // Identity map: every original id maps to itself.
+        assert_eq!(map.get("CP012345.1"), Some(&"CP012345.1".to_string()));
+        assert_eq!(
+            map.get("NODE_7_length_30"),
+            Some(&"NODE_7_length_30".to_string())
+        );
+
+        // Output headers are the original accessions, longest first (CP… is
+        // longer than NODE_7…), and contain no scaffold_ renaming.
+        let headers = output_headers(&out);
+        assert_eq!(headers, vec!["CP012345.1", "NODE_7_length_30"]);
+        assert!(!headers.iter().any(|h| h.starts_with("scaffold_")));
+
+        let _ = std::fs::remove_file(&input);
+        let _ = std::fs::remove_file(&out);
+    }
+
+    #[test]
+    fn ncbi_clean_renames_to_scaffold_n_and_emits_table() {
+        let input = write_input("rename");
+        let out = tmp("rename", "out.fa");
+        let table = tmp("rename", "tsv");
+        let config = SortConfig {
+            input: input.clone(),
+            output: out.clone(),
+            rename_contigs: true,
+            rename_table: Some(table.clone()),
+            ..SortConfig::default()
+        };
+        let map = run_sort(&config).unwrap();
+
+        // Longest contig (CP012345.1) becomes scaffold_001.
+        assert_eq!(map.get("CP012345.1"), Some(&"scaffold_001".to_string()));
+        assert_eq!(
+            map.get("NODE_7_length_30"),
+            Some(&"scaffold_002".to_string())
+        );
+
+        let headers = output_headers(&out);
+        assert_eq!(headers, vec!["scaffold_001", "scaffold_002"]);
+
+        // Rename table maps original → new.
+        let tbl = std::fs::read_to_string(&table).unwrap();
+        assert!(tbl.contains("CP012345.1\tscaffold_001\t20"));
+        assert!(tbl.contains("NODE_7_length_30\tscaffold_002\t10"));
+
+        let _ = std::fs::remove_file(&input);
+        let _ = std::fs::remove_file(&out);
+        let _ = std::fs::remove_file(&table);
+    }
+
+    #[test]
+    fn liftover_roundtrips_under_rename_flag() {
+        // With --ncbi-clean the rename map lifts a GFF3's seqids over to the
+        // new names, and nothing else on the line changes.
+        let input = write_input("lift");
+        let out = tmp("lift", "out.fa");
+        let config = SortConfig {
+            input: input.clone(),
+            output: out.clone(),
+            rename_contigs: true,
+            ..SortConfig::default()
+        };
+        let map = run_sort(&config).unwrap();
+
+        let gff_in = tmp("lift", "in.gff3");
+        {
+            let mut f = std::fs::File::create(&gff_in).unwrap();
+            writeln!(f, "##gff-version 3").unwrap();
+            writeln!(f, "CP012345.1\tmyco\tgene\t5\t15\t.\t+\t.\tID=g1").unwrap();
+            writeln!(f, "NODE_7_length_30\tmyco\tgene\t1\t8\t.\t-\t.\tID=g2").unwrap();
+        }
+        let gff_out = tmp("lift", "out.gff3");
+        let updated = liftover_gff3(&gff_in, &gff_out, &map).unwrap();
+        assert_eq!(updated, 2);
+
+        let lifted = std::fs::read_to_string(&gff_out).unwrap();
+        assert!(lifted.contains("scaffold_001\tmyco\tgene\t5\t15\t.\t+\t.\tID=g1"));
+        assert!(lifted.contains("scaffold_002\tmyco\tgene\t1\t8\t.\t-\t.\tID=g2"));
+        // Original accessions are gone from the lifted GFF.
+        assert!(!lifted.contains("CP012345.1\tmyco"));
+
+        for p in [&input, &out, &gff_in, &gff_out] {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+
+    #[test]
+    fn preserve_mode_liftover_is_identity() {
+        // Under the default (preserve) map, lifting a GFF3 leaves seqids intact.
+        let input = write_input("idlift");
+        let out = tmp("idlift", "out.fa");
+        let config = SortConfig {
+            input: input.clone(),
+            output: out.clone(),
+            ..SortConfig::default()
+        };
+        let map = run_sort(&config).unwrap();
+
+        let gff_in = tmp("idlift", "in.gff3");
+        {
+            let mut f = std::fs::File::create(&gff_in).unwrap();
+            writeln!(f, "CP012345.1\tmyco\tgene\t5\t15\t.\t+\t.\tID=g1").unwrap();
+        }
+        let gff_out = tmp("idlift", "out.gff3");
+        liftover_gff3(&gff_in, &gff_out, &map).unwrap();
+        let lifted = std::fs::read_to_string(&gff_out).unwrap();
+        assert!(lifted.contains("CP012345.1\tmyco\tgene\t5\t15"));
+
+        for p in [&input, &out, &gff_in, &gff_out] {
+            let _ = std::fs::remove_file(p);
+        }
+    }
 }

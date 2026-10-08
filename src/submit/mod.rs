@@ -10,12 +10,23 @@
 /// independent and not derived from any other annotation tool.
 ///
 /// Reference: https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
+pub mod structure;
+
 use crate::parser::gff::{GFFReader, GFFRecord};
 use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+/// NCBI's practical upper bound on contig/local sequence-ID length for genome
+/// submissions. GenBank/table2asn reject or mangle long local IDs, which is
+/// why submission pipelines (funannotate included) rename contigs to short
+/// `scaffold_N` names. MycoNote's `sort --ncbi-clean` produces such names;
+/// `validate_for_ncbi` warns when a seqid is longer than this so a user who
+/// kept their original accessions (the new `sort` default) is told before
+/// table2asn fails rather than after.
+pub const NCBI_MAX_SEQID_LEN: usize = 16;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -57,6 +68,13 @@ pub struct SubmitConfig {
     pub institution: String,
     /// Run table2asn validation
     pub validate: bool,
+    /// Auto-repair safe structural problems (orphan CDS / missing gene-mRNA
+    /// parents) before table2asn. Default `false` = report-and-continue: the
+    /// structure is checked and every problem printed, but the pipeline
+    /// proceeds untouched so no feature is ever rewritten silently. With
+    /// `true` (`--fix-structure`) the repairable cases are fixed into a
+    /// corrected `structure_fixed.gff3` that the rest of the run consumes.
+    pub fix_structure: bool,
 }
 
 impl Default for SubmitConfig {
@@ -79,6 +97,7 @@ impl Default for SubmitConfig {
             contact_last: String::new(),
             institution: String::new(),
             validate: true,
+            fix_structure: false,
         }
     }
 }
@@ -250,6 +269,28 @@ pub fn validate_for_ncbi(gff: &Path, fasta: &Path) -> Result<ValidationResult> {
                 .map(|s| s.as_str())
                 .collect::<Vec<_>>()
                 .join(", ")
+        ));
+    }
+
+    // Advisory: NCBI wants short, simple local sequence identifiers. Long or
+    // raw-accession seqids (the kind kept by `sort` in its new default
+    // preserve mode) can trip table2asn/GenBank. We flag — not fail — so a
+    // submission is never silently broken: the user can re-run
+    // `sort --ncbi-clean` to get scaffold_N names. See NCBI_MAX_SEQID_LEN.
+    let long_ids: Vec<&String> = fasta_seqids
+        .iter()
+        .filter(|id| id.len() > NCBI_MAX_SEQID_LEN)
+        .collect();
+    if !long_ids.is_empty() {
+        let mut sample: Vec<&str> = long_ids.iter().take(3).map(|s| s.as_str()).collect();
+        sample.sort_unstable();
+        result.warnings.push(format!(
+            "{} contig name(s) exceed NCBI's {}-char local-ID guideline (e.g. {}). \
+             Re-run `myconote-cli sort --ncbi-clean` to shorten them to scaffold_N \
+             before submission.",
+            long_ids.len(),
+            NCBI_MAX_SEQID_LEN,
+            sample.join(", ")
         ));
     }
 
@@ -586,14 +627,96 @@ fn escape_asn_string(s: &str) -> String {
     s.replace('"', "\"\"").replace(['\n', '\r'], " ")
 }
 
+/// Structural pre-validation (and optional repair) of the input GFF3 before it
+/// is handed to table2asn. Returns the path of the GFF3 the rest of the
+/// pipeline should use: the original when it is clean or `--fix-structure` is
+/// off, or a repaired `structure_fixed.gff3` when repairs were applied.
+///
+/// Conservative default (`fix_structure == false`): the graph is checked and
+/// every problem printed, but nothing is rewritten — table2asn then gives its
+/// own verdict. This matches the prior behaviour (no silent changes) while
+/// surfacing the "CDS not in mRNA" / "features reference missing parents"
+/// class of failures up front instead of mid-table2asn.
+pub fn prevalidate_structure(config: &SubmitConfig) -> Result<PathBuf> {
+    std::fs::create_dir_all(&config.out_dir).map_err(MycoNoteError::Io)?;
+
+    let records: Vec<GFFRecord> = GFFReader::from_path(&config.gff)?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    println!("  Checking GFF3 feature structure...");
+    let report = structure::check_structure(&records);
+    report.print_summary();
+
+    if report.is_clean() {
+        return Ok(config.gff.clone());
+    }
+
+    if !config.fix_structure {
+        if report.repairable_count() > 0 {
+            println!(
+                "  {} problem(s) are auto-repairable — re-run with --fix-structure to apply.",
+                report.repairable_count()
+            );
+        }
+        // Report-and-continue: hand table2asn the original GFF3 untouched.
+        return Ok(config.gff.clone());
+    }
+
+    // Repair pass.
+    let (fixed, log) = structure::repair_structure(records);
+    let fixed_path = config.out_dir.join("structure_fixed.gff3");
+    write_gff3(&fixed_path, &fixed)?;
+    println!("  Applied {} structural repair(s):", log.actions.len());
+    for action in log.actions.iter().take(20) {
+        println!("    + {action}");
+    }
+    if log.actions.len() > 20 {
+        println!("    ... and {} more", log.actions.len() - 20);
+    }
+
+    // Re-check so a residual (non-repairable) problem is still reported.
+    let after = structure::check_structure(&fixed);
+    if after.is_clean() {
+        println!("  Structure after repair: OK → {}", fixed_path.display());
+    } else {
+        println!(
+            "  Structure after repair: {} problem(s) remain (not auto-repairable):",
+            after.issues.len()
+        );
+        after.print_summary();
+    }
+
+    Ok(fixed_path)
+}
+
+/// Write a GFF3 record set to disk with a version pragma, parents first.
+fn write_gff3(path: &Path, records: &[GFFRecord]) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(MycoNoteError::Io)?;
+        }
+    }
+    let mut f = std::fs::File::create(path).map_err(MycoNoteError::Io)?;
+    writeln!(f, "##gff-version 3").map_err(MycoNoteError::Io)?;
+    for rec in records {
+        writeln!(f, "{}", rec.to_gff3_line()).map_err(MycoNoteError::Io)?;
+    }
+    Ok(())
+}
+
 /// Run table2asn to generate .sqn file for NCBI submission.
 pub fn run_table2asn(config: &SubmitConfig) -> Result<PathBuf> {
     std::fs::create_dir_all(&config.out_dir).map_err(MycoNoteError::Io)?;
 
+    // Structural pre-validation / repair. The returned path is the GFF3 the
+    // rest of the pipeline consumes (original, or repaired when --fix-structure).
+    let gff_path = prevalidate_structure(config)?;
+
     // First validate
     if config.validate {
         println!("  Validating GFF3 for NCBI compliance...");
-        let validation = validate_for_ncbi(&config.gff, &config.fasta)?;
+        let validation = validate_for_ncbi(&gff_path, &config.fasta)?;
         validation.print_summary();
         if !validation.is_valid() {
             return Err(MycoNoteError::InvalidFormat(
@@ -605,7 +728,7 @@ pub fn run_table2asn(config: &SubmitConfig) -> Result<PathBuf> {
     // Write feature table
     let tbl_path = config.out_dir.join("annotation.tbl");
     println!("  Writing NCBI feature table...");
-    let n_features = write_feature_table(&config.gff, &tbl_path, config)?;
+    let n_features = write_feature_table(&gff_path, &tbl_path, config)?;
     println!(
         "  {} features written to {}",
         n_features,
@@ -894,5 +1017,73 @@ NW_1\tmaker\tCDS\t300\t500\t.\t+\t0\tID=cds4b;Parent=g4\n";
 
         let _ = std::fs::remove_file(&gff_path);
         let _ = std::fs::remove_file(&tbl);
+    }
+
+    fn write_fasta(label: &str, seqids: &[&str]) -> std::path::PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!(
+            "myconote_submit_test_{}_{}.fsa",
+            std::process::id(),
+            label
+        ));
+        let mut f = std::fs::File::create(&p).unwrap();
+        for id in seqids {
+            writeln!(f, ">{}", id).unwrap();
+            writeln!(f, "ACGTACGTACGTACGT").unwrap();
+        }
+        p
+    }
+
+    #[test]
+    fn long_contig_name_triggers_ncbi_shortname_warning() {
+        // A seqid well over NCBI_MAX_SEQID_LEN (16) — the kind `sort`'s new
+        // preserve-default keeps. validate_for_ncbi must warn (not error) and
+        // point the user at `sort --ncbi-clean`.
+        let long_id = "scaffold_assembly_contig_000000001"; // 34 chars
+        assert!(long_id.len() > NCBI_MAX_SEQID_LEN);
+        let gff_body = format!(
+            "{id}\tmyco\tgene\t10\t100\t.\t+\t.\tID=g1;locus_tag=MYCO_0001\n\
+             {id}\tmyco\tmRNA\t10\t100\t.\t+\t.\tID=g1.t1;Parent=g1\n\
+             {id}\tmyco\tCDS\t10\t100\t.\t+\t0\tID=cds1;Parent=g1.t1\n",
+            id = long_id
+        );
+        let gff = write_gff("longid", &gff_body);
+        let fasta = write_fasta("longid", &[long_id]);
+
+        let result = validate_for_ncbi(&gff, &fasta).unwrap();
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.contains("NCBI") && w.contains("--ncbi-clean")),
+            "expected an NCBI short-name warning, got: {:?}",
+            result.warnings
+        );
+
+        let _ = std::fs::remove_file(&gff);
+        let _ = std::fs::remove_file(&fasta);
+    }
+
+    #[test]
+    fn short_contig_names_do_not_warn_about_length() {
+        let short_id = "scaffold_1"; // 10 chars, under the limit
+        let gff_body = format!(
+            "{id}\tmyco\tgene\t10\t100\t.\t+\t.\tID=g1;locus_tag=MYCO_0001\n\
+             {id}\tmyco\tmRNA\t10\t100\t.\t+\t.\tID=g1.t1;Parent=g1\n\
+             {id}\tmyco\tCDS\t10\t100\t.\t+\t0\tID=cds1;Parent=g1.t1\n",
+            id = short_id
+        );
+        let gff = write_gff("shortid", &gff_body);
+        let fasta = write_fasta("shortid", &[short_id]);
+
+        let result = validate_for_ncbi(&gff, &fasta).unwrap();
+        assert!(
+            !result.warnings.iter().any(|w| w.contains("--ncbi-clean")),
+            "short seqids should not trigger the length warning: {:?}",
+            result.warnings
+        );
+
+        let _ = std::fs::remove_file(&gff);
+        let _ = std::fs::remove_file(&fasta);
     }
 }

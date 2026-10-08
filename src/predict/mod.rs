@@ -8,7 +8,8 @@ pub mod glimmer;
 /// Orchestrates the full predict workflow:
 ///   1. Run Augustus (ab initio, kingdom-aware)
 ///   2. Run SNAP (secondary ab initio, optional)
-///   3. Merge predictions with Evidence Modeler-style scoring
+///   3. Merge predictions with MycoNote's own agreement-weighted consensus
+///      (EVM-inspired weighted-evidence scoring; does NOT invoke Evidence Modeler)
 ///   4. Write consensus GFF3 with sequential locus tags
 ///
 /// External tools used (all optional — graceful fallback):
@@ -715,11 +716,14 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         ));
     }
 
-    // ── 3. Evidence Modeler consensus ─────────────────────────────────────────
+    // ── 3. Agreement-weighted consensus merge ──────────────────────────────────
+    // This is MycoNote's own consensus (evidence::merge_predictions_filtered),
+    // NOT the external Evidence Modeler. The scoring is EVM-inspired
+    // (weight × cross-predictor CDS agreement), but no EVM binary is invoked.
     progress::step(
         step_offset + 3,
         step_offset + 3,
-        "Merging predictions (Evidence Modeler)…",
+        "Merging predictions (agreement-weighted consensus)…",
     );
     let consensus_gff = config.out_dir.join("consensus.gff3");
 

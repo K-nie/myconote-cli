@@ -899,10 +899,7 @@ fn trained_model_usable(report: &train::TrainReport) -> bool {
 /// file it produces. Robust by design: a missing protein file or a missing
 /// aligner logs a warning and returns `Ok(None)` so prediction proceeds
 /// ab-initio. Only a genuine I/O error (directory creation) propagates.
-fn build_protein_hints_miniprot(
-    config: &PredictConfig,
-    prot_fa: &Path,
-) -> Result<Option<PathBuf>> {
+fn build_protein_hints_miniprot(config: &PredictConfig, prot_fa: &Path) -> Result<Option<PathBuf>> {
     if !prot_fa.exists() {
         eprintln!(
             "  ⚠  --protein-hints file not found: {} — continuing ab-initio (non-fatal).",

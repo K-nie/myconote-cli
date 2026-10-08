@@ -433,8 +433,7 @@ fn resolve_overlaps_filtered(
             // *same* source do not inflate support (we want corroboration from
             // an independent predictor, which is what the benchmark FP source
             // lacked).
-            let mut sources: std::collections::HashSet<&str> =
-                std::collections::HashSet::new();
+            let mut sources: std::collections::HashSet<&str> = std::collections::HashSet::new();
             sources.insert(models[group[best]].source.as_str());
             for y in 0..group.len() {
                 if y == best {
@@ -491,7 +490,12 @@ pub fn merge_predictions(
     output_gff: &Path,
     locus_prefix: &str,
 ) -> Result<usize> {
-    merge_predictions_filtered(inputs, output_gff, locus_prefix, &ConsensusFilter::default())
+    merge_predictions_filtered(
+        inputs,
+        output_gff,
+        locus_prefix,
+        &ConsensusFilter::default(),
+    )
 }
 
 /// Merge predictions into a consensus GFF3, dropping false-positive loci that
@@ -1000,7 +1004,11 @@ scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
             min_consensus_score: None,
         };
         let (kept2, dropped2) = resolve_overlaps_filtered(vec![lone], &f2);
-        assert_eq!(kept2.len(), 0, "lone low-weight predictor dropped at support ≥ 2");
+        assert_eq!(
+            kept2.len(),
+            0,
+            "lone low-weight predictor dropped at support ≥ 2"
+        );
         assert_eq!(dropped2, 1);
     }
 
@@ -1011,10 +1019,8 @@ scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
         let a = gene_model_src(100, 200, 10.0, &[(100, 200)], "augustus");
         let b = gene_model_src(100, 200, 5.0, &[(100, 200)], "genemark");
 
-        let (k1, d1) = resolve_overlaps_filtered(
-            vec![a.clone(), b.clone()],
-            &ConsensusFilter::default(),
-        );
+        let (k1, d1) =
+            resolve_overlaps_filtered(vec![a.clone(), b.clone()], &ConsensusFilter::default());
         assert_eq!(k1.len(), 1);
         assert_eq!(d1, 0);
 
@@ -1023,7 +1029,11 @@ scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
             min_consensus_score: None,
         };
         let (k2, d2) = resolve_overlaps_filtered(vec![a, b], &f2);
-        assert_eq!(k2.len(), 1, "two independent predictors corroborate → kept at support ≥ 2");
+        assert_eq!(
+            k2.len(),
+            1,
+            "two independent predictors corroborate → kept at support ≥ 2"
+        );
         assert_eq!(d2, 0);
     }
 
@@ -1038,7 +1048,11 @@ scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
             min_consensus_score: None,
         };
         let (k, d) = resolve_overlaps_filtered(vec![a, b], &f2);
-        assert_eq!(k.len(), 0, "same-source duplicates are not independent support");
+        assert_eq!(
+            k.len(),
+            0,
+            "same-source duplicates are not independent support"
+        );
         assert_eq!(d, 1);
     }
 
@@ -1053,7 +1067,11 @@ scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
             min_consensus_score: Some(15.0),
         };
         let (k, d) = resolve_overlaps_filtered(vec![lone.clone()], &rescue);
-        assert_eq!(k.len(), 1, "score 20 ≥ 15 rescues the lone high-confidence locus");
+        assert_eq!(
+            k.len(),
+            1,
+            "score 20 ≥ 15 rescues the lone high-confidence locus"
+        );
         assert_eq!(d, 0);
 
         let strict = ConsensusFilter {
@@ -1105,9 +1123,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
 
         // Default: a1/s1 merge, a2 and s2 pass through → 3 genes.
         let out_def = dir.path().join("def.gff3");
-        let n_def =
-            merge_predictions_filtered(&inputs, &out_def, "D", &ConsensusFilter::default())
-                .unwrap();
+        let n_def = merge_predictions_filtered(&inputs, &out_def, "D", &ConsensusFilter::default())
+            .unwrap();
         assert_eq!(n_def, 3, "default keeps all three loci");
         assert_eq!(
             count_feature(&std::fs::read_to_string(&out_def).unwrap(), "gene"),

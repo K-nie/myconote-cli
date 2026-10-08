@@ -45,7 +45,9 @@ impl AugustusConfig {
     /// Resolve the `--extrinsicCfgFile` basename: the caller's override if set,
     /// otherwise the historical default. Only consulted when `hints_file` is set.
     pub fn extrinsic_cfg_name(&self) -> &str {
-        self.extrinsic_cfg.as_deref().unwrap_or(DEFAULT_EXTRINSIC_CFG)
+        self.extrinsic_cfg
+            .as_deref()
+            .unwrap_or(DEFAULT_EXTRINSIC_CFG)
     }
 }
 
@@ -125,7 +127,10 @@ fn run_single(
 
     if let Some(ref hints) = config.hints_file {
         args.push(format!("--hintsfile={}", hints.display()));
-        args.push(format!("--extrinsicCfgFile={}", config.extrinsic_cfg_name()));
+        args.push(format!(
+            "--extrinsicCfgFile={}",
+            config.extrinsic_cfg_name()
+        ));
     }
 
     args.extend(config.extra_args.clone());

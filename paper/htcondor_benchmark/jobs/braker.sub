@@ -9,6 +9,15 @@ request_cpus   = 16
 request_memory = 64 GB
 request_disk   = 30 GB
 
+# augustus 3.5.0 in the braker env (myconote_braker3) is compiled with AVX2
+# (1912 ymm instruction refs). On execute nodes that lack AVX2 (x86_64-v2,
+# e.g. scarcity-10) augustus aborts with SIGILL -- "Illegal instruction
+# (core dumped)" -- at braker.pl:2551 config self-test, so the job exits 1
+# with no braker.gtf. Cluster 145888 had 15/18 jobs packed onto scarcity-10
+# and all failed there; jobs on AVX2 nodes (scarcity-20/-3) ran fine. Gate
+# BRAKER to AVX2-capable nodes so augustus runs everywhere it is scheduled.
+requirements   = (TARGET.has_avx2 =?= true)
+
 log    = $(RESULTS_DIR)/braker/$(genome_id)_rep$(rep).log
 output = $(RESULTS_DIR)/braker/$(genome_id)_rep$(rep).out
 error  = $(RESULTS_DIR)/braker/$(genome_id)_rep$(rep).err

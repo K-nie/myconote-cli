@@ -16,6 +16,20 @@ BENCHMARK_DIR="$3"
 DATA_DIR="$4"
 RESULTS_DIR="$5"
 
+# ── CPU feature preflight ──────────────────────────────────────────────────
+# augustus 3.5.0 in the braker env is compiled with AVX2. On an execute node
+# without AVX2 (x86_64-v2, e.g. scarcity-10) it dies with SIGILL ("Illegal
+# instruction (core dumped)") at braker.pl:2551 config self-test, leaving no
+# braker.gtf -- the failure mode that sank 15/18 jobs of cluster 145888.
+# braker.sub already gates jobs to has_avx2 nodes; this is a loud belt-and-
+# braces check so a mis-scheduled job fails early with an actionable message
+# instead of a cryptic SIGILL buried in braker.log.
+if ! grep -qw avx2 /proc/cpuinfo 2>/dev/null; then
+    echo "ERROR: execute node $(hostname) lacks AVX2; braker augustus 3.5.0 will SIGILL." >&2
+    echo "       Resubmit with: requirements = (TARGET.has_avx2 =?= true)" >&2
+    exit 1
+fi
+
 # ── Conda env ────────────────────────────────────────────────────────────
 # BRAKER3 is installed as the `myconote_braker3` env on this pool (not `braker`).
 # Source the base conda profile from wherever it lives, activate, and also

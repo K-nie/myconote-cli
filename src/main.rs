@@ -238,9 +238,20 @@ fn main() -> Result<()> {
                 println!("  --no-snap                   Disable SNAP (use only Augustus)");
                 println!("  --snap-hmm <hmm>            SNAP HMM model (default: auto from kingdom)");
                 println!("  --protein-evidence <blast>  BLAST tabular fmt6 protein hits for hints");
+                println!("  --protein-hints <proteins.fa> Protein FASTA → miniprot → Augustus hints");
+                println!("                              (BRAKER-style; non-fatal if miniprot absent).");
                 println!("  --locus-prefix <prefix>     Gene ID prefix (default: GENE)");
-                println!("  --train                     Auto-train Augustus from first-pass prediction");
+                println!("  --train, --self-train       Auto-train Augustus from first-pass prediction");
+                println!("  --augustus-training <mode>  stock|self (default: stock). `self` trains a");
+                println!("                              genome-specific model, falling back to stock on");
+                println!("                              failure — recommended for divergent fungi where");
+                println!("                              the stock S288C species collapses.");
                 println!("  --train-species <name>      Species name for trained model (default: <prefix>_trained)");
+                println!("  --min-predictor-support <N> Drop consensus loci backed by < N distinct");
+                println!("                              predictors (default: 1 = keep all; try 2 for");
+                println!("                              fungi to cut false positives).");
+                println!("  --min-consensus-score <F>   Rescue a below-support locus whose agreement-");
+                println!("                              weighted consensus score ≥ F (default: off).");
                 println!("  --glimmerhmm                Also run GlimmerHMM (adds third ab initio predictor)");
                 println!("  --glimmer-dir <dir>         GlimmerHMM training directory (default: auto-detect)");
                 println!("  --genemark-mode <mode>      es|et|ep|etp (default: skip GeneMark)");
@@ -1917,9 +1928,25 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                 config.locus_prefix = args[i + 1].clone();
                 i += 2;
             }
-            "--train" => {
+            "--train" | "--self-train" => {
                 config.self_train = true;
                 i += 1;
+            }
+            // --augustus-training {stock,self}: `self` trains a genome-specific
+            // Augustus model (with stock fallback on failure); `stock` keeps the
+            // pre-trained species (default). Alias for --self-train / --species.
+            "--augustus-training" if i + 1 < args.len() => {
+                match args[i + 1].to_lowercase().as_str() {
+                    "self" | "self-train" | "selftrain" => config.self_train = true,
+                    "stock" | "pretrained" | "pre-trained" => config.self_train = false,
+                    other => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --augustus-training {:?}. Expected: stock | self",
+                            other
+                        ));
+                    }
+                }
+                i += 2;
             }
             "--train-species" if i + 1 < args.len() => {
                 config.train_species = Some(args[i + 1].clone());
@@ -1958,6 +1985,36 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
             }
             "--protein-fasta" if i + 1 < args.len() => {
                 config.protein_fasta = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            // Feature 3: protein FASTA → miniprot → Augustus extrinsic hints.
+            "--protein-hints" if i + 1 < args.len() => {
+                config.protein_hints = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            // Feature 1: consensus false-positive filter.
+            "--min-predictor-support" if i + 1 < args.len() => {
+                match args[i + 1].parse::<usize>() {
+                    Ok(n) => config.consensus_min_support = n,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --min-predictor-support {:?}: expected a non-negative integer",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            "--min-consensus-score" if i + 1 < args.len() => {
+                match args[i + 1].parse::<f64>() {
+                    Ok(f) => config.consensus_min_score = Some(f),
+                    Err(_) => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --min-consensus-score {:?}: expected a number",
+                            args[i + 1]
+                        ));
+                    }
+                }
                 i += 2;
             }
             "--max-intron" if i + 1 < args.len() => {

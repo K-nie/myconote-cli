@@ -693,6 +693,19 @@ mod braker_tests {
     }
 
     #[test]
+    fn braker_with_protein_hints_is_a_conflict() {
+        // --protein-hints feeds the ab-initio Augustus path, which BRAKER
+        // bypasses entirely; reject it so the user isn't misled.
+        let cfg = PredictConfig {
+            use_braker: true,
+            protein_hints: Some(PathBuf::from("proteins.fa")),
+            ..PredictConfig::default()
+        };
+        let err = check_braker_conflicts(&cfg).unwrap_err();
+        assert!(err.to_string().contains("--protein-hints"));
+    }
+
+    #[test]
     fn braker_with_glimmerhmm_is_a_conflict() {
         let cfg = PredictConfig {
             use_braker: true,

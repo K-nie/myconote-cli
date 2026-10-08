@@ -97,6 +97,26 @@ pub struct PredictConfig {
     /// NCBI translation table forwarded to BRAKER as `--translation_table`
     /// and through Augustus / GeneMark.  Only meaningful when `use_braker`.
     pub genetic_code: u8,
+    // ── Consensus false-positive filter (v0.7.7) ─────────────────────────────
+    /// Minimum number of distinct predictor sources that must corroborate a
+    /// consensus locus for it to be emitted.  `1` (default) keeps every locus
+    /// and reproduces pre-filter behaviour; `2` drops loci called by a single
+    /// predictor alone.  See `evidence::ConsensusFilter`.
+    pub consensus_min_support: usize,
+    /// Optional rescue threshold on the agreement-weighted consensus score: a
+    /// locus failing the support test is still kept when its score reaches this
+    /// value.  `None` (default) disables the rescue.
+    pub consensus_min_score: Option<f64>,
+    // ── Augustus training mode (v0.7.7) ──────────────────────────────────────
+    // (self-training itself is driven by `self_train`; `--augustus-training
+    // self` is an alias that sets it.  No extra field needed.)
+    // ── Protein → Augustus hints, BRAKER-style (v0.7.7) ──────────────────────
+    /// Protein FASTA aligned with miniprot to build Augustus extrinsic hints
+    /// that steer Augustus's own ab-initio calls (distinct from
+    /// `protein_fasta`, which adds protein alignments as a separate EVM track,
+    /// and from `protein_evidence`, which consumes a precomputed BLAST table).
+    /// `None` (default) → ab-initio only, unchanged behaviour.
+    pub protein_hints: Option<PathBuf>,
 }
 
 impl Default for PredictConfig {
@@ -128,6 +148,9 @@ impl Default for PredictConfig {
             braker_rna_bams: Vec::new(),
             braker_proteins: None,
             genetic_code: 1,
+            consensus_min_support: 1,
+            consensus_min_score: None,
+            protein_hints: None,
         }
     }
 }
@@ -196,6 +219,9 @@ pub fn check_braker_conflicts(config: &PredictConfig) -> Result<()> {
     }
     if config.protein_evidence.is_some() {
         conflicts.push("--protein-evidence");
+    }
+    if config.protein_hints.is_some() {
+        conflicts.push("--protein-hints");
     }
     if config.protein_fasta.is_some() {
         conflicts.push("--protein-fasta");
@@ -346,21 +372,43 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         .unwrap_or_else(|| config.kingdom.default_augustus_species().to_string());
     let aug_species = aug_species_owned.as_str();
 
-    // Optionally build protein hints first
-    let hints_path = if let Some(ref blast_tsv) = config.protein_evidence {
+    // ── Augustus extrinsic hints ─────────────────────────────────────────────
+    // Two independent hint sources can feed Augustus, and both are optional:
+    //   * --protein-evidence <blast.tsv>  (existing)  → CDSpart hints from a
+    //     precomputed BLAST table (augustus::make_protein_hints).
+    //   * --protein-hints   <proteins.fa> (v0.7.7, BRAKER-style) → run miniprot
+    //     protein→genome and convert the alignment into Augustus hints.
+    // Whatever is available is concatenated into one hints file. The presence of
+    // protein-FASTA hints also selects a P-aware extrinsic config so Augustus
+    // actually weights the `src=P` lines. With neither flag, Augustus runs
+    // ab-initio exactly as before (hints_path = None, extrinsic_cfg = None).
+    let mut hint_files: Vec<PathBuf> = Vec::new();
+
+    if let Some(ref blast_tsv) = config.protein_evidence {
         let hp = config.out_dir.join("protein_hints.gff");
         println!("  Building protein hints from {}…", blast_tsv.display());
         augustus::make_protein_hints(blast_tsv, &hp, 4)?;
-        Some(hp)
-    } else {
-        None
-    };
+        hint_files.push(hp);
+    }
+
+    if let Some(ref prot_fa) = config.protein_hints {
+        // Non-fatal: a missing protein file or missing aligner logs and leaves
+        // Augustus ab-initio rather than failing the whole run.
+        if let Some(hp) = build_protein_hints_miniprot(config, prot_fa)? {
+            hint_files.push(hp);
+        }
+    }
+
+    let use_protein_extrinsic = config.protein_hints.is_some() && !hint_files.is_empty();
+    let hints_path = combine_hint_files(&hint_files, &config.out_dir)?;
+    let extrinsic_cfg = augustus_extrinsic_cfg(use_protein_extrinsic && hints_path.is_some());
 
     let aug_cfg = augustus::AugustusConfig {
         species: aug_species.to_string(),
         threads: config.threads,
         utr: config.kingdom.augustus_utr(),
         hints_file: hints_path,
+        extrinsic_cfg,
         extra_args: Vec::new(),
     };
 
@@ -680,8 +728,18 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         .map(|(p, s, w)| (p.as_path(), *s, *w))
         .collect();
 
-    let gene_count =
-        evidence::merge_predictions(&inputs_ref, &consensus_gff, &config.locus_prefix)?;
+    // Consensus false-positive filter. Defaults (support=1, score=None) make
+    // this a no-op that leaves the output byte-identical to prior releases.
+    let consensus_filter = evidence::ConsensusFilter {
+        min_predictor_support: config.consensus_min_support,
+        min_consensus_score: config.consensus_min_score,
+    };
+    let gene_count = evidence::merge_predictions_filtered(
+        &inputs_ref,
+        &consensus_gff,
+        &config.locus_prefix,
+        &consensus_filter,
+    )?;
 
     println!("  ✓  Consensus GFF3 → {}", consensus_gff.display());
     println!("     {} genes called", gene_count);
@@ -776,6 +834,7 @@ fn run_self_training(config: &PredictConfig) -> Result<String> {
         threads: config.threads,
         utr: false, // no UTR for training pass
         hints_file: None,
+        extrinsic_cfg: None,
         extra_args: Vec::new(),
     };
     augustus::run(&config.masked_fasta, &first_pass_gff, &aug_cfg)?;
@@ -796,6 +855,224 @@ fn run_self_training(config: &PredictConfig) -> Result<String> {
         ..train::TrainConfig::default()
     };
 
-    train::run_training(&train_config)?;
+    let report = train::run_training(&train_config)?;
+
+    // A run that technically "succeeds" can still leave an unusable model — no
+    // registered species directory, or one that recognises zero genes on the
+    // held-out test set. Shipping such a model collapses prediction on divergent
+    // fungi (the exact failure mode of the stock S288C species), so treat it as
+    // a training failure and let `run_prediction` fall back to the stock species.
+    if !trained_model_usable(&report) {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "trained species '{}' is unusable (species_path={:?}, gene_sensitivity={:?}); \
+             falling back to stock/default species",
+            report.species_name, report.species_path, report.gene_sensitivity
+        )));
+    }
+
     Ok(species_name)
+}
+
+/// Decide whether a freshly trained Augustus model is fit to predict with.
+///
+/// A model is usable only when Augustus actually registered a species directory
+/// for it AND, where a held-out accuracy estimate exists, gene-level sensitivity
+/// is above zero. A model that identifies no genes on its own test set is worse
+/// than the stock species, so the caller falls back rather than shipping it.
+/// When no evaluation is available (e.g. the test split was too small to score)
+/// we trust etraining and keep the model.
+fn trained_model_usable(report: &train::TrainReport) -> bool {
+    if report.species_path.is_none() {
+        return false;
+    }
+    match report.gene_sensitivity {
+        Some(sens) => sens > 0.0,
+        None => true,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Protein → Augustus hints (Feature 3, BRAKER-style)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Run miniprot (or exonerate) on a protein FASTA and return the Augustus hints
+/// file it produces. Robust by design: a missing protein file or a missing
+/// aligner logs a warning and returns `Ok(None)` so prediction proceeds
+/// ab-initio. Only a genuine I/O error (directory creation) propagates.
+fn build_protein_hints_miniprot(
+    config: &PredictConfig,
+    prot_fa: &Path,
+) -> Result<Option<PathBuf>> {
+    if !prot_fa.exists() {
+        eprintln!(
+            "  ⚠  --protein-hints file not found: {} — continuing ab-initio (non-fatal).",
+            prot_fa.display()
+        );
+        return Ok(None);
+    }
+
+    let prot_cfg = protein_evidence::ProteinEvidenceConfig {
+        proteins: prot_fa.to_path_buf(),
+        genome: config.masked_fasta.clone(),
+        out_dir: config.out_dir.join("protein_hints"),
+        threads: config.threads,
+        max_intron: config.max_intron,
+        ..protein_evidence::ProteinEvidenceConfig::default()
+    };
+
+    println!(
+        "  Building Augustus protein hints via miniprot ({})…",
+        prot_fa.display()
+    );
+    match protein_evidence::generate_protein_evidence(&prot_cfg) {
+        Ok(result) => {
+            println!(
+                "      {} proteins aligned to {} loci ({}) → {}",
+                result.n_aligned,
+                result.n_loci,
+                result.tool,
+                result.hints_gff.display()
+            );
+            Ok(Some(result.hints_gff))
+        }
+        Err(e) => {
+            // miniprot/exonerate absent or alignment failed — not fatal.
+            eprintln!(
+                "  ⚠  protein-hints alignment unavailable: {} — continuing ab-initio (non-fatal).",
+                e
+            );
+            Ok(None)
+        }
+    }
+}
+
+/// Collapse zero/one/many Augustus hint files into a single `Option<PathBuf>`.
+/// Zero files → `None` (ab-initio). One file → that file as-is. Many → their
+/// concatenation written to `<out_dir>/combined_hints.gff` so Augustus reads a
+/// single `--hintsfile`. Concatenation keeps every source's lines (no silent
+/// drop of either protein-BLAST or miniprot hints when both flags are given).
+fn combine_hint_files(files: &[PathBuf], out_dir: &Path) -> Result<Option<PathBuf>> {
+    match files.len() {
+        0 => Ok(None),
+        1 => Ok(Some(files[0].clone())),
+        _ => {
+            use std::io::Write;
+            let combined = out_dir.join("combined_hints.gff");
+            let mut out = std::fs::File::create(&combined).map_err(MycoNoteError::Io)?;
+            for f in files {
+                let body = std::fs::read_to_string(f).map_err(MycoNoteError::Io)?;
+                out.write_all(body.as_bytes()).map_err(MycoNoteError::Io)?;
+                if !body.ends_with('\n') {
+                    writeln!(out).map_err(MycoNoteError::Io)?;
+                }
+            }
+            Ok(Some(combined))
+        }
+    }
+}
+
+/// Choose the Augustus `--extrinsicCfgFile` basename. When protein hints are in
+/// play we need a config whose `[SOURCES]` block lists `P`; Augustus ships
+/// `extrinsic.M.RM.E.W.P.cfg` for exactly this. Otherwise `None` lets
+/// `AugustusConfig` fall back to its historical default, leaving the existing
+/// EST/BLAST hints path untouched.
+fn augustus_extrinsic_cfg(use_protein: bool) -> Option<String> {
+    if use_protein {
+        Some("extrinsic.M.RM.E.W.P.cfg".to_string())
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod predict_feature_tests {
+    use super::*;
+
+    fn report(species_path: Option<PathBuf>, sens: Option<f64>) -> train::TrainReport {
+        train::TrainReport {
+            species_name: "test_trained".to_string(),
+            n_training_genes: 200,
+            n_test_genes: 20,
+            gene_sensitivity: sens,
+            gene_specificity: sens, // mirror; not inspected by trained_model_usable
+            species_path,
+        }
+    }
+
+    // ── Feature 2: self-trained Augustus usability + fallback ─────────────────
+
+    #[test]
+    fn trained_model_usable_requires_species_path() {
+        // No registered species dir → unusable, caller must fall back.
+        assert!(!trained_model_usable(&report(None, Some(80.0))));
+    }
+
+    #[test]
+    fn trained_model_unusable_at_zero_sensitivity() {
+        let p = Some(PathBuf::from("/tmp/augustus/species/test_trained"));
+        assert!(!trained_model_usable(&report(p, Some(0.0))));
+    }
+
+    #[test]
+    fn trained_model_usable_with_positive_sensitivity() {
+        let p = Some(PathBuf::from("/tmp/augustus/species/test_trained"));
+        assert!(trained_model_usable(&report(p, Some(62.5))));
+    }
+
+    #[test]
+    fn trained_model_usable_when_no_eval_available() {
+        // Test set too small to score → trust etraining, keep the model.
+        let p = Some(PathBuf::from("/tmp/augustus/species/test_trained"));
+        assert!(trained_model_usable(&report(p, None)));
+    }
+
+    // ── Feature 3: protein → Augustus hints plumbing ──────────────────────────
+
+    #[test]
+    fn extrinsic_cfg_selected_only_with_protein_hints() {
+        assert_eq!(augustus_extrinsic_cfg(false), None);
+        assert_eq!(
+            augustus_extrinsic_cfg(true).as_deref(),
+            Some("extrinsic.M.RM.E.W.P.cfg")
+        );
+    }
+
+    #[test]
+    fn combine_hint_files_zero_one_many() {
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path();
+
+        // Zero → None (ab-initio).
+        assert!(combine_hint_files(&[], out).unwrap().is_none());
+
+        // One → passed through unchanged (no copy).
+        let a = out.join("a.gff");
+        std::fs::write(&a, "chr1\tP\tCDSpart\t1\t9\t.\t+\t.\tsrc=P\n").unwrap();
+        let one = combine_hint_files(&[a.clone()], out).unwrap().unwrap();
+        assert_eq!(one, a);
+
+        // Many → concatenated into combined_hints.gff with every line kept.
+        let b = out.join("b.gff");
+        std::fs::write(&b, "chr1\tP\tintron\t20\t40\t.\t+\t.\tsrc=P\n").unwrap();
+        let many = combine_hint_files(&[a, b], out).unwrap().unwrap();
+        assert_eq!(many.file_name().unwrap(), "combined_hints.gff");
+        let body = std::fs::read_to_string(&many).unwrap();
+        assert!(body.contains("CDSpart"), "first source kept");
+        assert!(body.contains("intron"), "second source kept");
+    }
+
+    #[test]
+    fn protein_hints_missing_file_is_nonfatal() {
+        // A protein FASTA path that does not exist must not fail the run; it
+        // logs and returns Ok(None) so Augustus proceeds ab-initio.
+        let dir = tempfile::tempdir().unwrap();
+        let cfg = PredictConfig {
+            masked_fasta: dir.path().join("genome.fa"),
+            out_dir: dir.path().to_path_buf(),
+            ..PredictConfig::default()
+        };
+        let missing = dir.path().join("does_not_exist.faa");
+        let res = build_protein_hints_miniprot(&cfg, &missing).unwrap();
+        assert!(res.is_none(), "missing protein file → ab-initio, non-fatal");
+    }
 }

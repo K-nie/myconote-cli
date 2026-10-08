@@ -6,6 +6,42 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [0.7.7] — 2026-10-08
+
+### Added
+
+- **Consensus false-positive gene filtering (`--min-predictor-support`,
+  `--min-consensus-score`).** The EVM-style consensus previously emitted exactly
+  one gene per overlap group unconditionally, which let a locus called by a
+  single low-weight predictor through — the source of the lowest loose gene-F1
+  on every genome of the 6-genome HTCondor benchmark, and the reason enabling
+  SNAP+GeneMark raised the gene count 5465 → 5781 while *lowering* loose F1
+  0.906 → 0.892. `evidence::ConsensusFilter` now drops a group's winner unless it
+  is corroborated by `>= --min-predictor-support` distinct predictor sources
+  whose CDS overlaps it (the winner counts itself), with `--min-consensus-score`
+  as an optional rescue for a lone high-confidence call. Defaults
+  (`--min-predictor-support 1`, score off) reproduce prior output byte-for-byte;
+  `--min-predictor-support 2` is the recommended fungal setting. Every dropped
+  locus is logged to stderr (no silent data loss). `merge_predictions` keeps its
+  old signature and delegates to the new `merge_predictions_filtered`.
+- **Selectable self-trained Augustus (`--augustus-training {stock,self}`).** An
+  alias for the self-training path (`self` ⇒ `--self-train`) with an explicit
+  stock/self switch, plus a usability gate: a trained species that registers no
+  Augustus species directory, or that scores zero gene-level sensitivity on its
+  held-out test set, is now rejected and prediction falls back to the stock
+  species (logged, non-fatal) instead of shipping a model that collapses on
+  divergent fungi. Default remains `stock`; `self` is opt-in pending an A/B.
+- **Protein-evidence hints into Augustus, BRAKER-style (`--protein-hints
+  <proteins.fa>`).** Runs miniprot (protein → genome) to build Augustus extrinsic
+  hints and feeds them via `--hintsfile` with a protein-aware
+  `--extrinsicCfgFile` (`extrinsic.M.RM.E.W.P.cfg`). Distinct from
+  `--protein-fasta` (adds a separate EVM track) and `--protein-evidence` (a
+  precomputed BLAST table). Robust: a missing protein file or absent aligner
+  logs and proceeds ab-initio. When the flag is absent, Augustus runs ab-initio
+  exactly as before (`AugustusConfig::extrinsic_cfg` defaults to the historical
+  `extrinsic.M.RM.E.W.cfg`). `--protein-hints` is rejected under `--use-braker`,
+  consistent with the other ab-initio predictor flags.
+
 ## [0.7.6] — 2026-10-06
 
 ### Fixed

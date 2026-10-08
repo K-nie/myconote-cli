@@ -27,8 +27,26 @@ pub struct AugustusConfig {
     pub utr: bool,
     /// Path to hints GFF file (optional — protein/EST evidence)
     pub hints_file: Option<PathBuf>,
+    /// Augustus `--extrinsicCfgFile` basename to use when `hints_file` is set.
+    /// `None` keeps the historical default (`extrinsic.M.RM.E.W.cfg`). Protein
+    /// (`src=P`) hints need a config whose `[SOURCES]` block lists `P`, e.g.
+    /// `extrinsic.M.RM.E.W.P.cfg`, which ships with Augustus.
+    pub extrinsic_cfg: Option<String>,
     /// Extra Augustus arguments (passed verbatim)
     pub extra_args: Vec<String>,
+}
+
+/// Historical default extrinsic config, used whenever `extrinsic_cfg` is `None`
+/// and a hints file is supplied. Kept as a constant so the single- and
+/// multi-contig paths stay in lockstep.
+const DEFAULT_EXTRINSIC_CFG: &str = "extrinsic.M.RM.E.W.cfg";
+
+impl AugustusConfig {
+    /// Resolve the `--extrinsicCfgFile` basename: the caller's override if set,
+    /// otherwise the historical default. Only consulted when `hints_file` is set.
+    pub fn extrinsic_cfg_name(&self) -> &str {
+        self.extrinsic_cfg.as_deref().unwrap_or(DEFAULT_EXTRINSIC_CFG)
+    }
 }
 
 impl Default for AugustusConfig {
@@ -38,6 +56,7 @@ impl Default for AugustusConfig {
             threads: 4,
             utr: false,
             hints_file: None,
+            extrinsic_cfg: None,
             extra_args: Vec::new(),
         }
     }
@@ -106,7 +125,7 @@ fn run_single(
 
     if let Some(ref hints) = config.hints_file {
         args.push(format!("--hintsfile={}", hints.display()));
-        args.push("--extrinsicCfgFile=extrinsic.M.RM.E.W.cfg".to_string());
+        args.push(format!("--extrinsicCfgFile={}", config.extrinsic_cfg_name()));
     }
 
     args.extend(config.extra_args.clone());
@@ -177,6 +196,7 @@ fn run_parallel(
     let utr_flag = if config.utr { "on" } else { "off" };
     let utr_flag_owned = utr_flag.to_string();
     let hints = config.hints_file.clone();
+    let extrinsic_cfg = config.extrinsic_cfg_name().to_string();
     let extra = config.extra_args.clone();
 
     let failures: Vec<String> = pool.install(|| {
@@ -193,7 +213,7 @@ fn run_parallel(
                 ];
                 if let Some(ref h) = hints {
                     args.push(format!("--hintsfile={}", h.display()));
-                    args.push("--extrinsicCfgFile=extrinsic.M.RM.E.W.cfg".to_string());
+                    args.push(format!("--extrinsicCfgFile={}", extrinsic_cfg));
                 }
                 args.extend(extra.clone());
                 args.push(fa_path.to_string_lossy().into_owned());
@@ -379,5 +399,23 @@ mod tests {
     fn rewrite_attrs_passes_through_short_lines() {
         let not_gff3 = "##gff-version 3";
         assert_eq!(rewrite_attrs_with_prefix(not_gff3, 1), not_gff3);
+    }
+
+    // Feature 3: extrinsic config resolution. Default (None) keeps the historical
+    // basename so the existing hints path is byte-for-byte unchanged; an override
+    // (used for protein `src=P` hints) is honoured verbatim.
+    #[test]
+    fn extrinsic_cfg_defaults_when_unset() {
+        let cfg = AugustusConfig::default();
+        assert_eq!(cfg.extrinsic_cfg_name(), "extrinsic.M.RM.E.W.cfg");
+    }
+
+    #[test]
+    fn extrinsic_cfg_override_is_honoured() {
+        let cfg = AugustusConfig {
+            extrinsic_cfg: Some("extrinsic.M.RM.E.W.P.cfg".to_string()),
+            ..AugustusConfig::default()
+        };
+        assert_eq!(cfg.extrinsic_cfg_name(), "extrinsic.M.RM.E.W.P.cfg");
     }
 }

@@ -40,6 +40,18 @@ if [[ -d "$HOME/.conda/envs/$FUN_ENV/lib" ]]; then
     export LD_LIBRARY_PATH="$HOME/.conda/envs/$FUN_ENV/lib:${LD_LIBRARY_PATH:-}"
 fi
 
+# Provision GeneMark-ES so funannotate runs its FULL intended ab-initio stack.
+# funannotate silently skips GeneMark when $GENEMARK_PATH is unset — which it was
+# in the first full run, so every funannotate job ran WITHOUT GeneMark while the
+# MycoNote arm ran WITH it (confirmed: "Will skip GeneMark" in 18/18 funannotate
+# logs). That broke the apples-to-apples predictor set. Point funannotate at the
+# same gmes suite + academic key (~/.gm_key) the MycoNote and BRAKER arms use so
+# all tools include GeneMark.
+export GENEMARK_PATH="${GENEMARK_PATH:-$HOME/.myconote/tools/gmes_linux_64_4}"
+if [[ -d "$GENEMARK_PATH" ]]; then
+    export PATH="$GENEMARK_PATH:$PATH"
+fi
+
 # Augustus writes trained species into its config tree, so AUGUSTUS_CONFIG_PATH
 # must point at a writable copy; the funannotate env ships one under config/.
 export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.conda/envs/$FUN_ENV/config}"

@@ -85,8 +85,11 @@ fi
 # ~/.myconote/tools with the academic key at ~/.gm_key (same layout the BRAKER
 # arm uses). Export GENEMARK_PATH and prepend its bin so gmes_petap.pl resolves.
 # If absent, predict logs an info line and proceeds with Augustus + SNAP.
-# This mirrors funannotate, which also runs GeneMark internally — so giving
-# MycoNote the same predictor keeps the comparison apples-to-apples.
+# funannotate CAN run GeneMark internally, but only when $GENEMARK_PATH is set;
+# in the first full run funannotate's env had it unset and it skipped GeneMark on
+# all 18 jobs, so that run was NOT apples-to-apples (MycoNote had GeneMark,
+# funannotate did not). run_funannotate.sh now provisions the same GENEMARK_PATH
+# so both arms include GeneMark — do not claim parity without that fix in place.
 export GENEMARK_PATH="${GENEMARK_PATH:-$HOME/.myconote/tools/gmes_linux_64_4}"
 if [[ -d "$GENEMARK_PATH" ]]; then
     export PATH="$GENEMARK_PATH:$PATH"

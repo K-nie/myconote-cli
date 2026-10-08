@@ -108,15 +108,31 @@ fi
     --threads=16 \
     >> "$LOG" 2>&1
 
+# braker3 emits braker.gtf as its primary output; braker.gff3 is only written by
+# a getAnnoFastaFromJoingenes step that can silently skip on a Biopython
+# deprecation, leaving only the GTF. Convert the GTF to GFF3 ourselves when the
+# gff3 is absent (gtf2gff.pl ships in the braker env, already on PATH).
 PREDICTED_GFF="$OUT_DIR/braker.gff3"
-[[ -f "$PREDICTED_GFF" ]] || PREDICTED_GFF=$(find "$OUT_DIR" -name "*.gff3" -print -quit 2>/dev/null || true)
+if [[ ! -s "$PREDICTED_GFF" && -s "$OUT_DIR/braker.gtf" ]]; then
+    gtf2gff.pl <"$OUT_DIR/braker.gtf" --out="$PREDICTED_GFF" --gff3 2>>"$LOG" || true
+fi
+[[ -s "$PREDICTED_GFF" ]] || PREDICTED_GFF=$(find "$OUT_DIR" -name "*.gff3" -print -quit 2>/dev/null || true)
 
-# BRAKER runs on the raw genome, so predicted seqids keep the original
-# accessions (NC_...) and match reference.gff3 directly — no rename lift-over.
+# BRAKER/AUGUSTUS keep the FASTA header as the seqid with spaces→underscores
+# (e.g. "NC_006670.1_Cryptococcus_...") while reference.gff3 uses the bare
+# accession (NC_006670.1). Build a rename table (original_id=accession from the
+# first header token, new_id=the mangled full header) so compare lifts predicted
+# seqids back to the reference namespace. For accession-only headers this is the
+# identity map, so it is harmless on genomes whose headers carry no description.
+RENAME_TSV="$OUT_DIR/braker_seqid_rename.tsv"
+printf 'original_id\tnew_id\tlength\n' > "$RENAME_TSV"
+awk '/^>/{acc=substr($1,2); h=substr($0,2); gsub(/[ \t]+/,"_",h); print acc"\t"h"\t0"}' "$GENOME_FA" >> "$RENAME_TSV"
+
 python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
     "$PREDICTED_GFF" \
     "$REFERENCE_GFF" \
     --label "braker_${GENOME_ID}_rep${REP}" \
+    --rename-table "$RENAME_TSV" \
     --output "$OUT_DIR/metrics.json"
 
 python3 - << PYEOF > "$OUT_DIR/performance.json"

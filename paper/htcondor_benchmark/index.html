@@ -1707,21 +1707,88 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#results-completed-myconote-arm-htcondor-cluster-145093" class="md-nav__link">
+  <a href="#results-complete-four-tool-run-myconote-v074076-era" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Results (completed MycoNote arm — HTCondor cluster 145093)
+        Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-gene-level-loose-f1-strict-f1-nucleotide-f1-myco-funannotate-maker-braker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accuracy — gene-level loose F1 / strict F1, nucleotide F1 (myco / funannotate / MAKER / BRAKER)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#expected-outcomes" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#speed-and-memory-median-over-3-reps-8-threads-braker-16" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Expected Outcomes
+        Speed and memory — median over 3 reps, 8 threads (BRAKER 16)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#function-by-function-capability-what-each-tool-actually-ran" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Function-by-function capability (what each tool actually ran)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bottom-line-honest-positioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bottom line (honest positioning)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bottom line (honest positioning)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funannotate-weakness-coverage-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        funannotate-weakness coverage (summary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caveats-for-the-manuscript" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caveats for the manuscript
       
     </span>
   </a>
@@ -2118,148 +2185,246 @@ on a different cluster will need the same fixes.</p>
 </li>
 </ul>
 <hr />
-<h2 id="results-completed-myconote-arm-htcondor-cluster-145093">Results (completed MycoNote arm — HTCondor cluster 145093)<a class="headerlink" href="#results-completed-myconote-arm-htcondor-cluster-145093" title="Permanent link">&para;</a></h2>
-<p>All 18 jobs (6 genomes × 3 replicates) completed with exit 0 on every stage,
-each genome run with its clade-appropriate Augustus species model. Accuracy is
-deterministic across replicates (identical metrics in all three), following the
-Eilbeck et al. (2009) gene/exon/nucleotide sensitivity–specificity–F1 scheme;
-BUSCO run against the clade <code>odb10</code> lineage.</p>
+<h2 id="results-complete-four-tool-run-myconote-v074076-era">Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)<a class="headerlink" href="#results-complete-four-tool-run-myconote-v074076-era" title="Permanent link">&para;</a></h2>
+<p>All four tools completed 18/18 jobs (6 genomes × 3 replicates). Accuracy follows
+the Eilbeck et al. (2009) gene/nucleotide sensitivity–specificity–F1 scheme.
+Strict gene F1 uses the <strong>CDS-structure</strong> definition (<code>genes_match_strict</code>:
+identical ordered CDS set, same strand) — not the old outer-bound match, which
+confounded UTR-annotation convention with gene-structure accuracy and is
+superseded. <strong>This comparison is apples-to-apples on the predictor set: all
+four tools ran with GeneMark</strong> (funannotate's first run skipped GeneMark for an
+unset <code>$GENEMARK_PATH</code>; it was re-run with GeneMark provisioned so both full
+pipelines carry the same ab-initio stack). Each tool used its clade-appropriate
+Augustus species (MycoNote via explicit <code>--species</code>; funannotate via
+<code>--busco_seed_species</code>). Replicates are tight (per-rep gene-count drift
+~0.1–0.5 %); values below are the per-genome mean of 3 reps.</p>
+<h3 id="accuracy-gene-level-loose-f1-strict-f1-nucleotide-f1-myco-funannotate-maker-braker">Accuracy — gene-level loose F1 / strict F1, nucleotide F1 (myco / funannotate / MAKER / BRAKER)<a class="headerlink" href="#accuracy-gene-level-loose-f1-strict-f1-nucleotide-f1-myco-funannotate-maker-braker" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th>genome</th>
-<th>Augustus model</th>
 <th>loose gene F1</th>
-<th>strict gene F1 †</th>
-<th>nt F1</th>
-<th>BUSCO</th>
+<th>strict gene F1</th>
+<th>nucleotide F1</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>sce</td>
-<td>saccharomyces_cerevisiae_S288C</td>
-<td>0.912</td>
-<td>~~0.838~~ †</td>
-<td>0.985</td>
-<td>96.4 %</td>
+<td>0.891 / <strong>0.939</strong> / 0.912 / 0.917</td>
+<td>0.788 / 0.813 / <strong>0.827</strong> / 0.729</td>
+<td><strong>0.985</strong> / 0.968 / 0.986 / 0.980</td>
 </tr>
 <tr>
 <td>cal</td>
-<td>candida_albicans</td>
-<td>0.951</td>
-<td>~~0.845~~ †</td>
-<td>0.986</td>
-<td>95.3 %</td>
+<td>0.925 / <strong>0.956</strong> / 0.952 / 0.958</td>
+<td>0.803 / 0.810 / <strong>0.839</strong> / 0.709</td>
+<td>0.986 / 0.978 / <strong>0.989</strong> / 0.990</td>
 </tr>
 <tr>
 <td>ylp</td>
-<td>yarrowia_lipolytica</td>
-<td>0.913</td>
-<td>~~0.740~~ †</td>
-<td>0.974</td>
-<td>97.8 %</td>
+<td>0.908 / <strong>0.947</strong> / 0.913 / 0.918</td>
+<td>0.726 / 0.672 / <strong>0.734</strong> / 0.728</td>
+<td>0.972 / 0.959 / 0.974 / <strong>0.977</strong></td>
 </tr>
 <tr>
 <td>ani</td>
-<td>aspergillus_nidulans</td>
-<td>0.919</td>
-<td>~~0.318~~ †</td>
-<td>0.943</td>
-<td>98.2 %</td>
+<td>0.897 / 0.921 / 0.919 / <strong>0.932</strong></td>
+<td>0.445 / 0.488 / 0.465 / <strong>0.524</strong></td>
+<td>0.941 / 0.936 / 0.944 / <strong>0.952</strong></td>
 </tr>
 <tr>
 <td>ncr</td>
-<td>neurospora_crassa</td>
-<td>0.898</td>
-<td>~~0.083~~ †</td>
-<td>0.963</td>
-<td>99.6 %</td>
+<td>0.897 / 0.909 / 0.898 / <strong>0.914</strong></td>
+<td>0.564 / 0.520 / 0.568 / <strong>0.647</strong></td>
+<td>0.964 / 0.936 / 0.964 / <strong>0.978</strong></td>
 </tr>
 <tr>
 <td>cne</td>
-<td>cryptococcus_neoformans_neoformans_JEC21</td>
-<td>0.936</td>
-<td>~~0.001~~ †</td>
-<td>0.946</td>
-<td>94.2 %</td>
+<td>0.921 / <strong>0.949</strong> / 0.936 / 0.940</td>
+<td>0.526 / 0.490 / 0.541 / <strong>0.650</strong></td>
+<td>0.945 / 0.947 / 0.947 / <strong>0.961</strong></td>
 </tr>
 </tbody>
 </table>
-<p><strong>† The strict gene-F1 column is SUPERSEDED and must be re-scored — do not
-cite these values.</strong> They were computed with a comparator that matched the
-gene feature's <em>outer</em> start/end (<code>features_match_strict</code>). MycoNote reports
-CDS-bounded gene spans (no UTR); RefSeq gene/mRNA features for the filamentous
-and basidiomycete fungi (<code>ani</code>/<code>ncr</code>/<code>cne</code>) carry UTRs. The old metric
-therefore compared a coding span against a UTR-inclusive span — it measured
-UTR-annotation <em>convention</em>, not gene-structure accuracy, which is why strict
-F1 tracked UTR content (UTR-poor yeasts 0.74–0.845; UTR-bearing fungi
-0.001–0.318) rather than prediction quality. <code>compare_annotations.py</code> now
-defines a strict match as <em>identical ordered CDS structure</em> (<code>genes_match_strict</code>,
-CDS-to-CDS, same strand), the Eilbeck et al. (2009) exact-gene definition and
-apples-to-apples across annotation conventions (verified on four synthetic
-cases: UTR-extended-but-identical-CDS → match; shifted internal boundary,
-opposite strand, and non-coding ref → no match). These strict values predate
-BOTH that fix AND the SNAP-self-train / GeneMark-ES / consensus-scoring code
-changes (predict commit <code>6c4ba2c</code>), and cluster 145093's raw GFFs are not local,
-so the column stays struck until the re-run re-scores it. Loose gene F1,
-nucleotide F1, and BUSCO are unaffected by the comparator change and stay the
-cross-clade-trustworthy signals (loose ≥ 0.90, nt ≥ 0.94, BUSCO ≥ 94 %).</p>
-<p>Timing/memory (8 threads; wall-clock summed from per-stage <code>/usr/bin/time -v</code>;
-median of 3 replicates with range; peak RSS dominated by the EggNog-mapper DB
-load in <code>annotate</code>):</p>
+<p><strong>Honest reading.</strong> MycoNote is <strong>competitive, not the accuracy leader</strong>:
+- <em>Loose gene F1</em> — MycoNote is lowest/near-lowest on every genome; funannotate leads.
+- <em>Strict gene F1</em> — a split with funannotate (each wins 3/6); MAKER leads the
+  yeasts (sce/cal/ylp), BRAKER leads the intron-rich (ani/ncr/cne). MycoNote is mid-pack.
+- <em>Nucleotide F1</em> — MycoNote edges funannotate on 5/6 and is top-tier overall.</p>
+<h3 id="speed-and-memory-median-over-3-reps-8-threads-braker-16">Speed and memory — median over 3 reps, 8 threads (BRAKER 16)<a class="headerlink" href="#speed-and-memory-median-over-3-reps-8-threads-braker-16" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>genome</th>
-<th>median wall</th>
-<th>wall range</th>
+<th>tool</th>
+<th>gene prediction</th>
+<th>functional annotation</th>
+<th>total</th>
 <th>peak RSS</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>sce</td>
-<td>100.7 min</td>
-<td>72.1–114.6</td>
-<td>~6.9 GB</td>
+<td><strong>MycoNote</strong></td>
+<td><strong>18.9 min</strong></td>
+<td>114.8 min (EggNog)¹</td>
+<td>146.6 min</td>
+<td>6.6 GB</td>
 </tr>
 <tr>
-<td>cal</td>
-<td>89.4 min</td>
-<td>76.8–99.5</td>
-<td>~6.9 GB</td>
+<td>funannotate</td>
+<td>74.5 min²</td>
+<td>8.0 min</td>
+<td>81.8 min²</td>
+<td>2.8 GB</td>
 </tr>
 <tr>
-<td>ylp</td>
-<td>75.2 min</td>
-<td>74.7–75.6</td>
-<td>~6.8 GB</td>
+<td>MAKER</td>
+<td>30.4 min (whole run; prediction only)</td>
+<td>— none</td>
+<td>30.4 min</td>
+<td>0.3 GB</td>
 </tr>
 <tr>
-<td>ani</td>
-<td>105.4 min</td>
-<td>105.3–122.4</td>
-<td>~6.8 GB</td>
-</tr>
-<tr>
-<td>ncr</td>
-<td>129.8 min</td>
-<td>118.9–134.9</td>
-<td>~6.9 GB</td>
-</tr>
-<tr>
-<td>cne</td>
-<td>92.5 min</td>
-<td>50.3–148.0</td>
-<td>~6.8 GB</td>
+<td>BRAKER</td>
+<td>~94 min² (prediction only; log-span)</td>
+<td>— none</td>
+<td>~94 min²</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
+<p><strong>MycoNote has the fastest gene prediction by a wide margin</strong> (18.9 min vs
+30–94). Three caveats stated plainly:
+1. ¹ MycoNote's 114.8-min functional annotation is the <strong>pre-v0.7.8 EggNog</strong>
+   (<code>--dmnd_iterate yes</code>). A same-node A/B showed <code>--dmnd_iterate no</code> runs
+   ~4.4× faster (3h22m→46m) with <strong>identical recall</strong> (9,736/10,655 proteins);
+   v0.7.8 makes <code>no</code> the default, projecting annotation to ~10–28 min/genome.
+   MAKER and BRAKER do <strong>no</strong> functional annotation, so their totals are
+   prediction-only and not comparable to the full-pipeline totals of
+   MycoNote/funannotate.
+2. ² funannotate and BRAKER use Augustus 3.5.0, which is AVX2-compiled and
+   <strong>SIGILLs on non-AVX2 execute nodes</strong>; their jobs were gated to AVX2-capable
+   (newer, faster) nodes, so their wall-times are <strong>not directly comparable</strong> to
+   MycoNote/MAKER, which ran the full pool. MycoNote's Augustus 3.3.3 is not
+   AVX2-compiled and runs everywhere — a genuine portability advantage.
+3. Peak RSS: MycoNote's 6.6 GB is the EggNog-mapper DB load; its prediction
+   stage alone is light.</p>
 <hr />
-<h2 id="expected-outcomes">Expected Outcomes<a class="headerlink" href="#expected-outcomes" title="Permanent link">&para;</a></h2>
-<p><strong>For the manuscript</strong>: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.</p>
-<p><strong>For users</strong>: Confidence in MycoNote-CLI's accuracy relative to established tools. If the benchmarks show MycoNote-CLI achieves comparable accuracy to funannotate/MAKER/BRAKER while running faster, that justifies adoption. If it shows MycoNote-CLI is less accurate, that informs honest scoping of where it should be used.</p>
+<h3 id="function-by-function-capability-what-each-tool-actually-ran">Function-by-function capability (what each tool actually ran)<a class="headerlink" href="#function-by-function-capability-what-each-tool-actually-ran" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>function</th>
+<th>MycoNote</th>
+<th>funannotate</th>
+<th>MAKER</th>
+<th>BRAKER</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>repeat masking</td>
+<td>✓ SelfAlign (no DB)</td>
+<td>✓ tantan (simple)</td>
+<td>✗ off</td>
+<td>✗ raw</td>
+</tr>
+<tr>
+<td>Augustus / SNAP / GeneMark</td>
+<td>✓ / ✓ / ✓(ES)</td>
+<td>✓ / ✓ / ✓(EP)</td>
+<td>✓ / ✗ / ✗</td>
+<td>✓ / ✗ / ✓(EP)</td>
+</tr>
+<tr>
+<td>GlimmerHMM</td>
+<td>✗</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>consensus</td>
+<td>own agreement-weighted</td>
+<td>EVM</td>
+<td>single predictor</td>
+<td>TSEBRA</td>
+</tr>
+<tr>
+<td>protein homology / Pfam</td>
+<td>✓ MMseqs2 / ✓</td>
+<td>✓ Diamond / ✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td><strong>EggNog orthology</strong></td>
+<td>✓</td>
+<td>✗ (default)</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>CAZyme / MEROPS / BUSCO</td>
+<td>✓ / ✓ / ✓</td>
+<td>✓ / ✓ / ✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>NCBI submission prep</td>
+<td>✓ table2asn</td>
+<td>✓ (.tbl)</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+</tbody>
+</table>
+<p>MycoNote and funannotate are the only full predict+functional-annotation
+pipelines; MAKER and BRAKER are gene-prediction only.</p>
+<h2 id="bottom-line-honest-positioning">Bottom line (honest positioning)<a class="headerlink" href="#bottom-line-honest-positioning" title="Permanent link">&para;</a></h2>
+<p>MycoNote is <strong>not the most accurate</strong> fungal annotator in this panel — it is
+competitive (beats funannotate on nucleotide F1, splits strict, trails on
+loose; mid-pack against MAKER/BRAKER). Its defensible, durable advantages are:</p>
+<ol>
+<li><strong>Fastest gene prediction</strong> (18.9 min median; 1.6–5× faster than the others).</li>
+<li><strong>Most complete functional annotation</strong> out of the box — the only tool here
+   doing EggNog orthology by default (MAKER/BRAKER do none); after v0.7.8 this
+   runs at competitive speed.</li>
+<li><strong>Portability / low friction</strong> — single Rust binary, DB-free default masking
+   (no RepeatMasker/RepBase/Dfam), Augustus 3.3.3 that runs the full compute
+   pool (funannotate/BRAKER need AVX2 nodes), modern <code>table2asn</code>.</li>
+</ol>
+<h3 id="funannotate-weakness-coverage-summary">funannotate-weakness coverage (summary)<a class="headerlink" href="#funannotate-weakness-coverage-summary" title="Permanent link">&para;</a></h3>
+<p>A systematic audit of funannotate's full issue tracker (1,093 issues) + docs
+mapped ~22 distinct weakness themes against MycoNote. MycoNote cleanly
+<strong>resolves ~4</strong> (Augustus-PPX path avoided, DB-free default masking, no
+Python-legacy in core, no CodingQuarry failures), <strong>partially mitigates ~8</strong>
+(install footprint, DB/BUSCO provisioning, EggNog speed, SignalP/Phobius
+licensing, IPRScan→REST, submission, determinism, Augustus-training class),
+<strong>still shares ~6</strong> (GeneMark license, Augustus binary, PASA lock, tRNAscan,
+contig-rename, silent-drop design), is <strong>unverified on ~2</strong> (large-assembly
+scaling, table2asn validation), and <strong>introduces ~3 of its own</strong> (the
+S288C-for-all-fungi default, BUSCO offline-dataset fallback, IPRScan
+network-only). Several of these are addressed by later versions: v0.7.9 adds a
+clade-aware species default + loud guard (S288C), opt-in lossless contig naming,
+and submit structural pre-validation. <strong>MycoNote does not remove funannotate's
+hard external-tool dependencies (GeneMark, Augustus, emapper, PASA) — it
+repackages and speeds up around them.</strong></p>
+<h2 id="caveats-for-the-manuscript">Caveats for the manuscript<a class="headerlink" href="#caveats-for-the-manuscript" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Node-class asymmetry: funannotate/BRAKER ran AVX2-gated; wall-times are not
+  directly comparable across arms (CPU-time is steadier). Report prediction
+  speed and total runtime separately.</li>
+<li>MycoNote used explicit per-genome <code>--species</code>; the naive default (pre-v0.7.9)
+  is S288C for all fungi and collapses on divergent fungi — state the species
+  provenance.</li>
+<li>EggNog timing above is the pre-v0.7.8 slow path; cite the v0.7.8 speedup
+  explicitly if quoting MycoNote's total runtime.</li>
+<li>BRAKER <code>performance.json</code> timing was unusable (all-zero); its runtime is a
+  <code>braker.log</code> log-span estimate, not the <code>/usr/bin/time</code> figure.</li>
+</ul>
 <p><strong>For the field</strong>: A reproducible benchmark protocol that other developers can use to evaluate new annotation tools.</p>
 <hr />
 <h2 id="reproducibility">Reproducibility<a class="headerlink" href="#reproducibility" title="Permanent link">&para;</a></h2>

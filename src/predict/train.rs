@@ -704,22 +704,97 @@ fn self_training_scripts_resolvable(
     .is_some()
 }
 
-/// Whether this install can self-train Augustus — i.e. `new_species.pl` resolves
-/// from the current environment / the `augustus` binary on PATH. Callers use
-/// this to bail out *before* an expensive first-pass prediction when the
-/// companion scripts are absent, so the loud stock-species fallback fires
-/// immediately instead of after wasted compute.
+/// Resolve the `AUGUSTUS_CONFIG_PATH` that `new_species.pl` will actually
+/// read, trying the explicit env var first, then the config dir that sits
+/// beside the `augustus` binary (`../config`). This must match whatever the
+/// training subprocess sees, so the generic-template check below tests the
+/// same directory the script will copy from.
+fn resolved_augustus_config_dir(augustus_bin: Option<&Path>) -> Option<PathBuf> {
+    if let Some(p) = std::env::var_os("AUGUSTUS_CONFIG_PATH").map(PathBuf::from) {
+        return Some(p);
+    }
+    let bin = augustus_bin?;
+    bin.parent()?.parent().map(|root| root.join("config"))
+}
+
+/// Whether the `species/generic/` template `new_species.pl` copies to seed a
+/// new species is present. Its absence is the second, subtler self-training
+/// blocker (after a missing `new_species.pl`): the script is found and runs,
+/// but aborts with `Could not open .../species/generic/generic_parameters.cfg`
+/// and we silently fall back to a stock species. `myconote setup --dbs
+/// augustus-fungi` now provisions this directory.
+fn self_training_generic_template_present(config_dir: Option<&Path>) -> bool {
+    match config_dir {
+        Some(dir) => dir
+            .join("species")
+            .join("generic")
+            .join("generic_parameters.cfg")
+            .is_file(),
+        None => false,
+    }
+}
+
+/// Whether this install can self-train Augustus. Two gates must both hold:
+/// (1) `new_species.pl` resolves from the environment / the `augustus` binary
+/// on PATH, and (2) the `species/generic/` template it copies from is present
+/// under the resolved `AUGUSTUS_CONFIG_PATH`. Callers use this to bail out
+/// *before* an expensive first-pass prediction when self-training cannot
+/// succeed, so the loud stock-species fallback fires immediately instead of
+/// after wasted compute.
 pub fn augustus_self_training_available() -> bool {
     let scripts_env = std::env::var_os("AUGUSTUS_SCRIPTS_PATH").map(PathBuf::from);
     let bin_env = std::env::var_os("AUGUSTUS_BIN_PATH").map(PathBuf::from);
     let config_env = std::env::var_os("AUGUSTUS_CONFIG_PATH").map(PathBuf::from);
     let augustus_bin = which::which("augustus").ok();
-    self_training_scripts_resolvable(
+    let scripts_ok = self_training_scripts_resolvable(
         scripts_env.as_deref(),
         bin_env.as_deref(),
         config_env.as_deref(),
         augustus_bin.as_deref(),
-    )
+    );
+    let config_dir = resolved_augustus_config_dir(augustus_bin.as_deref());
+    scripts_ok && self_training_generic_template_present(config_dir.as_deref())
+}
+
+/// If self-training cannot run, return the *specific* blocking reason so the
+/// caller's fallback banner names the real cause (and the exact fix) rather
+/// than a generic "scripts not found". Returns `None` when self-training is
+/// available. The two gates are checked in the order they bite: scripts
+/// first (nothing runs without `new_species.pl`), then the generic template
+/// (the script runs but aborts copying `species/generic/`).
+pub fn self_training_unavailable_reason() -> Option<String> {
+    let scripts_env = std::env::var_os("AUGUSTUS_SCRIPTS_PATH").map(PathBuf::from);
+    let bin_env = std::env::var_os("AUGUSTUS_BIN_PATH").map(PathBuf::from);
+    let config_env = std::env::var_os("AUGUSTUS_CONFIG_PATH").map(PathBuf::from);
+    let augustus_bin = which::which("augustus").ok();
+
+    if !self_training_scripts_resolvable(
+        scripts_env.as_deref(),
+        bin_env.as_deref(),
+        config_env.as_deref(),
+        augustus_bin.as_deref(),
+    ) {
+        return Some(
+            "Augustus companion scripts (new_species.pl / etraining / \
+             gff2gbSmallDNA.pl) were not found beside the augustus binary, under \
+             $AUGUSTUS_SCRIPTS_PATH, or $AUGUSTUS_CONFIG_PATH/../scripts"
+                .to_string(),
+        );
+    }
+
+    let config_dir = resolved_augustus_config_dir(augustus_bin.as_deref());
+    if !self_training_generic_template_present(config_dir.as_deref()) {
+        let where_ = config_dir
+            .map(|d| d.join("species").join("generic").display().to_string())
+            .unwrap_or_else(|| "$AUGUSTUS_CONFIG_PATH/species/generic".to_string());
+        return Some(format!(
+            "the species/generic/ template new_species.pl copies to seed a new \
+             species is missing ({where_}/generic_parameters.cfg not found). \
+             Run `myconote setup --dbs augustus-fungi` to provision it"
+        ));
+    }
+
+    None
 }
 
 fn find_augustus_species_path(species: &str) -> Option<PathBuf> {
@@ -876,6 +951,42 @@ mod tests {
             None,
             Some(&aug)
         ));
+    }
+
+    // The generic/ template gate: scripts can resolve while self-training is
+    // still blocked because species/generic/generic_parameters.cfg is absent
+    // (the second, subtler blocker that silently forced a stock fallback).
+    #[test]
+    fn generic_template_gate_detected() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config");
+        // No generic template yet → not present.
+        assert!(!self_training_generic_template_present(Some(&config)));
+        // None config dir → not present (never panics).
+        assert!(!self_training_generic_template_present(None));
+        // Create the template file → present.
+        let gdir = config.join("species").join("generic");
+        std::fs::create_dir_all(&gdir).unwrap();
+        touch(&gdir.join("generic_parameters.cfg"));
+        assert!(self_training_generic_template_present(Some(&config)));
+    }
+
+    // AUGUSTUS_CONFIG_PATH/../config is derived from the augustus binary when
+    // the env var is unset, matching what new_species.pl resolves at runtime.
+    #[test]
+    fn config_dir_resolved_beside_augustus_binary() {
+        // Env var wins when set; this test only exercises the binary-derived
+        // branch, so skip if the process environment has AUGUSTUS_CONFIG_PATH
+        // (avoids flakiness from parallel tests / CI environments).
+        if std::env::var_os("AUGUSTUS_CONFIG_PATH").is_some() {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let aug = dir.path().join("bin").join("augustus");
+        touch(&aug);
+        // With no env var set, config dir is <augustus>/../config.
+        let resolved = resolved_augustus_config_dir(Some(&aug));
+        assert_eq!(resolved, Some(dir.path().join("config")));
     }
 
     // Missing script → resolver returns None (the caller maps this to a clean,

@@ -253,6 +253,8 @@ fn main() -> Result<()> {
                 println!("                              no diamond, capped to --protein-hints-max.");
                 println!("  --protein-hints-evalue <E>  diamond evalue for the prefilter (default: 1e-5)");
                 println!("  --protein-hints-max <N>     Max proteins fed to miniprot after prefilter");
+                println!("  --protein-hints-min-identity <P>  Keep only prefilter hits ≥ P% identity");
+                println!("                              (0 = keep all; raise to drop remote homologs)");
                 println!("                              (default: 50000; 0 = unbounded).");
                 println!("  --locus-prefix <prefix>     Gene ID prefix (default: GENE)");
                 println!("  --train, --self-train       Auto-train Augustus from first-pass prediction");
@@ -2045,6 +2047,18 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                     Err(_) => {
                         return Err(anyhow::anyhow!(
                             "Invalid --protein-hints-max {:?}: expected a non-negative integer (0 = unbounded)",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            "--protein-hints-min-identity" if i + 1 < args.len() => {
+                match args[i + 1].parse::<f64>() {
+                    Ok(p) if (0.0..=100.0).contains(&p) => config.protein_hints_min_identity = p,
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --protein-hints-min-identity {:?}: expected a percent in 0-100 (0 = keep all hits)",
                             args[i + 1]
                         ));
                     }

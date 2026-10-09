@@ -224,6 +224,24 @@ pub const AUGUSTUS_SPECIES_FILES: &[&str] = &[
     "_weightmatrix.txt",
 ];
 
+/// The `species/generic/` template directory upstream. `new_species.pl`
+/// seeds every new (self-trained) species by copying these files out of
+/// `AUGUSTUS_CONFIG_PATH/species/generic/`; without them self-training
+/// aborts with `Could not open .../species/generic/generic_parameters.cfg`.
+/// These filenames are the full generic set (they do NOT follow the
+/// `<species>_<suffix>` pattern, so they need their own list). Verified
+/// against config/species/generic/ upstream.
+pub const AUGUSTUS_GENERIC_FILES: &[&str] = &[
+    "generic_parameters.cfg",
+    "generic_metapars.cfg",
+    "generic_metapars.utr.cfg",
+    "generic_metapars.cgp.cfg",
+    "generic_exon_probs.pbl",
+    "generic_intron_probs.pbl",
+    "generic_igenic_probs.pbl",
+    "generic_weightmatrix.txt",
+];
+
 const AUGUSTUS_GITHUB_RAW: &str =
     "https://raw.githubusercontent.com/Gaius-Augustus/Augustus/master/config/species";
 
@@ -1096,6 +1114,67 @@ fn species_present(config_root: &Path, name: &str) -> bool {
         .all(|suffix| dir.join(format!("{}{}", name, suffix)).is_file())
 }
 
+/// Whether the `species/generic/` template directory is fully populated.
+/// Required for Augustus self-training (`new_species.pl`) to work.
+fn generic_present(config_root: &Path) -> bool {
+    let dir = config_root.join("species").join("generic");
+    if !dir.is_dir() {
+        return false;
+    }
+    // generic_parameters.cfg is the file new_species.pl opens first (and
+    // the one whose absence triggered the self-training abort); treat the
+    // whole template as present only when every file is on disk.
+    AUGUSTUS_GENERIC_FILES.iter().all(|f| dir.join(f).is_file())
+}
+
+/// Fetch the `species/generic/` template so self-training can bootstrap a
+/// new species. Mirrors the per-species downloader but uses the flat
+/// `generic_*` filenames. Returns the files it could not fetch.
+fn download_augustus_generic(species_root: &Path, force: bool) -> Vec<String> {
+    let dir = species_root.join("generic");
+    if std::fs::create_dir_all(&dir).is_err() {
+        return AUGUSTUS_GENERIC_FILES
+            .iter()
+            .map(|f| f.to_string())
+            .collect();
+    }
+    let mut failed = Vec::new();
+    for filename in AUGUSTUS_GENERIC_FILES {
+        let dest = dir.join(filename);
+        if dest.exists() && !force {
+            continue;
+        }
+        let url = format!("{}/generic/{}", AUGUSTUS_GITHUB_RAW, filename);
+        print!("  {:<42} {} … ", "generic", filename);
+        use std::io::Write as IoWrite;
+        std::io::stdout().flush().ok();
+        let ok = Command::new("curl")
+            .args([
+                "-fsSL",
+                "--retry",
+                "3",
+                "--retry-delay",
+                "2",
+                "--max-time",
+                "60",
+                "-o",
+                dest.to_str().unwrap_or(""),
+                &url,
+            ])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if ok {
+            println!("ok");
+        } else {
+            println!("\x1b[31mFAILED\x1b[0m  ({})", url);
+            let _ = std::fs::remove_file(&dest);
+            failed.push((*filename).to_string());
+        }
+    }
+    failed
+}
+
 fn download_augustus_fungi(db_dir: &Path, force: bool, dry_run: bool) -> Result<()> {
     let config_root = augustus_config_root();
     let species_root = config_root.join("species");
@@ -1118,6 +1197,15 @@ fn download_augustus_fungi(db_dir: &Path, force: bool, dry_run: bool) -> Result<
                 }
             );
         }
+        println!(
+            "    {:<42} {}",
+            "generic (self-training template)",
+            if generic_present(&config_root) {
+                "[already present]"
+            } else {
+                "[would download]"
+            }
+        );
         println!(
             "\n  After install, set:  export AUGUSTUS_CONFIG_PATH={}",
             config_root.display()
@@ -1191,6 +1279,16 @@ fn download_augustus_fungi(db_dir: &Path, force: bool, dry_run: bool) -> Result<
         }
     }
 
+    // Always ensure the generic/ template is present: self-training
+    // (`new_species.pl`) copies it to bootstrap a new species, and its
+    // absence was silently forcing a fallback to stock species.
+    let generic_failed = if generic_present(&config_root) && !force {
+        println!("  [skip] generic template (already present)");
+        Vec::new()
+    } else {
+        download_augustus_generic(&species_root, force)
+    };
+
     let _ = write_db_version(db_dir, "augustus-fungi", AUGUSTUS_GITHUB_RAW);
 
     println!();
@@ -1202,6 +1300,15 @@ fn download_augustus_fungi(db_dir: &Path, force: bool, dry_run: bool) -> Result<
     );
     if !failed.is_empty() {
         println!("    Failures: {}", failed.join(", "));
+    }
+    if generic_failed.is_empty() {
+        println!("  self-training template (species/generic/): ready");
+    } else {
+        println!(
+            "  \x1b[31mself-training template INCOMPLETE\x1b[0m — missing: {}",
+            generic_failed.join(", ")
+        );
+        println!("    Augustus --augustus-training self will fall back to a stock species.");
     }
     println!();
     println!("  Point Augustus at the curated config dir:");
@@ -1767,5 +1874,29 @@ tags = []
             std::fs::write(sp_dir.join(format!("{}{}", sp, suffix)), "x").unwrap();
         }
         assert!(species_present(dir.path(), sp));
+    }
+
+    #[test]
+    fn generic_present_requires_full_template() {
+        let dir = tempfile::tempdir().unwrap();
+        let gdir = dir.path().join("species").join("generic");
+        std::fs::create_dir_all(&gdir).unwrap();
+        // Empty dir → not present.
+        assert!(!generic_present(dir.path()));
+        // Only generic_parameters.cfg → still incomplete.
+        std::fs::write(gdir.join("generic_parameters.cfg"), "x").unwrap();
+        assert!(!generic_present(dir.path()));
+        // All template files → present.
+        for f in AUGUSTUS_GENERIC_FILES {
+            std::fs::write(gdir.join(f), "x").unwrap();
+        }
+        assert!(generic_present(dir.path()));
+    }
+
+    #[test]
+    fn generic_file_list_includes_the_file_new_species_opens() {
+        // new_species.pl opens generic_parameters.cfg first; it must be in
+        // the provisioned set or self-training silently falls back.
+        assert!(AUGUSTUS_GENERIC_FILES.contains(&"generic_parameters.cfg"));
     }
 }

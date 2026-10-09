@@ -130,6 +130,13 @@ pub struct PredictConfig {
     /// (v0.7.10). Bounds runtime so a full OrthoDB partition can't stall the
     /// run. `0` = unbounded. Default `50_000`.
     pub protein_hints_max: usize,
+    /// Minimum percent identity (0-100) a diamond hit must reach for its
+    /// protein to pass the `--protein-hints` prefilter (v0.7.11). `0.0`
+    /// (default) keeps every protein with a hit; raising it keeps only
+    /// near-orthologs, following the "close relatives beat remote proteins"
+    /// finding — a whole-kingdom OrthoDB set otherwise feeds miniprot many
+    /// distant, low-identity homologs that add noise.
+    pub protein_hints_min_identity: f64,
 }
 
 impl Default for PredictConfig {
@@ -167,6 +174,7 @@ impl Default for PredictConfig {
             protein_hints: None,
             protein_hints_evalue: 1e-5,
             protein_hints_max: 50_000,
+            protein_hints_min_identity: 0.0,
         }
     }
 }
@@ -871,10 +879,13 @@ fn self_training_fallback_banner(reason: &str, stock_species: &str) -> String {
          \n\
            reason         : {reason}\n\
            using species  : {stock_species}  (stock / pre-trained fallback)\n\
-           how to fix      : install the Augustus companion scripts\n\
-                             (new_species.pl, etraining, gff2gbSmallDNA.pl) in\n\
-                             the same install as the `augustus` binary, or set\n\
-                             $AUGUSTUS_SCRIPTS_PATH to the directory holding them.\n\
+           how to fix      : the reason above says which gate failed.\n\
+                             • scripts missing → install the companion scripts\n\
+                               (new_species.pl, etraining, gff2gbSmallDNA.pl) beside\n\
+                               the `augustus` binary, or set $AUGUSTUS_SCRIPTS_PATH.\n\
+                             • generic template missing → run\n\
+                               `myconote setup --dbs augustus-fungi` to provision\n\
+                               species/generic/ under $AUGUSTUS_CONFIG_PATH.\n\
          ======================================================================"
     )
 }
@@ -891,14 +902,10 @@ fn run_self_training(config: &PredictConfig) -> Result<String> {
     // resolved from this install. Running a first-pass Augustus only to fail at
     // `new_species.pl` wastes minutes per genome and buries the real cause; the
     // caller turns this Err into the loud stock-species fallback banner.
-    if !train::augustus_self_training_available() {
-        return Err(MycoNoteError::UnsupportedFormat(
-            "Augustus companion scripts (new_species.pl / etraining / \
-             gff2gbSmallDNA.pl) were not found beside the augustus binary, under \
-             $AUGUSTUS_SCRIPTS_PATH, or $AUGUSTUS_CONFIG_PATH/../scripts — \
-             self-training cannot run on this install"
-                .to_string(),
-        ));
+    if let Some(reason) = train::self_training_unavailable_reason() {
+        return Err(MycoNoteError::UnsupportedFormat(format!(
+            "{reason} — self-training cannot run on this install"
+        )));
     }
 
     // Seed the first-pass model with the clade-aware default so a basidiomycete
@@ -1002,6 +1009,7 @@ fn build_protein_hints_miniprot(config: &PredictConfig, prot_fa: &Path) -> Resul
     // errors leaves Augustus ab-initio.
     let prefilter = protein_evidence::PrefilterParams {
         evalue: config.protein_hints_evalue,
+        min_identity: config.protein_hints_min_identity,
         max_proteins: config.protein_hints_max,
         threads: config.threads,
     };

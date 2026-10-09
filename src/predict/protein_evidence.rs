@@ -117,6 +117,14 @@ pub fn diamond_available() -> bool {
 pub struct PrefilterParams {
     /// diamond `--evalue` threshold for keeping a protein hit.
     pub evalue: f64,
+    /// Minimum percent identity (0-100) a diamond hit must reach for its
+    /// protein to be kept. `0.0` keeps every hit below the e-value (the
+    /// original behaviour). Raising it enacts the "close relatives beat
+    /// remote proteins" finding (Gabriel et al. BRAKER3; Brůna et al. GALBA):
+    /// a whole-kingdom OrthoDB partition contains many distant homologs whose
+    /// low-identity, partial alignments add noise rather than signal, so
+    /// gating on identity keeps only near-orthologs for miniprot.
+    pub min_identity: f64,
     /// Maximum proteins fed to miniprot after prefiltering. `0` = unbounded.
     pub max_proteins: usize,
     /// Threads for diamond.
@@ -127,6 +135,9 @@ impl Default for PrefilterParams {
     fn default() -> Self {
         Self {
             evalue: 1e-5,
+            // Default off (0.0) so existing behaviour is unchanged until the
+            // user opts in; the benchmark A/B picks the operating point.
+            min_identity: 0.0,
             max_proteins: 50_000,
             threads: 4,
         }
@@ -156,9 +167,17 @@ fn write_fasta_record(out: &mut impl Write, rec: &crate::parser::fasta::FastaRec
     Ok(())
 }
 
-/// Parse diamond `--outfmt 6` output and collect the set of subject (protein)
-/// IDs with a hit. Column 2 (0-based index 1) is `sseqid`.
-fn parse_diamond_hit_ids(tsv: &Path) -> Result<std::collections::HashSet<String>> {
+/// Parse diamond `--outfmt 6 qseqid sseqid pident evalue` output and collect
+/// the set of subject (protein) IDs with at least one hit at or above
+/// `min_identity` percent identity. Column 2 (index 1) is `sseqid`, column 3
+/// (index 2) is `pident`. A protein is kept if *any* of its hits clears the
+/// identity gate, so a true ortholog with one strong local alignment survives
+/// while a distant homolog with only weak hits is dropped. `min_identity` of
+/// 0.0 keeps every protein with a hit (original behaviour).
+fn parse_diamond_hit_ids(
+    tsv: &Path,
+    min_identity: f64,
+) -> Result<std::collections::HashSet<String>> {
     let file = std::fs::File::open(tsv).map_err(MycoNoteError::Io)?;
     let mut ids = std::collections::HashSet::new();
     for line in BufReader::new(file).lines() {
@@ -167,11 +186,21 @@ fn parse_diamond_hit_ids(tsv: &Path) -> Result<std::collections::HashSet<String>
         if t.is_empty() || t.starts_with('#') {
             continue;
         }
-        if let Some(sseqid) = t.split('\t').nth(1) {
-            if !sseqid.is_empty() {
-                ids.insert(sseqid.to_string());
+        let mut cols = t.split('\t');
+        let sseqid = cols.nth(1).unwrap_or("");
+        if sseqid.is_empty() {
+            continue;
+        }
+        if min_identity > 0.0 {
+            // `pident` is the next column (index 2 overall). A malformed /
+            // missing value fails the gate rather than slipping through.
+            let pident = cols.next().and_then(|v| v.parse::<f64>().ok());
+            match pident {
+                Some(p) if p >= min_identity => {}
+                _ => continue,
             }
         }
+        ids.insert(sseqid.to_string());
     }
     Ok(ids)
 }
@@ -272,7 +301,7 @@ fn run_diamond_prefilter(
         ));
     }
 
-    parse_diamond_hit_ids(&hits)
+    parse_diamond_hit_ids(&hits, params.min_identity)
 }
 
 /// Reduce a (potentially huge) protein DB to a miniprot-sized set before
@@ -294,10 +323,17 @@ pub fn prefilter_protein_db(
     let reduced = out_dir.join("proteins_prefiltered.faa");
 
     if diamond_available() {
-        println!(
-            "  Prefiltering protein DB with diamond blastx (evalue ≤ {:e})…",
-            params.evalue
-        );
+        if params.min_identity > 0.0 {
+            println!(
+                "  Prefiltering protein DB with diamond blastx (evalue ≤ {:e}, identity ≥ {:.0}%)…",
+                params.evalue, params.min_identity
+            );
+        } else {
+            println!(
+                "  Prefiltering protein DB with diamond blastx (evalue ≤ {:e})…",
+                params.evalue
+            );
+        }
         match run_diamond_prefilter(proteins, genome, out_dir, params) {
             Ok(ids) if !ids.is_empty() => {
                 let (kept, capped) =
@@ -608,7 +644,7 @@ MQRSTV
             &tsv,
             "contig1\tp2\t88.0\t1e-20\ncontig1\tp4\t72.0\t3e-10\ncontig2\tp2\t91.0\t1e-30\n",
         );
-        let ids = parse_diamond_hit_ids(&tsv).unwrap();
+        let ids = parse_diamond_hit_ids(&tsv, 0.0).unwrap();
         let expected: HashSet<String> = ["p2".to_string(), "p4".to_string()].into_iter().collect();
         assert_eq!(ids, expected);
     }
@@ -688,6 +724,7 @@ MQRSTV
 
         let params = PrefilterParams {
             evalue: 1e-5,
+            min_identity: 0.0,
             max_proteins: 2,
             threads: 1,
         };
@@ -700,5 +737,33 @@ MQRSTV
             "the max cap bounds the set regardless of path (got {})",
             res.n_kept
         );
+    }
+
+    // The identity gate drops subjects whose only hit is below the threshold,
+    // while keeping a subject that has at least one hit at or above it.
+    #[test]
+    fn identity_gate_filters_low_identity_hits() {
+        use std::io::Write as _;
+        let dir = tempfile::tempdir().unwrap();
+        let tsv = dir.path().join("hits.tsv");
+        let mut f = std::fs::File::create(&tsv).unwrap();
+        // qseqid  sseqid  pident  evalue
+        writeln!(f, "chr1\tprotA\t85.0\t1e-40").unwrap(); // strong — keep
+        writeln!(f, "chr1\tprotB\t30.0\t1e-6").unwrap(); // weak only — drop at 60
+        writeln!(f, "chr2\tprotC\t35.0\t1e-7").unwrap(); // weak…
+        writeln!(f, "chr3\tprotC\t72.0\t1e-20").unwrap(); // …but also strong — keep
+        drop(f);
+
+        // No gate (0.0) → all three subjects kept.
+        let all = parse_diamond_hit_ids(&tsv, 0.0).unwrap();
+        assert_eq!(all.len(), 3);
+
+        // Gate at 60% → protB dropped (only 30%), protA and protC kept
+        // (protC survives on its 72% hit even though it also has a 35% one).
+        let gated = parse_diamond_hit_ids(&tsv, 60.0).unwrap();
+        assert!(gated.contains("protA"));
+        assert!(gated.contains("protC"));
+        assert!(!gated.contains("protB"));
+        assert_eq!(gated.len(), 2);
     }
 }

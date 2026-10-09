@@ -321,63 +321,126 @@ on a different cluster will need the same fixes.
 
 ---
 
-## Results (completed MycoNote arm — HTCondor cluster 145093)
+## Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)
 
-All 18 jobs (6 genomes × 3 replicates) completed with exit 0 on every stage,
-each genome run with its clade-appropriate Augustus species model. Accuracy is
-deterministic across replicates (identical metrics in all three), following the
-Eilbeck et al. (2009) gene/exon/nucleotide sensitivity–specificity–F1 scheme;
-BUSCO run against the clade `odb10` lineage.
+All four tools completed 18/18 jobs (6 genomes × 3 replicates). Accuracy follows
+the Eilbeck et al. (2009) gene/nucleotide sensitivity–specificity–F1 scheme.
+Strict gene F1 uses the **CDS-structure** definition (`genes_match_strict`:
+identical ordered CDS set, same strand) — not the old outer-bound match, which
+confounded UTR-annotation convention with gene-structure accuracy and is
+superseded. **This comparison is apples-to-apples on the predictor set: all
+four tools ran with GeneMark** (funannotate's first run skipped GeneMark for an
+unset `$GENEMARK_PATH`; it was re-run with GeneMark provisioned so both full
+pipelines carry the same ab-initio stack). Each tool used its clade-appropriate
+Augustus species (MycoNote via explicit `--species`; funannotate via
+`--busco_seed_species`). Replicates are tight (per-rep gene-count drift
+~0.1–0.5 %); values below are the per-genome mean of 3 reps.
 
-| genome | Augustus model | loose gene F1 | strict gene F1 † | nt F1 | BUSCO |
-|---|---|---|---|---|---|
-| sce | saccharomyces_cerevisiae_S288C | 0.912 | ~~0.838~~ † | 0.985 | 96.4 % |
-| cal | candida_albicans | 0.951 | ~~0.845~~ † | 0.986 | 95.3 % |
-| ylp | yarrowia_lipolytica | 0.913 | ~~0.740~~ † | 0.974 | 97.8 % |
-| ani | aspergillus_nidulans | 0.919 | ~~0.318~~ † | 0.943 | 98.2 % |
-| ncr | neurospora_crassa | 0.898 | ~~0.083~~ † | 0.963 | 99.6 % |
-| cne | cryptococcus_neoformans_neoformans_JEC21 | 0.936 | ~~0.001~~ † | 0.946 | 94.2 % |
+### Accuracy — gene-level loose F1 / strict F1, nucleotide F1 (myco / funannotate / MAKER / BRAKER)
 
-**† The strict gene-F1 column is SUPERSEDED and must be re-scored — do not
-cite these values.** They were computed with a comparator that matched the
-gene feature's *outer* start/end (`features_match_strict`). MycoNote reports
-CDS-bounded gene spans (no UTR); RefSeq gene/mRNA features for the filamentous
-and basidiomycete fungi (`ani`/`ncr`/`cne`) carry UTRs. The old metric
-therefore compared a coding span against a UTR-inclusive span — it measured
-UTR-annotation *convention*, not gene-structure accuracy, which is why strict
-F1 tracked UTR content (UTR-poor yeasts 0.74–0.845; UTR-bearing fungi
-0.001–0.318) rather than prediction quality. `compare_annotations.py` now
-defines a strict match as *identical ordered CDS structure* (`genes_match_strict`,
-CDS-to-CDS, same strand), the Eilbeck et al. (2009) exact-gene definition and
-apples-to-apples across annotation conventions (verified on four synthetic
-cases: UTR-extended-but-identical-CDS → match; shifted internal boundary,
-opposite strand, and non-coding ref → no match). These strict values predate
-BOTH that fix AND the SNAP-self-train / GeneMark-ES / consensus-scoring code
-changes (predict commit `6c4ba2c`), and cluster 145093's raw GFFs are not local,
-so the column stays struck until the re-run re-scores it. Loose gene F1,
-nucleotide F1, and BUSCO are unaffected by the comparator change and stay the
-cross-clade-trustworthy signals (loose ≥ 0.90, nt ≥ 0.94, BUSCO ≥ 94 %).
-
-Timing/memory (8 threads; wall-clock summed from per-stage `/usr/bin/time -v`;
-median of 3 replicates with range; peak RSS dominated by the EggNog-mapper DB
-load in `annotate`):
-
-| genome | median wall | wall range | peak RSS |
+| genome | loose gene F1 | strict gene F1 | nucleotide F1 |
 |---|---|---|---|
-| sce | 100.7 min | 72.1–114.6 | ~6.9 GB |
-| cal | 89.4 min | 76.8–99.5 | ~6.9 GB |
-| ylp | 75.2 min | 74.7–75.6 | ~6.8 GB |
-| ani | 105.4 min | 105.3–122.4 | ~6.8 GB |
-| ncr | 129.8 min | 118.9–134.9 | ~6.9 GB |
-| cne | 92.5 min | 50.3–148.0 | ~6.8 GB |
+| sce | 0.891 / **0.939** / 0.912 / 0.917 | 0.788 / 0.813 / **0.827** / 0.729 | **0.985** / 0.968 / 0.986 / 0.980 |
+| cal | 0.925 / **0.956** / 0.952 / 0.958 | 0.803 / 0.810 / **0.839** / 0.709 | 0.986 / 0.978 / **0.989** / 0.990 |
+| ylp | 0.908 / **0.947** / 0.913 / 0.918 | 0.726 / 0.672 / **0.734** / 0.728 | 0.972 / 0.959 / 0.974 / **0.977** |
+| ani | 0.897 / 0.921 / 0.919 / **0.932** | 0.445 / 0.488 / 0.465 / **0.524** | 0.941 / 0.936 / 0.944 / **0.952** |
+| ncr | 0.897 / 0.909 / 0.898 / **0.914** | 0.564 / 0.520 / 0.568 / **0.647** | 0.964 / 0.936 / 0.964 / **0.978** |
+| cne | 0.921 / **0.949** / 0.936 / 0.940 | 0.526 / 0.490 / 0.541 / **0.650** | 0.945 / 0.947 / 0.947 / **0.961** |
+
+**Honest reading.** MycoNote is **competitive, not the accuracy leader**:
+- *Loose gene F1* — MycoNote is lowest/near-lowest on every genome; funannotate leads.
+- *Strict gene F1* — a split with funannotate (each wins 3/6); MAKER leads the
+  yeasts (sce/cal/ylp), BRAKER leads the intron-rich (ani/ncr/cne). MycoNote is mid-pack.
+- *Nucleotide F1* — MycoNote edges funannotate on 5/6 and is top-tier overall.
+
+### Speed and memory — median over 3 reps, 8 threads (BRAKER 16)
+
+| tool | gene prediction | functional annotation | total | peak RSS |
+|---|---|---|---|---|
+| **MycoNote** | **18.9 min** | 114.8 min (EggNog)¹ | 146.6 min | 6.6 GB |
+| funannotate | 74.5 min² | 8.0 min | 81.8 min² | 2.8 GB |
+| MAKER | 30.4 min (whole run; prediction only) | — none | 30.4 min | 0.3 GB |
+| BRAKER | ~94 min² (prediction only; log-span) | — none | ~94 min² | — |
+
+**MycoNote has the fastest gene prediction by a wide margin** (18.9 min vs
+30–94). Three caveats stated plainly:
+1. ¹ MycoNote's 114.8-min functional annotation is the **pre-v0.7.8 EggNog**
+   (`--dmnd_iterate yes`). A same-node A/B showed `--dmnd_iterate no` runs
+   ~4.4× faster (3h22m→46m) with **identical recall** (9,736/10,655 proteins);
+   v0.7.8 makes `no` the default, projecting annotation to ~10–28 min/genome.
+   MAKER and BRAKER do **no** functional annotation, so their totals are
+   prediction-only and not comparable to the full-pipeline totals of
+   MycoNote/funannotate.
+2. ² funannotate and BRAKER use Augustus 3.5.0, which is AVX2-compiled and
+   **SIGILLs on non-AVX2 execute nodes**; their jobs were gated to AVX2-capable
+   (newer, faster) nodes, so their wall-times are **not directly comparable** to
+   MycoNote/MAKER, which ran the full pool. MycoNote's Augustus 3.3.3 is not
+   AVX2-compiled and runs everywhere — a genuine portability advantage.
+3. Peak RSS: MycoNote's 6.6 GB is the EggNog-mapper DB load; its prediction
+   stage alone is light.
 
 ---
 
-## Expected Outcomes
+### Function-by-function capability (what each tool actually ran)
 
-**For the manuscript**: A comparison table showing each tool's mean ± SD for sensitivity, specificity, F1, runtime, and memory across the six fungal panel genomes, with statistical significance markers. This is the central result the reviewer asked for.
+| function | MycoNote | funannotate | MAKER | BRAKER |
+|---|---|---|---|---|
+| repeat masking | ✓ SelfAlign (no DB) | ✓ tantan (simple) | ✗ off | ✗ raw |
+| Augustus / SNAP / GeneMark | ✓ / ✓ / ✓(ES) | ✓ / ✓ / ✓(EP) | ✓ / ✗ / ✗ | ✓ / ✗ / ✓(EP) |
+| GlimmerHMM | ✗ | ✓ | ✗ | ✗ |
+| consensus | own agreement-weighted | EVM | single predictor | TSEBRA |
+| protein homology / Pfam | ✓ MMseqs2 / ✓ | ✓ Diamond / ✓ | ✗ | ✗ |
+| **EggNog orthology** | ✓ | ✗ (default) | ✗ | ✗ |
+| CAZyme / MEROPS / BUSCO | ✓ / ✓ / ✓ | ✓ / ✓ / ✓ | ✗ | ✗ |
+| NCBI submission prep | ✓ table2asn | ✓ (.tbl) | ✗ | ✗ |
 
-**For users**: Confidence in MycoNote-CLI's accuracy relative to established tools. If the benchmarks show MycoNote-CLI achieves comparable accuracy to funannotate/MAKER/BRAKER while running faster, that justifies adoption. If it shows MycoNote-CLI is less accurate, that informs honest scoping of where it should be used.
+MycoNote and funannotate are the only full predict+functional-annotation
+pipelines; MAKER and BRAKER are gene-prediction only.
+
+## Bottom line (honest positioning)
+
+MycoNote is **not the most accurate** fungal annotator in this panel — it is
+competitive (beats funannotate on nucleotide F1, splits strict, trails on
+loose; mid-pack against MAKER/BRAKER). Its defensible, durable advantages are:
+
+1. **Fastest gene prediction** (18.9 min median; 1.6–5× faster than the others).
+2. **Most complete functional annotation** out of the box — the only tool here
+   doing EggNog orthology by default (MAKER/BRAKER do none); after v0.7.8 this
+   runs at competitive speed.
+3. **Portability / low friction** — single Rust binary, DB-free default masking
+   (no RepeatMasker/RepBase/Dfam), Augustus 3.3.3 that runs the full compute
+   pool (funannotate/BRAKER need AVX2 nodes), modern `table2asn`.
+
+### funannotate-weakness coverage (summary)
+
+A systematic audit of funannotate's full issue tracker (1,093 issues) + docs
+mapped ~22 distinct weakness themes against MycoNote. MycoNote cleanly
+**resolves ~4** (Augustus-PPX path avoided, DB-free default masking, no
+Python-legacy in core, no CodingQuarry failures), **partially mitigates ~8**
+(install footprint, DB/BUSCO provisioning, EggNog speed, SignalP/Phobius
+licensing, IPRScan→REST, submission, determinism, Augustus-training class),
+**still shares ~6** (GeneMark license, Augustus binary, PASA lock, tRNAscan,
+contig-rename, silent-drop design), is **unverified on ~2** (large-assembly
+scaling, table2asn validation), and **introduces ~3 of its own** (the
+S288C-for-all-fungi default, BUSCO offline-dataset fallback, IPRScan
+network-only). Several of these are addressed by later versions: v0.7.9 adds a
+clade-aware species default + loud guard (S288C), opt-in lossless contig naming,
+and submit structural pre-validation. **MycoNote does not remove funannotate's
+hard external-tool dependencies (GeneMark, Augustus, emapper, PASA) — it
+repackages and speeds up around them.**
+
+## Caveats for the manuscript
+
+- Node-class asymmetry: funannotate/BRAKER ran AVX2-gated; wall-times are not
+  directly comparable across arms (CPU-time is steadier). Report prediction
+  speed and total runtime separately.
+- MycoNote used explicit per-genome `--species`; the naive default (pre-v0.7.9)
+  is S288C for all fungi and collapses on divergent fungi — state the species
+  provenance.
+- EggNog timing above is the pre-v0.7.8 slow path; cite the v0.7.8 speedup
+  explicitly if quoting MycoNote's total runtime.
+- BRAKER `performance.json` timing was unusable (all-zero); its runtime is a
+  `braker.log` log-span estimate, not the `/usr/bin/time` figure.
 
 **For the field**: A reproducible benchmark protocol that other developers can use to evaluate new annotation tools.
 

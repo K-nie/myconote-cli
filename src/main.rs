@@ -248,6 +248,12 @@ fn main() -> Result<()> {
                 println!("  --protein-evidence <blast>  BLAST tabular fmt6 protein hits for hints");
                 println!("  --protein-hints <proteins.fa> Protein FASTA → miniprot → Augustus hints");
                 println!("                              (BRAKER-style; non-fatal if miniprot absent).");
+                println!("                              Prefiltered with diamond before alignment so a");
+                println!("                              full OrthoDB partition can't stall the run; with");
+                println!("                              no diamond, capped to --protein-hints-max.");
+                println!("  --protein-hints-evalue <E>  diamond evalue for the prefilter (default: 1e-5)");
+                println!("  --protein-hints-max <N>     Max proteins fed to miniprot after prefilter");
+                println!("                              (default: 50000; 0 = unbounded).");
                 println!("  --locus-prefix <prefix>     Gene ID prefix (default: GENE)");
                 println!("  --train, --self-train       Auto-train Augustus from first-pass prediction");
                 println!("  --augustus-training <mode>  stock|self (default: stock). `self` trains a");
@@ -2018,6 +2024,31 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
             // Feature 3: protein FASTA → miniprot → Augustus extrinsic hints.
             "--protein-hints" if i + 1 < args.len() => {
                 config.protein_hints = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            // FIX B: tune the protein-hints prefilter (diamond evalue + max cap).
+            "--protein-hints-evalue" if i + 1 < args.len() => {
+                match args[i + 1].parse::<f64>() {
+                    Ok(e) if e > 0.0 => config.protein_hints_evalue = e,
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --protein-hints-evalue {:?}: expected a positive number (e.g. 1e-5)",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            "--protein-hints-max" if i + 1 < args.len() => {
+                match args[i + 1].parse::<usize>() {
+                    Ok(n) => config.protein_hints_max = n,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --protein-hints-max {:?}: expected a non-negative integer (0 = unbounded)",
+                            args[i + 1]
+                        ));
+                    }
+                }
                 i += 2;
             }
             // Feature 1: consensus false-positive filter.

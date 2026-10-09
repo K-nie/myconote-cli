@@ -544,54 +544,182 @@ fn optimize_species(species: &str, train_gb: &Path, config: &TrainConfig) -> Res
 // Script/path helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn find_augustus_script(name: &str) -> Result<PathBuf> {
-    // Check $AUGUSTUS_SCRIPTS_PATH first
-    if let Ok(dir) = std::env::var("AUGUSTUS_SCRIPTS_PATH") {
-        let p = PathBuf::from(&dir).join(name);
-        if p.exists() {
-            return Ok(p);
-        }
+/// Push `d` onto `dirs` only if it is not already present — keeps the search
+/// list ordered by priority without duplicate stat() calls.
+fn push_unique(dirs: &mut Vec<PathBuf>, d: PathBuf) {
+    if !dirs.contains(&d) {
+        dirs.push(d);
     }
-    // Check $AUGUSTUS_BIN_PATH/../scripts
-    if let Ok(bin_dir) = std::env::var("AUGUSTUS_BIN_PATH") {
-        let p = PathBuf::from(&bin_dir)
-            .parent()
-            .unwrap_or(Path::new("/"))
-            .join("scripts")
-            .join(name);
-        if p.exists() {
-            return Ok(p);
-        }
-    }
-    // Try to find augustus binary and look in sibling scripts/ directory
-    if let Ok(aug_bin) = which::which("augustus") {
-        let scripts_dir = aug_bin
-            .parent()
-            .unwrap_or(Path::new("/usr/bin"))
-            .parent()
-            .unwrap_or(Path::new("/usr"))
-            .join("share")
-            .join("augustus")
-            .join("scripts");
-        let p = scripts_dir.join(name);
-        if p.exists() {
-            return Ok(p);
-        }
-    }
-    // Common conda paths
-    for prefix in &["/usr", "/opt/conda", "/usr/local"] {
-        for subdir in &["share/augustus/scripts", "bin"] {
-            let p = PathBuf::from(prefix).join(subdir).join(name);
-            if p.exists() {
-                return Ok(p);
+}
+
+/// Enumerate `share/augustus*` directories (e.g. `augustus`, `augustus-3.5.0`)
+/// so version-suffixed source/Debian builds are discovered. Returns an empty
+/// vec when `share` does not exist or cannot be read. Sorted for determinism.
+fn augustus_share_subdirs(share: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(share) {
+        for e in entries.flatten() {
+            let name = e.file_name();
+            if name.to_string_lossy().starts_with("augustus") {
+                out.push(e.path());
             }
         }
     }
-    Err(MycoNoteError::UnsupportedFormat(format!(
-        "Augustus script '{}' not found.\n\
-         Set $AUGUSTUS_SCRIPTS_PATH to the directory containing Augustus scripts.",
-        name
-    )))
+    out.sort();
+    out
+}
+
+/// Candidate directories that may hold Augustus companion scripts
+/// (`new_species.pl`, `etraining`, `gff2gbSmallDNA.pl`, `optimize_augustus.pl`),
+/// in priority order, derived from the environment and the resolved `augustus`
+/// binary.
+///
+/// Augustus ships these scripts in one of two layouts depending on the build:
+///   * conda / Homebrew: beside the `augustus` binary in the env's `bin/`, or in
+///     a sibling `../scripts` of that `bin/`.
+///   * source / Debian: under `<prefix>/share/augustus*/scripts` (the directory
+///     is version-suffixed on some builds, e.g. `augustus-3.5.0`).
+///
+/// We search relative to the binary's install root, not just `$PATH`, so a
+/// self-training run finds the scripts the same install provides — this is the
+/// fix for conda envs (e.g. `myconote_augustus`) that keep `new_species.pl` in
+/// their `bin/` directory next to `augustus`.
+fn augustus_script_search_dirs(
+    scripts_env: Option<&Path>,
+    bin_env: Option<&Path>,
+    config_env: Option<&Path>,
+    augustus_bin: Option<&Path>,
+) -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+
+    // 1. Explicit $AUGUSTUS_SCRIPTS_PATH wins.
+    if let Some(d) = scripts_env {
+        push_unique(&mut dirs, d.to_path_buf());
+    }
+    // 2. $AUGUSTUS_BIN_PATH itself and its sibling scripts/.
+    if let Some(b) = bin_env {
+        push_unique(&mut dirs, b.to_path_buf());
+        if let Some(parent) = b.parent() {
+            push_unique(&mut dirs, parent.join("scripts"));
+        }
+    }
+    // 3. $AUGUSTUS_CONFIG_PATH/../scripts.
+    if let Some(c) = config_env {
+        if let Some(parent) = c.parent() {
+            push_unique(&mut dirs, parent.join("scripts"));
+        }
+    }
+    // 4. Relative to the resolved augustus binary.
+    if let Some(aug) = augustus_bin {
+        if let Some(bin_dir) = aug.parent() {
+            // 4a. Beside the binary (conda env bin/ — the cluster layout).
+            push_unique(&mut dirs, bin_dir.to_path_buf());
+            // 4b. Sibling scripts/ of bin/ (bin/../scripts).
+            push_unique(&mut dirs, bin_dir.join("scripts"));
+            if let Some(root) = bin_dir.parent() {
+                // 4c. <root>/scripts
+                push_unique(&mut dirs, root.join("scripts"));
+                // 4d. <root>/share/augustus*/scripts (version-suffixed dirs).
+                let share = root.join("share");
+                for sub in augustus_share_subdirs(&share) {
+                    push_unique(&mut dirs, sub.join("scripts"));
+                }
+                // 4e. plain <root>/share/augustus/scripts
+                push_unique(&mut dirs, share.join("augustus").join("scripts"));
+            }
+        }
+    }
+    // 5. Common system / conda prefixes as a last resort.
+    for prefix in ["/usr", "/opt/conda", "/usr/local"] {
+        push_unique(
+            &mut dirs,
+            PathBuf::from(prefix).join("share/augustus/scripts"),
+        );
+        push_unique(&mut dirs, PathBuf::from(prefix).join("bin"));
+    }
+
+    dirs
+}
+
+/// Locate an Augustus companion script by name, returning the first candidate
+/// directory that actually contains it. Pure over its inputs so it can be
+/// unit-tested against a mock install tree.
+fn locate_augustus_script(
+    name: &str,
+    scripts_env: Option<&Path>,
+    bin_env: Option<&Path>,
+    config_env: Option<&Path>,
+    augustus_bin: Option<&Path>,
+) -> Option<PathBuf> {
+    for dir in augustus_script_search_dirs(scripts_env, bin_env, config_env, augustus_bin) {
+        let p = dir.join(name);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    None
+}
+
+fn find_augustus_script(name: &str) -> Result<PathBuf> {
+    let scripts_env = std::env::var_os("AUGUSTUS_SCRIPTS_PATH").map(PathBuf::from);
+    let bin_env = std::env::var_os("AUGUSTUS_BIN_PATH").map(PathBuf::from);
+    let config_env = std::env::var_os("AUGUSTUS_CONFIG_PATH").map(PathBuf::from);
+    let augustus_bin = which::which("augustus").ok();
+
+    locate_augustus_script(
+        name,
+        scripts_env.as_deref(),
+        bin_env.as_deref(),
+        config_env.as_deref(),
+        augustus_bin.as_deref(),
+    )
+    .ok_or_else(|| {
+        MycoNoteError::UnsupportedFormat(format!(
+            "Augustus script '{}' not found beside the augustus binary, under \
+             $AUGUSTUS_SCRIPTS_PATH, $AUGUSTUS_CONFIG_PATH/../scripts, or any \
+             share/augustus*/scripts directory.\n\
+             Set $AUGUSTUS_SCRIPTS_PATH to the directory holding Augustus scripts.",
+            name
+        ))
+    })
+}
+
+/// Pure trainability check shared by the self-train entry point and tests:
+/// given the environment overrides and a resolved `augustus` binary, can the
+/// gating script `new_species.pl` be found? `new_species.pl` is the script
+/// that registers a species; without it self-training cannot even start.
+fn self_training_scripts_resolvable(
+    scripts_env: Option<&Path>,
+    bin_env: Option<&Path>,
+    config_env: Option<&Path>,
+    augustus_bin: Option<&Path>,
+) -> bool {
+    locate_augustus_script(
+        "new_species.pl",
+        scripts_env,
+        bin_env,
+        config_env,
+        augustus_bin,
+    )
+    .is_some()
+}
+
+/// Whether this install can self-train Augustus — i.e. `new_species.pl` resolves
+/// from the current environment / the `augustus` binary on PATH. Callers use
+/// this to bail out *before* an expensive first-pass prediction when the
+/// companion scripts are absent, so the loud stock-species fallback fires
+/// immediately instead of after wasted compute.
+pub fn augustus_self_training_available() -> bool {
+    let scripts_env = std::env::var_os("AUGUSTUS_SCRIPTS_PATH").map(PathBuf::from);
+    let bin_env = std::env::var_os("AUGUSTUS_BIN_PATH").map(PathBuf::from);
+    let config_env = std::env::var_os("AUGUSTUS_CONFIG_PATH").map(PathBuf::from);
+    let augustus_bin = which::which("augustus").ok();
+    self_training_scripts_resolvable(
+        scripts_env.as_deref(),
+        bin_env.as_deref(),
+        config_env.as_deref(),
+        augustus_bin.as_deref(),
+    )
 }
 
 fn find_augustus_species_path(species: &str) -> Option<PathBuf> {
@@ -647,4 +775,117 @@ fn write_train_report(report: &TrainReport, config: &TrainConfig) -> Result<()> 
     .map_err(MycoNoteError::Io)?;
 
     Ok(())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Create an empty file at `path`, making parent dirs as needed.
+    fn touch(path: &Path) {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(path, b"").unwrap();
+    }
+
+    // FIX A: the conda/cluster layout — companion scripts live in the SAME bin/
+    // as the `augustus` binary. The resolver must find them there (this is the
+    // case the old code missed, which caused the silent self-training no-op).
+    #[test]
+    fn locates_script_beside_augustus_binary() {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        let aug = bin.join("augustus");
+        let script = bin.join("new_species.pl");
+        touch(&aug);
+        touch(&script);
+
+        let found = locate_augustus_script("new_species.pl", None, None, None, Some(&aug));
+        assert_eq!(found.as_deref(), Some(script.as_path()));
+    }
+
+    // Source/Debian layout: scripts under <root>/share/augustus-<ver>/scripts.
+    #[test]
+    fn locates_script_under_versioned_share_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let aug = dir.path().join("bin").join("augustus");
+        touch(&aug);
+        let script = dir
+            .path()
+            .join("share")
+            .join("augustus-3.5.0")
+            .join("scripts")
+            .join("gff2gbSmallDNA.pl");
+        touch(&script);
+
+        let found = locate_augustus_script("gff2gbSmallDNA.pl", None, None, None, Some(&aug));
+        assert_eq!(found.as_deref(), Some(script.as_path()));
+    }
+
+    // $AUGUSTUS_SCRIPTS_PATH override is honoured and takes priority.
+    #[test]
+    fn locates_script_under_scripts_path_env() {
+        let dir = tempfile::tempdir().unwrap();
+        let scripts = dir.path().join("aug_scripts");
+        let script = scripts.join("etraining");
+        touch(&script);
+
+        let found = locate_augustus_script("etraining", Some(&scripts), None, None, None);
+        assert_eq!(found.as_deref(), Some(script.as_path()));
+    }
+
+    // $AUGUSTUS_CONFIG_PATH/../scripts is searched (common conda config layout).
+    #[test]
+    fn locates_script_via_config_path_sibling_scripts() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config");
+        std::fs::create_dir_all(&config).unwrap();
+        let script = dir.path().join("scripts").join("optimize_augustus.pl");
+        touch(&script);
+
+        let found = locate_augustus_script("optimize_augustus.pl", None, None, Some(&config), None);
+        assert_eq!(found.as_deref(), Some(script.as_path()));
+    }
+
+    // A present-scripts path is detected as trainable; an absent one is not.
+    #[test]
+    fn self_training_detected_when_scripts_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        let aug = bin.join("augustus");
+        touch(&aug);
+
+        // No new_species.pl yet → not trainable.
+        assert!(!self_training_scripts_resolvable(
+            None,
+            None,
+            None,
+            Some(&aug)
+        ));
+
+        // Drop new_species.pl beside augustus → now trainable.
+        touch(&bin.join("new_species.pl"));
+        assert!(self_training_scripts_resolvable(
+            None,
+            None,
+            None,
+            Some(&aug)
+        ));
+    }
+
+    // Missing script → resolver returns None (the caller maps this to a clean,
+    // actionable error, never a panic).
+    #[test]
+    fn missing_script_returns_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let aug = dir.path().join("bin").join("augustus");
+        touch(&aug);
+        let found = locate_augustus_script("new_species.pl", None, None, None, Some(&aug));
+        assert!(found.is_none());
+    }
 }

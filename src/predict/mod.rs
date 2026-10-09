@@ -122,6 +122,14 @@ pub struct PredictConfig {
     /// and from `protein_evidence`, which consumes a precomputed BLAST table).
     /// `None` (default) → ab-initio only, unchanged behaviour.
     pub protein_hints: Option<PathBuf>,
+    /// diamond `--evalue` threshold for the `--protein-hints` prefilter
+    /// (v0.7.10). Proteins with no genome hit at or below this evalue are
+    /// dropped before miniprot. Default `1e-5`.
+    pub protein_hints_evalue: f64,
+    /// Maximum proteins fed to miniprot after the `--protein-hints` prefilter
+    /// (v0.7.10). Bounds runtime so a full OrthoDB partition can't stall the
+    /// run. `0` = unbounded. Default `50_000`.
+    pub protein_hints_max: usize,
 }
 
 impl Default for PredictConfig {
@@ -157,6 +165,8 @@ impl Default for PredictConfig {
             consensus_min_support: 1,
             consensus_min_score: None,
             protein_hints: None,
+            protein_hints_evalue: 1e-5,
+            protein_hints_max: 50_000,
         }
     }
 }
@@ -358,8 +368,15 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
                 Some(name)
             }
             Err(e) => {
-                eprintln!("  ⚠  Self-training failed: {}", e);
-                eprintln!("     Continuing with pre-trained species model.");
+                // LOUD, impossible-to-miss fallback: the user asked for a
+                // self-trained model and did NOT get one. A quiet one-liner here
+                // let an A/B read "no change" without noticing nothing trained.
+                let (stock, _warn) = kingdom::resolve_augustus_species(
+                    &config.kingdom,
+                    config.augustus_species.as_deref(),
+                    config.clade,
+                );
+                eprintln!("{}", self_training_fallback_banner(&e.to_string(), &stock));
                 None
             }
         }
@@ -835,12 +852,54 @@ fn write_summary(
 // Self-training helper
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Build the prominent, impossible-to-miss self-training fallback warning.
+///
+/// Returned as a `String` (rather than printed inline) so it is unit-testable
+/// and so the caller controls the stream. The caller prints it to stderr. The
+/// message states plainly that self-training did NOT happen, why, and which
+/// stock species is being used instead — the A/B that motivated FIX A saw the
+/// old one-liner and read "no change", never realising nothing had trained.
+fn self_training_fallback_banner(reason: &str, stock_species: &str) -> String {
+    format!(
+        "\n\
+         ======================================================================\n\
+         !!  WARNING: Augustus SELF-TRAINING DID NOT RUN                     !!\n\
+         ======================================================================\n\
+         You requested self-training (--augustus-training self / --self-train),\n\
+         but NO genome-specific model was trained. Prediction is FALLING BACK\n\
+         to the stock pre-trained species. These results are NOT self-trained.\n\
+         \n\
+           reason         : {reason}\n\
+           using species  : {stock_species}  (stock / pre-trained fallback)\n\
+           how to fix      : install the Augustus companion scripts\n\
+                             (new_species.pl, etraining, gff2gbSmallDNA.pl) in\n\
+                             the same install as the `augustus` binary, or set\n\
+                             $AUGUSTUS_SCRIPTS_PATH to the directory holding them.\n\
+         ======================================================================"
+    )
+}
+
 /// Run a first-pass prediction with the default model, then use those gene
 /// models to train a custom Augustus species for the actual prediction.
 /// Returns the trained species name.
 fn run_self_training(config: &PredictConfig) -> Result<String> {
     let train_dir = config.out_dir.join("training");
     std::fs::create_dir_all(&train_dir).map_err(MycoNoteError::Io)?;
+
+    // Bail before the expensive first-pass prediction if the Augustus companion
+    // scripts that species registration needs (new_species.pl etc.) can't be
+    // resolved from this install. Running a first-pass Augustus only to fail at
+    // `new_species.pl` wastes minutes per genome and buries the real cause; the
+    // caller turns this Err into the loud stock-species fallback banner.
+    if !train::augustus_self_training_available() {
+        return Err(MycoNoteError::UnsupportedFormat(
+            "Augustus companion scripts (new_species.pl / etraining / \
+             gff2gbSmallDNA.pl) were not found beside the augustus binary, under \
+             $AUGUSTUS_SCRIPTS_PATH, or $AUGUSTUS_CONFIG_PATH/../scripts — \
+             self-training cannot run on this install"
+                .to_string(),
+        ));
+    }
 
     // Seed the first-pass model with the clade-aware default so a basidiomycete
     // self-train bootstraps from a basidiomycete model rather than S288C. The
@@ -933,10 +992,43 @@ fn build_protein_hints_miniprot(config: &PredictConfig, prot_fa: &Path) -> Resul
         return Ok(None);
     }
 
+    let hints_dir = config.out_dir.join("protein_hints");
+    std::fs::create_dir_all(&hints_dir).map_err(MycoNoteError::Io)?;
+
+    // FIX B: never feed the entire protein DB to miniprot. Prefilter it down to
+    // the genome's plausible homologs (diamond) or a bounded subset (no diamond)
+    // first — this is what keeps a per-genome run from stalling for 12+ h on a
+    // multi-GB OrthoDB partition. Non-fatal: a prefilter that keeps nothing or
+    // errors leaves Augustus ab-initio.
+    let prefilter = protein_evidence::PrefilterParams {
+        evalue: config.protein_hints_evalue,
+        max_proteins: config.protein_hints_max,
+        threads: config.threads,
+    };
+    let reduced_proteins = match protein_evidence::prefilter_protein_db(
+        prot_fa,
+        &config.masked_fasta,
+        &hints_dir,
+        &prefilter,
+    ) {
+        Ok(r) if r.n_kept > 0 => r.proteins,
+        Ok(_) => {
+            eprintln!("  ⚠  protein prefilter kept 0 proteins — continuing ab-initio (non-fatal).");
+            return Ok(None);
+        }
+        Err(e) => {
+            eprintln!(
+                "  ⚠  protein prefilter failed: {} — continuing ab-initio (non-fatal).",
+                e
+            );
+            return Ok(None);
+        }
+    };
+
     let prot_cfg = protein_evidence::ProteinEvidenceConfig {
-        proteins: prot_fa.to_path_buf(),
+        proteins: reduced_proteins,
         genome: config.masked_fasta.clone(),
-        out_dir: config.out_dir.join("protein_hints"),
+        out_dir: hints_dir,
         threads: config.threads,
         max_intron: config.max_intron,
         ..protein_evidence::ProteinEvidenceConfig::default()
@@ -1048,6 +1140,26 @@ mod predict_feature_tests {
         assert!(trained_model_usable(&report(p, None)));
     }
 
+    // ── FIX A: loud self-training fallback ────────────────────────────────────
+
+    #[test]
+    fn self_training_fallback_banner_is_loud_and_names_stock_species() {
+        let reason = "new_species.pl not found";
+        let banner = self_training_fallback_banner(reason, "saccharomyces_cerevisiae_S288C");
+
+        // Impossible to miss: states training did NOT run.
+        assert!(banner.contains("SELF-TRAINING DID NOT RUN"));
+        assert!(banner.contains("NOT self-trained"));
+        // Carries the concrete reason through to the user.
+        assert!(banner.contains(reason));
+        // Names the stock species the run fell back to.
+        assert!(banner.contains("saccharomyces_cerevisiae_S288C"));
+        // Tells the user how to fix it.
+        assert!(banner.contains("AUGUSTUS_SCRIPTS_PATH"));
+        // Multi-line banner, not a single easy-to-miss line.
+        assert!(banner.lines().count() >= 8);
+    }
+
     // ── Feature 3: protein → Augustus hints plumbing ──────────────────────────
 
     #[test]
@@ -1096,5 +1208,48 @@ mod predict_feature_tests {
         let missing = dir.path().join("does_not_exist.faa");
         let res = build_protein_hints_miniprot(&cfg, &missing).unwrap();
         assert!(res.is_none(), "missing protein file → ab-initio, non-fatal");
+    }
+
+    // FIX B: a present protein FASTA runs through the prefilter and is non-fatal
+    // regardless of whether diamond/miniprot are installed. The prefilter must
+    // write a bounded reduced FASTA, and the call must not error (it returns
+    // Ok(None) ab-initio when no aligner is present, Ok(Some) when miniprot is).
+    #[test]
+    fn protein_hints_prefilters_and_is_nonfatal() {
+        let dir = tempfile::tempdir().unwrap();
+        let genome = dir.path().join("genome.fa");
+        std::fs::write(&genome, ">c1\nACGTACGTACGTACGTACGTACGT\n").unwrap();
+        let prot = dir.path().join("proteins.faa");
+        std::fs::write(&prot, ">p1\nMKVLAA\n>p2\nMARNDC\n>p3\nMQEGHI\n").unwrap();
+
+        let cfg = PredictConfig {
+            masked_fasta: genome,
+            out_dir: dir.path().to_path_buf(),
+            protein_hints_max: 2,
+            ..PredictConfig::default()
+        };
+
+        // Must not error — the whole point of FIX B is a run that completes.
+        let res = build_protein_hints_miniprot(&cfg, &prot);
+        assert!(res.is_ok(), "protein-hints path must be non-fatal");
+
+        // The bounded reduced FASTA must have been produced by the prefilter.
+        let reduced = dir
+            .path()
+            .join("protein_hints")
+            .join("proteins_prefiltered.faa");
+        assert!(
+            reduced.exists(),
+            "prefilter must write the reduced protein set"
+        );
+        let n = std::fs::read_to_string(&reduced)
+            .unwrap()
+            .matches('>')
+            .count();
+        assert!(
+            n >= 1 && n <= 2,
+            "reduced set is bounded by the cap (got {})",
+            n
+        );
     }
 }

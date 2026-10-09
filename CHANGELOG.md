@@ -6,6 +6,40 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+### Fixed
+
+- **`--augustus-training self` no longer silently falls back to the stock
+  species (FIX A).** Two defects made self-training a no-op on real installs.
+  (1) The companion-script resolver only looked under
+  `<prefix>/share/augustus/scripts` and the bare `$PATH`, so it missed the
+  conda/Homebrew layout where `new_species.pl`, `etraining`,
+  `gff2gbSmallDNA.pl` and `optimize_augustus.pl` live in the same `bin/` as the
+  `augustus` binary (the layout the `myconote_augustus` cluster env uses). The
+  resolver now derives the scripts directory from the resolved `augustus`
+  binary — the binary's own `bin/`, `bin/../scripts`, `<root>/scripts`, and
+  version-suffixed `<root>/share/augustus*/scripts` — in addition to
+  `$AUGUSTUS_SCRIPTS_PATH`, `$AUGUSTUS_BIN_PATH/../scripts` and
+  `$AUGUSTUS_CONFIG_PATH/../scripts`. (2) When self-training could not run (or
+  produced an unusable model), the fallback printed one easy-to-miss line, so
+  users and A/B comparisons saw "no change" without realising nothing had
+  trained. The fallback now emits a prominent multi-line stderr banner stating
+  self-training did NOT happen, the reason, the stock species used instead, and
+  how to fix it. `predict` also now bails before the expensive first-pass
+  prediction when the companion scripts are absent, so the banner fires
+  immediately instead of after wasted compute.
+
+- **`--protein-hints` prefilters the protein DB before miniprot (FIX B).**
+  Passing a full OrthoDB partition (e.g. `Fungi.fa`, ~3.9 GB) ran miniprot on
+  the entire set; an A/B run was still aligning after 12.5 h and Augustus never
+  started. Like BRAKER/ProtHint, the protein set is now prefiltered before
+  splice-aware alignment: `diamond blastx` of the genome against the protein DB
+  keeps only proteins with a plausible hit, and the survivors are capped. When
+  diamond is unavailable the DB is capped to a bounded subset instead of
+  aligning the whole thing, with a clear log. New tunables `--protein-hints-evalue`
+  (default `1e-5`) and `--protein-hints-max` (default `50000`; `0` = unbounded).
+  The path remains non-fatal: a missing diamond, miniprot, or a prefilter that
+  keeps nothing logs and proceeds ab-initio, exactly as before.
+
 ### Added
 
 - **Clade-aware default Augustus species (`--clade`).** `predict` no longer

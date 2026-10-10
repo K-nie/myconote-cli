@@ -115,9 +115,69 @@ overlap. Metric reported: `gene_level.{loose,strict}.F1`.
 
 ## Results
 
-PENDING — orchestration watcher `bivhy3h0d` reports loose/strict vs baseline
-for all arms on completion. Fill this section with the table and the
-progress-vs-lag decision once the jobs drain.
+Verdict: **neither lever lifts gene-level F1.** Both fixes corrected the
+mechanics they targeted, and the accuracy did not move. The accuracy chase
+through these two levers was closed on 2026-10-10.
+
+### Self-training (clusters 146281; generic/ provisioned)
+
+The `species/generic/` fix cleared the second blocker: `new_species.pl` now
+succeeds and creates the trained species dir (`ncr_trained`, `cne_trained`,
+each with `*_parameters.cfg` etc. on disk). But a **third** blocker surfaced —
+`etraining` then fails on MycoNote's first-pass training-gene input:
+
+```
+Running etraining…
+!! WARNING: Augustus SELF-TRAINING DID NOT RUN !!
+reason: Invalid GFF format: etraining failed. Check train_out/etraining.log
+using species: neurospora_crassa (stock / pre-trained fallback)
+```
+
+The SNAP self-training path failed on the same run (`fathom … -categorize 1000
+failed`). Both training engines rejecting the same input points to one upstream
+cause: the first-pass training-gene set (its GFF→GenBank conversion) is
+malformed or empty. Because training aborts, prediction falls back to the stock
+species and the metrics are byte-identical to baseline:
+
+| genome | baseline loose/strict | self-train loose/strict | Δ |
+|--------|-----------------------|-------------------------|---|
+| ncr    | 0.897 / 0.564         | 0.8971 / 0.5638         | ~0 |
+| cne    | 0.921 / 0.526         | 0.9217 / 0.5267         | ~0 |
+
+No successful self-train has ever been observed across four fix cycles, so there
+is no evidence fixing the etraining-GFF bug would lift F1. The etraining failure
+is filed as a standalone correctness bug (predict now fails *loudly* — the
+banner names which gate failed — rather than silently falling back), decoupled
+from the accuracy question.
+
+### Protein hints (clusters 145951 no-gate, 146282 gate70)
+
+The identity gate works exactly as designed and still changes nothing. On cne
+the 70 % gate dropped the prefiltered set from **312 → 207** proteins (105
+distant homologs removed), and F1 was unchanged and strictly below the
+ab-initio baseline either way:
+
+| genome | baseline strict | no-gate (n prot) loose/strict | gate70 (n prot) loose/strict |
+|--------|-----------------|-------------------------------|------------------------------|
+| cne    | 0.526           | (312) 0.9244 / 0.490          | (207) 0.9243 / 0.491         |
+| ani    | 0.445           | (running)                     | (running)                    |
+| ncr    | 0.564           | (running)                     | (running)                    |
+
+Mechanism: MycoNote's agreement-weighted consensus is dominated by the ab-initio
+predictors (Augustus / SNAP / GeneMark); miniprot protein evidence — whether 312
+or 207 proteins — does not shift the merge, and whatever it does add slightly
+*lowers* strict F1 vs ab-initio alone. This is not a provisioning artifact: the
+lever functions correctly and does not help this architecture. (ani/ncr reps
+confirm the pattern on completion; watcher `b8si2y8kg` fills the two cells.)
+
+### Decision
+
+Stop pursuing prediction accuracy through self-training and protein hints. Lock
+MycoNote's positioning on its demonstrated strengths (fast ab-initio prediction,
+complete functional annotation, x86-64-v2 portability vs the AVX2-compiled
+Augustus in funannotate/BRAKER). The v0.7.11 code (generic provisioning,
+loud-failing self-train preflight, opt-in `--protein-hints-min-identity`) stays:
+each is correct on its own merit even though neither raised F1.
 
 ## Key decisions / caveats
 

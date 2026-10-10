@@ -411,6 +411,34 @@ loose; mid-pack against MAKER/BRAKER). Its defensible, durable advantages are:
    (no RepeatMasker/RepBase/Dfam), Augustus 3.3.3 that runs the full compute
    pool (funannotate/BRAKER need AVX2 nodes), modern `table2asn`.
 
+### Accuracy levers tested and closed (v0.7.11, 2026-10-10)
+
+Two levers were investigated to try to raise MycoNote's gene-level F1 toward the
+leaders — Augustus **self-training** and miniprot **protein hints**. Both were
+A/B-tested against the ab-initio baseline across four fix cycles; the full
+protocol, results, and log evidence are in
+[`AB_v0711_selftrain_prothints_README.md`](AB_v0711_selftrain_prothints_README.md).
+
+Outcome: **neither lifts F1.** Each cycle corrected a real mechanical defect and
+produced no accuracy gain.
+
+- **Self-training** cleared three successive blockers (silent fallback → script
+  discovery → missing `species/generic/` template, provisioned in v0.7.11) only
+  to hit `etraining` rejecting MycoNote's first-pass training-gene GFF (SNAP's
+  `fathom` fails on the same input). Training aborts, prediction falls back to
+  the stock species, and F1 is byte-identical to baseline. Filed as a standalone
+  correctness bug; predict now fails *loudly* instead of silently.
+- **Protein hints** demonstrably do not help the architecture: the v0.7.11
+  `--protein-hints-min-identity` gate filtered the prefiltered set as designed
+  (cne 312→207 proteins at 70 % identity) with F1 unchanged and strict below
+  ab-initio either way. MycoNote's agreement-weighted consensus is driven by the
+  ab-initio predictors; miniprot evidence does not shift the merge.
+
+Conclusion: the MycoNote story is **positioning, not peak accuracy** — the three
+durable advantages above stand, and the accuracy-via-these-levers thread is
+closed. The v0.7.11 code (generic provisioning, loud-failing self-train
+preflight, opt-in identity gate) stays: each is correct on its own merit.
+
 ### funannotate-weakness coverage (summary)
 
 A systematic audit of funannotate's full issue tracker (1,093 issues) + docs

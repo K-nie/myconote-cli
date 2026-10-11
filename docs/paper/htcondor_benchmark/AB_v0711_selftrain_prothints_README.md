@@ -157,18 +157,22 @@ the 70 % gate dropped the prefiltered set from **312 → 207** proteins (105
 distant homologs removed), and F1 was unchanged and strictly below the
 ab-initio baseline either way:
 
-| genome | baseline strict | no-gate (n prot) loose/strict | gate70 (n prot) loose/strict |
-|--------|-----------------|-------------------------------|------------------------------|
-| cne    | 0.526           | (312) 0.9244 / 0.490          | (207) 0.9243 / 0.491         |
-| ani    | 0.445           | (running)                     | (running)                    |
-| ncr    | 0.564           | (running)                     | (running)                    |
+| genome | baseline loose/strict | no-gate (n prot) loose/strict | gate70 (n prot) loose/strict |
+|--------|-----------------------|-------------------------------|------------------------------|
+| cne    | 0.921 / 0.526         | (312) 0.9244 / 0.490          | (207) 0.9243 / 0.491         |
+| ani    | 0.897 / 0.445         | (rep still draining)          | (179) 0.9041 / 0.432         |
+| ncr    | 0.897 / 0.564         | (rep still draining)          | (rep still draining)         |
 
-Mechanism: MycoNote's agreement-weighted consensus is dominated by the ab-initio
-predictors (Augustus / SNAP / GeneMark); miniprot protein evidence — whether 312
-or 207 proteins — does not shift the merge, and whatever it does add slightly
-*lowers* strict F1 vs ab-initio alone. This is not a provisioning artifact: the
-lever functions correctly and does not help this architecture. (ani/ncr reps
-confirm the pattern on completion; watcher `b8si2y8kg` fills the two cells.)
+Pattern confirmed on both completed genomes (cne, ani gate70): vs ab-initio
+baseline, protein hints leave loose ~flat (cne −0.000, ani +0.007) and nudge
+strict *down* (cne 0.526→0.491, ani 0.445→0.432). Mechanism: MycoNote's
+agreement-weighted consensus is dominated by the ab-initio predictors (Augustus
+/ SNAP / GeneMark); miniprot protein evidence — whether 312, 207, or 179
+proteins — does not shift the merge and slightly lowers strict. Not a
+provisioning artifact: the lever functions correctly and does not help this
+architecture. The remaining no-gate ani/ncr and gate70 ncr reps were still
+draining when the decision was taken; they do not bear on the conclusion and are
+left to land on disk at `results/ab/prothints{,70}/<g>/metrics.json`.
 
 ### Decision
 

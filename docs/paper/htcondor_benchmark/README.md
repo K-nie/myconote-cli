@@ -453,18 +453,21 @@ verified against the current source, not intent.
 |---|---|---|---|
 | Wrong species model on divergent fungi (MycoNote's S288C-for-all default — self-introduced) | **introduced** | **resolved** | v0.7.9 clade-aware default (`FungalClade` + `resolve_augustus_species`) + loud guard when a naive run would fall back to S288C off-Saccharomycotina |
 | Contig renaming loses the user's original seqids | **shared** | **resolved** | v0.7.9 default now preserves original seqids through `sort`; renaming is opt-in (`--ncbi-clean` / `--rename-contigs`) and emits a lift-over table |
-| NCBI submission failures (malformed structure) | **partial** | **resolved** | v0.7.9 `submit` structural pre-validation (`check_structure`/`repair_structure`): orphan/missing Parent, CDS-outside-mRNA |
+| NCBI submission failures (malformed structure) | **partial** | **partial** | v0.7.9 `submit` structural pre-validation + `--fix-structure` detect and repair some problems (orphan/missing Parent). But a table2asn verification (v0.7.12, table2asn 1.29.324, all 6 genomes) shows the output is **not yet submittable** — two open bugs block it: (1) the generated `.sbt` omits the required `cit` (Cit-sub) block, so table2asn can't load the template; (2) gene/mRNA parent feature bounds do not span all CDS children (~2–3 % of genes; e.g. sce `SCE_000005` parent 15601–15609 vs a CDS at 15025–15318), producing "CDS outside mRNA" that `--fix-structure` cannot repair. Both originate upstream of `submit` (the second in `predict`/consensus). Until fixed, "submission-ready" is **not** a supported claim. |
 | EggNog functional-annotation runtime | **partial** | **resolved** | v0.7.8 `--dmnd_iterate no` default — measured 4.4× faster at identical recall (46 min vs ~3.4 h on a 10,655-protein proteome) |
 | Augustus self-training silently no-ops / fails | **partial/broken** | **resolved (capability)** | v0.7.10 script discovery + loud preflight; v0.7.11 `species/generic/` provisioning; v0.7.12 GenBank `source` feature → `etraining` now completes end to end. *Caveat: the trained model underperforms stock on model fungi — the capability works and fails loudly, but is not an accuracy win* |
 | No protein evidence option (funannotate uses exonerate/miniprot) | **shared/missing** | **mitigated** | v0.7.11 opt-in `--protein-hints` with a literature-aligned identity gate (`--protein-hints-min-identity`); runs, but does not lift MycoNote's ab-initio-driven consensus |
 
-**Net progress from the scan corrections:** of the themes we could act on, **4
-move to fully resolved** (S288C default, contig-rename, submission, EggNog
-speed), **1 capability is repaired** (self-training now runs and fails loudly
-instead of silently — though it doesn't beat stock here), and **1 new capability
-is added** (opt-in protein evidence). Self-introduced weaknesses drop from 3 → 2
-(BUSCO offline-dataset fallback and IPRScan network-only remain); shared
-weaknesses drop as contig-rename is resolved.
+**Net progress from the scan corrections:** of the themes we could act on, **3
+move to fully resolved** (S288C default, contig-rename, EggNog speed), **1
+capability is repaired** (self-training now runs and fails loudly instead of
+silently — though it doesn't beat stock here), and **1 new capability is added**
+(opt-in protein evidence). NCBI submission stays **partial**: the v0.7.9
+pre-validation/repair works, but a table2asn verification caught two open output
+bugs (incomplete `.sbt`; gene/mRNA bounds not spanning all CDS) that must be
+fixed before "submission-ready" can be claimed. Self-introduced weaknesses drop
+from 3 → 2 (BUSCO offline-dataset fallback and IPRScan network-only remain);
+shared weaknesses drop as contig-rename is resolved.
 
 **Unchanged (honest):** MycoNote does **not** remove funannotate's hard
 external-tool dependencies — GeneMark license, Augustus binary, PASA lock,

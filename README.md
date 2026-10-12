@@ -381,16 +381,17 @@ Generates `condor.sub`, `run_genome.sh` (per-job wrapper), and `condor_genomes.t
 Learn myconote-cli step by step, like R's swirl:
 
 ```bash
-myconote-cli learn          # list all 20 lessons
+myconote-cli learn          # list all 22 lessons
 myconote-cli learn 1        # start lesson 1
 myconote-cli learn --resume # pick up where you left off
 ```
 
-20 lessons covering the full pipeline (basics to NCBI submission), the
+22 lessons covering the full pipeline (basics to NCBI submission), the
 RNA-seq stack (`quant`, `fetch-rna`, `de-template`, `ase`, `ase-template`,
 `go-template`), the modern predictors (BRAKER, GeneMark-EP/ETP+),
 `clean --mode contigs`, the `setup --db augustus-fungi` bundle,
-reproducibility manifests, and NCBI codon tables (Candida CTG focus).
+reproducibility manifests, NCBI codon tables (Candida CTG focus), and the
+evidence/training track (protein hints, Augustus self-training).
 Progress is saved between sessions.
 
 ---

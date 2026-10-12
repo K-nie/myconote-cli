@@ -616,6 +616,23 @@ pub fn merge_predictions_filtered(
         let mut norm_records = model.records.clone();
         crate::parser::gff::include_stop_codon_in_cds(&mut norm_records);
 
+        // A GFF3 parent feature MUST span all its children. Some predictors
+        // (and the consensus merge, which can combine CDS from more than one
+        // predictor) emit a `gene` / `mRNA` whose own start/end cover only a
+        // subset of the model's CDS — e.g. a single exon — leaving the other
+        // CDS "outside mRNA bounds". That is invalid GFF and makes table2asn /
+        // NCBI reject the record. Recompute the true span (min child start,
+        // max child end) over every coordinate-bearing child and clamp the
+        // parent features to it when we emit them below. Codons are already
+        // folded into the CDS, so they never extend this span.
+        let (child_min, child_max) = norm_records
+            .iter()
+            .filter(|r| !matches!(r.feature_type.as_str(), "gene" | "mRNA" | "transcript"))
+            .fold((u64::MAX, 0u64), |(mn, mx), r| {
+                (mn.min(r.start), mx.max(r.end))
+            });
+        let have_children = child_min <= child_max;
+
         for rec in &norm_records {
             let mut r = rec.clone();
 
@@ -623,6 +640,11 @@ pub fn merge_predictions_filtered(
                 "gene" => {
                     r.attributes.insert("ID".into(), gene_id.clone());
                     r.attributes.insert("locus_tag".into(), locus_tag.clone());
+                    // Clamp the gene to span all its children (see above).
+                    if have_children {
+                        r.start = child_min;
+                        r.end = child_max;
+                    }
                 }
                 "mRNA" | "transcript" => {
                     // F3b: normalize whichever label the predictor used.
@@ -630,6 +652,11 @@ pub fn merge_predictions_filtered(
                     r.attributes.insert("ID".into(), mrna_id.clone());
                     r.attributes.insert("Parent".into(), gene_id.clone());
                     mrna_source = Some(r.source.clone());
+                    // Clamp the mRNA to span all its children (see above).
+                    if have_children {
+                        r.start = child_min;
+                        r.end = child_max;
+                    }
                 }
                 "CDS" => {
                     cds_counter += 1;
@@ -984,6 +1011,51 @@ scaffold_001\tGeneMark.hmm\tstop_codon\t2951\t2953\t.\t+\t0\tParent=gm_1.t1\n",
             "real-shape consensus CDS must fold the stop codon (got {:?})\n{}",
             cds, gff
         );
+    }
+
+    // Regression: a parent gene/mRNA whose own bounds cover only a SUBSET of
+    // its CDS (the SCE_000005 shape — parent 15601-15609 but a second CDS at
+    // 15025-15318) must be clamped on emit to span ALL children. Otherwise the
+    // other CDS is "outside mRNA bounds" → invalid GFF, table2asn rejects it.
+    #[test]
+    fn parent_bounds_span_all_cds_children() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("in.gff3");
+        std::fs::write(
+            &input,
+            "##gff-version 3\n\
+scaffold_001\ttest\tgene\t15601\t15609\t.\t-\t.\tID=g1\n\
+scaffold_001\ttest\tmRNA\t15601\t15609\t.\t-\t.\tID=g1.t1;Parent=g1\n\
+scaffold_001\ttest\tCDS\t15601\t15609\t.\t-\t0\tID=g1.cds1;Parent=g1.t1\n\
+scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
+        )
+        .unwrap();
+
+        let out = dir.path().join("consensus.gff3");
+        let inputs: Vec<(&Path, &str, f64)> = vec![(input.as_path(), "test", 5.0)];
+        let n = merge_predictions(&inputs, &out, "SCE").unwrap();
+        assert_eq!(n, 1);
+
+        let gff = std::fs::read_to_string(&out).unwrap();
+        // Every emitted gene and mRNA must span the full 15025..15609 CDS union.
+        for want_type in ["gene", "mRNA"] {
+            let line = gff
+                .lines()
+                .find(|l| l.split('\t').nth(2) == Some(want_type))
+                .unwrap_or_else(|| panic!("no {want_type} line\n{gff}"));
+            let f: Vec<&str> = line.split('\t').collect();
+            assert_eq!(f[3], "15025", "{want_type} start must be min CDS\n{gff}");
+            assert_eq!(f[4], "15609", "{want_type} end must be max CDS\n{gff}");
+        }
+        // And no CDS may fall outside the parent span.
+        for l in gff.lines().filter(|l| l.split('\t').nth(2) == Some("CDS")) {
+            let f: Vec<&str> = l.split('\t').collect();
+            let (s, e): (u64, u64) = (f[3].parse().unwrap(), f[4].parse().unwrap());
+            assert!(
+                s >= 15025 && e <= 15609,
+                "CDS {s}-{e} outside parent\n{gff}"
+            );
+        }
     }
 
     // ── Feature 1: consensus false-positive filter ────────────────────────────

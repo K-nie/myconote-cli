@@ -613,12 +613,99 @@ pub fn write_submission_template(output: &Path, config: &SubmitConfig) -> Result
     .map_err(MycoNoteError::Io)?;
     writeln!(f, "        email \"{}\"", escape_asn_string(&config.email))
         .map_err(MycoNoteError::Io)?;
+    writeln!(f, "      }}").map_err(MycoNoteError::Io)?; // close affil
+    writeln!(f, "    }}").map_err(MycoNoteError::Io)?; // close Contact-info
+    writeln!(f, "  }},").map_err(MycoNoteError::Io)?; // close contact field (comma: cit follows)
+
+    // The `cit` (Cit-sub) field is MANDATORY in an ASN.1 Submit-block. A
+    // template with only `contact` is not a complete Submit-block, so
+    // table2asn refuses to load it ("Error loading template file") regardless
+    // of the contact values. Emit the authors (reusing the contact name),
+    // affiliation, submission date, and `subtype new`.
+    let (year, month, day) = today_ymd();
+    writeln!(f, "  cit {{").map_err(MycoNoteError::Io)?;
+    writeln!(f, "    authors {{").map_err(MycoNoteError::Io)?;
+    writeln!(f, "      names std {{").map_err(MycoNoteError::Io)?;
+    writeln!(f, "        {{").map_err(MycoNoteError::Io)?;
+    writeln!(f, "          name name {{").map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "            last \"{}\",",
+        escape_asn_string(&config.contact_last)
+    )
+    .map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "            first \"{}\"",
+        escape_asn_string(&config.contact_first)
+    )
+    .map_err(MycoNoteError::Io)?;
+    writeln!(f, "          }}").map_err(MycoNoteError::Io)?;
+    writeln!(f, "        }}").map_err(MycoNoteError::Io)?;
+    writeln!(f, "      }},").map_err(MycoNoteError::Io)?;
+    writeln!(f, "      affil std {{").map_err(MycoNoteError::Io)?;
+    writeln!(
+        f,
+        "        affil \"{}\"",
+        escape_asn_string(&config.institution)
+    )
+    .map_err(MycoNoteError::Io)?;
     writeln!(f, "      }}").map_err(MycoNoteError::Io)?;
+    writeln!(f, "    }},").map_err(MycoNoteError::Io)?;
+    writeln!(f, "    date std {{").map_err(MycoNoteError::Io)?;
+    writeln!(f, "      year {},", year).map_err(MycoNoteError::Io)?;
+    writeln!(f, "      month {},", month).map_err(MycoNoteError::Io)?;
+    writeln!(f, "      day {}", day).map_err(MycoNoteError::Io)?;
     writeln!(f, "    }}").map_err(MycoNoteError::Io)?;
-    writeln!(f, "  }}").map_err(MycoNoteError::Io)?;
+    writeln!(f, "  }},").map_err(MycoNoteError::Io)?;
+    writeln!(f, "  subtype new").map_err(MycoNoteError::Io)?;
     writeln!(f, "}}").map_err(MycoNoteError::Io)?;
 
     Ok(())
+}
+
+/// Today's date as `(year, month, day)` in UTC, computed from the system clock
+/// without a date-library dependency (the codebase deliberately avoids chrono).
+/// Used only for the `.sbt` submission date, so UTC civil date is sufficient.
+fn today_ymd() -> (u64, u64, u64) {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let mut remaining_days = secs / 86_400;
+    let is_leap = |y: u64| y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+    let mut year = 1970u64;
+    loop {
+        let diy = if is_leap(year) { 366 } else { 365 };
+        if remaining_days < diy {
+            break;
+        }
+        remaining_days -= diy;
+        year += 1;
+    }
+    let month_days = [
+        31,
+        if is_leap(year) { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    let mut month = 1u64;
+    for md in &month_days {
+        if remaining_days < *md {
+            break;
+        }
+        remaining_days -= *md;
+        month += 1;
+    }
+    (year, month, remaining_days + 1)
 }
 
 /// Escape a string for embedding inside an ASN.1 double-quoted value.
@@ -1085,5 +1172,37 @@ NW_1\tmaker\tCDS\t300\t500\t.\t+\t0\tID=cds4b;Parent=g4\n";
 
         let _ = std::fs::remove_file(&gff);
         let _ = std::fs::remove_file(&fasta);
+    }
+
+    // Regression: the .sbt must be a COMPLETE Submit-block — the `cit`
+    // (Cit-sub) field is mandatory, or table2asn refuses to load the template
+    // ("Error loading template file"). Assert the writer emits contact + cit
+    // (authors, affil, date) + subtype.
+    #[test]
+    fn sbt_template_includes_mandatory_cit_block() {
+        let dir = tempfile::tempdir().unwrap();
+        let sbt = dir.path().join("template.sbt");
+        let cfg = SubmitConfig {
+            contact_first: "Jane".into(),
+            contact_last: "Doe".into(),
+            institution: "Test Lab".into(),
+            email: "jane@example.org".into(),
+            ..default_cfg()
+        };
+        write_submission_template(&sbt, &cfg).unwrap();
+        let s = std::fs::read_to_string(&sbt).unwrap();
+
+        assert!(s.contains("Submit-block ::= {"), "has Submit-block:\n{s}");
+        assert!(s.contains("contact {"), "has contact:\n{s}");
+        assert!(s.contains("cit {"), "cit (Cit-sub) is mandatory:\n{s}");
+        assert!(s.contains("authors {"), "cit needs authors:\n{s}");
+        assert!(s.contains("date std {"), "cit needs a date:\n{s}");
+        assert!(s.contains("subtype new"), "needs subtype new:\n{s}");
+        // Balanced braces → parseable ASN.1 structure.
+        assert_eq!(
+            s.matches('{').count(),
+            s.matches('}').count(),
+            "unbalanced braces in .sbt:\n{s}"
+        );
     }
 }

@@ -320,6 +320,15 @@ fn write_augustus_genbank(
             .map_err(MycoNoteError::Io)?;
         writeln!(f, "FEATURES             Location/Qualifiers").map_err(MycoNoteError::Io)?;
 
+        // Write the `source` feature spanning the whole record. Augustus's
+        // GenBank reader (etraining / gff2gbSmallDNA.pl output) uses this
+        // feature to establish the sequence bounds; WITHOUT it the internal
+        // sequence length is unset and every CDS is rejected as "out of range.
+        // Ignoring it." — which silently emptied the training set and made
+        // self-training fall back to the stock species. Emitting it matches
+        // gff2gbSmallDNA.pl and makes etraining accept every record.
+        writeln!(f, "     source          1..{}", region_len).map_err(MycoNoteError::Io)?;
+
         // Write CDS feature
         let strand_char = model.gene.strand;
         let location = build_location(&cds_coords, strand_char);
@@ -969,6 +978,76 @@ mod tests {
         std::fs::create_dir_all(&gdir).unwrap();
         touch(&gdir.join("generic_parameters.cfg"));
         assert!(self_training_generic_template_present(Some(&config)));
+    }
+
+    // Regression: every GenBank training record must carry a `source 1..<len>`
+    // feature. Augustus etraining uses it to set the sequence bounds; without
+    // it, EVERY CDS is rejected as "out of range. Ignoring it.", the training
+    // set empties, and self-training silently falls back to the stock species.
+    #[test]
+    fn genbank_record_has_source_feature_and_in_range_cds() {
+        use crate::parser::gff::GFFRecord;
+        use std::collections::HashMap;
+
+        // A 3000 bp contig; one minus-strand gene at 1436..1990 with two CDS.
+        let mut fasta_index = HashMap::new();
+        fasta_index.insert(
+            "scaffold_001".to_string(),
+            FastaRecord {
+                header: "scaffold_001".to_string(),
+                id: "scaffold_001".to_string(),
+                sequence: "A".repeat(3000),
+            },
+        );
+
+        let mk = |ft: &str, start: u64, end: u64, id: &str, parent: Option<&str>| {
+            let mut attrs = HashMap::new();
+            attrs.insert("ID".to_string(), id.to_string());
+            if let Some(p) = parent {
+                attrs.insert("Parent".to_string(), p.to_string());
+            }
+            GFFRecord {
+                seqid: "scaffold_001".to_string(),
+                source: "AUGUSTUS".to_string(),
+                feature_type: ft.to_string(),
+                start,
+                end,
+                score: None,
+                strand: '-',
+                phase: Some(0),
+                attributes: attrs,
+            }
+        };
+
+        let model = GeneModel {
+            gene: mk("gene", 1436, 1990, "c0_g1", None),
+            mrnas: vec![mk("mRNA", 1436, 1990, "c0_g1.t1", Some("c0_g1"))],
+            cds: vec![
+                mk("CDS", 1439, 1449, "c0_g1.t1.cds", Some("c0_g1.t1")),
+                mk("CDS", 1528, 1990, "c0_g1.t1.cds", Some("c0_g1.t1")),
+            ],
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let gb = dir.path().join("t.gb");
+        let config = TrainConfig {
+            flanking: 1000,
+            ..Default::default()
+        };
+        let n = write_augustus_genbank(&[model], &fasta_index, &config, &gb).unwrap();
+        assert_eq!(n, 1);
+
+        let text = std::fs::read_to_string(&gb).unwrap();
+        // LOCUS length = gene span (555) + 2*1000 flank, clamped to contig = 2555.
+        assert!(text.contains("LOCUS"), "has LOCUS line");
+        assert!(
+            text.contains("     source          1..2555"),
+            "must emit a source feature spanning the record:\n{text}"
+        );
+        // The source feature precedes the CDS feature.
+        let src_at = text.find("source").unwrap();
+        let cds_at = text.find("CDS").unwrap();
+        assert!(src_at < cds_at, "source must come before CDS");
     }
 
     // AUGUSTUS_CONFIG_PATH/../config is derived from the augustus binary when

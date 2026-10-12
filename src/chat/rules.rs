@@ -94,7 +94,8 @@ fn evaluate_sort(ctx: &StageContext, findings: &mut Vec<Finding>) {
         findings.push(Finding {
             rule_id: "sort.no_rename_table".to_string(),
             severity: Severity::Info,
-            message: "No rename table found. If contigs were renamed, the mapping is not recorded."
+            message: "No rename table — contigs kept their original names (sort's lossless \
+                      default since v0.7.9). A rename table is written only with --ncbi-clean."
                 .to_string(),
             evidence: "No file matching 'name_map' or 'rename' found in directory.".to_string(),
             citation: None,

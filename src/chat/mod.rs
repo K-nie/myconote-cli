@@ -539,7 +539,7 @@ fn print_explain_help() {
     println!("    myconote-cli explain --paste [options]");
     println!();
     println!("  {}Stages:{}", C_BOLD, C_RESET);
-    println!("    sort       Sort + rename genome contigs");
+    println!("    sort       Sort/filter contigs (lossless; rename with --ncbi-clean)");
     println!("    mask       Repeat masking results");
     println!("    train      Gene predictor training reports");
     println!("    predict    Gene prediction summary + GFF3");

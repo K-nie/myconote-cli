@@ -89,7 +89,9 @@ fn print_main_help() {
     print_banner();
     println!("Usage: myconote-cli <command> [options]");
     println!("\nPipeline commands (run in order):");
-    println!("  sort     Sort + rename genome contigs by length (pre-processing)");
+    println!(
+        "  sort     Sort/filter contigs by length; lossless by default (--ncbi-clean to rename)"
+    );
     println!("  mask     Identify and soft-mask repeats in a genome FASTA");
     println!("  train    RNA-seq mediated training of Augustus/SNAP (Trinity + PASA)");
     println!("  predict  Predict genes (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + EVM, or BRAKER via --use-braker)");

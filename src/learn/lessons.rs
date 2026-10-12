@@ -495,19 +495,29 @@ These cause problems downstream because:
   - Special characters (|, =, spaces) break GFF3 parsers
   - NCBI rejects submissions with non-standard sequence IDs
 
-The 'sort' command standardizes everything:
+The 'sort' command reorders contigs longest-first and filters short
+contigs that are too small to contain genes (typically < 500 bp).
+
+By DEFAULT it is lossless: your original contig names pass through
+unchanged, so every downstream GFF3 keeps the accessions you know.
+
+For NCBI submission, where short standard IDs are required, add
+'--ncbi-clean' to rename contigs to:
   >scaffold_001    (longest contig first)
   >scaffold_002
   ...
-
-It also filters short contigs that are too small to contain genes
-(typically < 500 bp) and writes a rename table so you can trace
-the original names."
+and pair it with '--rename-table' to write a lift-over table so you
+can trace back to the original names."
             ),
 
             LessonItem::CodeExample(
-                "Sort contigs, remove anything under 500 bp, save rename mapping:",
-                "myconote-cli sort assembly.fa --min-length 500 --rename-table rename.tsv"
+                "Default (lossless): reorder + drop anything under 500 bp, keep original names:",
+                "myconote-cli sort assembly.fa --min-length 500"
+            ),
+
+            LessonItem::CodeExample(
+                "NCBI-ready: also rename to scaffold_N and save the lift-over table:",
+                "myconote-cli sort assembly.fa --min-length 500 --ncbi-clean --rename-table rename.tsv"
             ),
 
             LessonItem::Question {
@@ -2601,7 +2611,13 @@ against the GitHub API. Coverage spans:
   - Mucoromycota / Microsporidia (Rhizopus, Encephalitozoon)
 
 Plus the bare-genus aliases that Augustus historically ships
-(`saccharomyces`, `fusarium`, `cryptococcus`, etc.)."
+(`saccharomyces`, `fusarium`, `cryptococcus`, etc.).
+
+The bundle also provisions the `species/generic/` template that
+Augustus needs to bootstrap a NEW species. Without it,
+`predict --augustus-training self` (lesson 6) aborts when
+`new_species.pl` tries to seed the model, so installing this
+bundle is what makes self-training work out of the box."
             ),
 
             LessonItem::Info("Why 49 and not the spec's hoped-for ~100?",
@@ -2655,9 +2671,14 @@ Retrain with `myconote-cli train` when:
   - You have substantial RNA-seq from your strain.
   - You're producing a publication-quality reference annotation.
 
-A common pattern: use `saccharomyces_cerevisiae_S288C` as a quick
-first pass to get an initial gene set, then retrain on your own
-organism for the final reference annotation."
+A common pattern: pick a clade-appropriate model with
+`predict --clade saccharomycotina|pezizomycotina|basidiomycota`
+for a quick first pass, then retrain on your own organism for the
+final reference annotation. Prefer `--clade` over hard-coding
+`saccharomyces_cerevisiae_S288C`: S288C is a Saccharomycotina
+model and a poor default off that clade (BUSCO completeness can
+fall below 15 % on a basidiomycete), which is why a fungal run
+with neither `--species` nor `--clade` now warns."
             ),
 
             LessonItem::TryIt {

@@ -40,6 +40,34 @@ the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   The path remains non-fatal: a missing diamond, miniprot, or a prefilter that
   keeps nothing logs and proceeds ab-initio, exactly as before.
 
+- **`--augustus-training self` now trains end to end (v0.7.11–v0.7.13).** Three
+  further defects blocked a self-trained model even after the resolver/banner
+  fix: (v0.7.11) `setup --dbs augustus-fungi` did not provision the
+  `species/generic/` template that `new_species.pl` copies to seed a species,
+  so species creation aborted; it is now fetched with the curated species, and
+  the `predict` preflight additionally gates on the template being present and
+  names it in the fallback banner. (v0.7.12) the native GenBank training-set
+  writer omitted the `source  1..<len>` feature that Augustus `etraining` uses
+  to set each record's sequence bounds, so every CDS was rejected as "out of
+  range" and the training set emptied; the feature is now emitted and etraining
+  completes. Note: a self-trained model does **not** beat the curated stock
+  species on well-represented model fungi (it trains on first-pass ab-initio
+  calls with no `optimize_augustus.pl` pass), so `stock` remains the default.
+- **Opt-in protein-hints identity gate (`--protein-hints-min-identity`,
+  v0.7.11).** The `diamond blastx` prefilter can now keep only subjects with a
+  hit at or above a percent-identity threshold (default `0` = keep all), so a
+  whole-kingdom OrthoDB set does not feed miniprot the distant, low-identity
+  homologs that add noise rather than signal (cf. BRAKER3 / GALBA close-relative
+  guidance; funannotate's exonerate 80 %).
+- **Valid GFF3 parent bounds and a complete NCBI `.sbt` (v0.7.13).** Two bugs a
+  `table2asn` verification surfaced: (1) the consensus merge emitted `gene` /
+  `mRNA` parents whose bounds covered only a subset of their CDS (~2–3 % of
+  genes), producing invalid "CDS outside mRNA" GFF — parents are now clamped to
+  span all coordinate-bearing children (min child start, max child end); (2) the
+  `submit` `.sbt` carried only a `contact` block, but an ASN.1 `Submit-block`
+  requires the `cit` (Cit-sub) field, so `table2asn` refused to load it — the
+  template now emits authors, affiliation, submission date and `subtype new`.
+
 ### Added
 
 - **Clade-aware default Augustus species (`--clade`).** `predict` no longer

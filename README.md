@@ -156,7 +156,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `setup` | Download and index annotation databases (Swiss-Prot, Pfam, EggNOG, BUSCO, dbCAN, MEROPS, Ollama, paper corpus) |
 | `remote` | Submit proteins to remote servers (Phobius, InterProScan, DeepLoc) |
 | `species` | List all Augustus species models (grouped by kingdom) |
-| `learn` | Interactive tutorial system -- 20 lessons, swirl-style, right in your terminal |
+| `learn` | Interactive tutorial system -- 22 lessons, swirl-style, right in your terminal |
 
 ---
 
@@ -298,7 +298,7 @@ myconote-cli explain predict --dry-run
 4. **Citation validator** strips any claim the LLM cannot back with a retrieved source
 5. **Command recommender** suggests 1-3 copy-pasteable next commands
 
-**Smart model selection:** The tool auto-detects your system RAM and picks the most capable local model:
+**Smart model selection:** From a curated, stable tier list, the tool picks the most capable model that both fits your system RAM **and is already pulled** in Ollama — so interpretation works out of the box instead of failing on an un-installed model (it falls back to rules-only if nothing suitable is pulled). The tiers are a fixed snapshot, not an auto-updating "latest": to use a newer model, `ollama pull <model>` and pass it with `--model <name>`.
 
 | RAM | Model | Quality |
 |-----|-------|---------|
@@ -308,7 +308,9 @@ myconote-cli explain predict --dry-run
 | 12+ GB | qwen2.5:14b | Good |
 | 8+ GB | llama3.1:8b | Baseline |
 
-**Privacy first:** All inference runs locally. No data ever leaves your machine. Override the model with `--model <name>` or `MYCONOTE_CHAT_MODEL` env var.
+Override the model with `--model <name>` or the `MYCONOTE_CHAT_MODEL` env var.
+
+**Responsible use and data privacy:** AI interpretation is a *starting point, not a substitute for human and contextual judgement* — weigh every output against your own domain expertise and the biology of your system; the scientific conclusions are yours, not the model's, and they must be independently verified before they inform a decision or a publication. By default all inference runs **locally via Ollama**, so your data stays on your machine. If you point `--endpoint` or a provider at a remote service, your inputs leave the machine — **review your organization's policies on AI use and data handling before sending sensitive or unpublished data to any model.** Every `explain` run prints this notice.
 
 **Scientific disclaimer:** All interpretations are suggestive, not definitive. Findings must be independently verified in the context of your research.
 

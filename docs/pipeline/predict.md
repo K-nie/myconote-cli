@@ -1,10 +1,64 @@
-# myconote predict
+# myconote-cli predict
 
 ```bash
-myconote predict --help
+myconote-cli predict --help
 ```
 
 See the [Pipeline Overview](overview.md) for how `predict` fits into the full workflow.
+
+## Choosing the Augustus species model (`--clade`)
+
+Augustus needs a species model. By default a fungal run uses
+`saccharomyces_cerevisiae_S288C`, but that is a Saccharomycotina model and a
+poor choice off that clade — so instead of hard-coding it, pass `--clade` to get
+a clade-appropriate default:
+
+```bash
+myconote-cli predict genome_masked.fa --kingdom fungi --clade pezizomycotina
+```
+
+| `--clade` | Default model |
+|-----------|---------------|
+| `saccharomycotina` | `saccharomyces_cerevisiae_S288C` |
+| `pezizomycotina` | `aspergillus_nidulans` |
+| `basidiomycota` | `cryptococcus_neoformans_neoformans_JEC21` |
+
+An explicit `--species <model>` always wins. A fungal run with neither
+`--species` nor `--clade` still uses S288C but prints a warning (BUSCO
+completeness can fall below 15 % off-Saccharomycotina).
+
+## Protein hints (`--protein-hints`)
+
+Add protein evidence from related species as Augustus hints via miniprot. The
+protein DB is prefiltered with `diamond blastx` so a whole-kingdom OrthoDB set
+does not stall miniprot:
+
+```bash
+myconote-cli predict genome_masked.fa --kingdom fungi --species aspergillus_nidulans \
+    --protein-hints orthodb_fungi.fa --protein-hints-min-identity 70
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--protein-hints <proteins.fa>` | off | Protein FASTA → miniprot → Augustus hints |
+| `--protein-hints-evalue <E>` | `1e-5` | diamond e-value for the prefilter |
+| `--protein-hints-max <N>` | `50000` | Max proteins fed to miniprot (`0` = unbounded) |
+| `--protein-hints-min-identity <P>` | `0` | Keep only prefilter hits ≥ P% identity — raise it to drop distant, low-identity homologs (close relatives beat remote proteins) |
+
+This path is non-fatal: if diamond/miniprot are absent or nothing survives the
+prefilter, prediction proceeds ab-initio. (Distinct from `--protein-fasta`,
+which feeds GeneMark EP+/ETP+ via ProtHint — see below.)
+
+## Self-training Augustus (`--augustus-training self`)
+
+`--augustus-training stock` (default) uses a curated pre-trained species.
+`--augustus-training self` instead trains a genome-specific model on the fly
+(first-pass prediction → `new_species.pl` → `etraining`). It needs the Augustus
+companion scripts and the `species/generic/` template from
+`setup --db augustus-fungi`; if either is missing, `predict` prints a loud
+banner and falls back to the stock species (it never silently pretends to
+train). On fungi with a curated model, `stock` usually wins — self-train earns
+its keep on a novel fungus with no close stock species.
 
 ## Choosing a GeneMark mode
 

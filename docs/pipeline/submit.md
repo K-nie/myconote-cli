@@ -27,8 +27,18 @@ myconote-cli submit <annotated.gff3> --fasta <genome.fa> --organism "Genus speci
 | `--biosample <acc>` | BioSample accession (e.g. SAMN12345678) |
 | `--locus-prefix <str>` | Locus tag prefix (default: MYCO) |
 | `--genetic-code <n>` | Translation table (default: 1) |
-| `--email <address>` | Contact email |
-| `--validate-only` | Only validate, do not generate files |
+| `--email <address>` | Contact email (written into `template.sbt`) |
+| `--contact-first <name>` | Submitter first name (`template.sbt`) |
+| `--contact-last <name>` | Submitter last name (`template.sbt`) |
+| `--institution <name>` | Submitter institution (`template.sbt`) |
+| `--fix-structure` | Repair safe structural problems before `table2asn` (synthesise missing gene/mRNA parents for orphan CDS); child coordinates are never altered |
+| `--validate-only` | Only validate (including the structure check), do not generate files |
+
+!!! note "Complete the `.sbt` or table2asn won't load it"
+    `table2asn` requires a complete submission template. Provide
+    `--contact-first`, `--contact-last`, `--institution` and `--email`, or it
+    rejects the stub with `Error loading template file`. MycoNote warns when any
+    of these is missing.
 
 ## Validation checks
 
@@ -58,10 +68,11 @@ myconote-cli submit annotated.gff3 --fasta genome.fa \
 
 # Output files
 ls submit_out/
-#  annotation.tbl    -- NCBI feature table
-#  annotation.fsa    -- Genome FASTA copy
-#  annotation.sqn    -- Sequin file (if table2asn installed)
-#  template.sbt      -- Submission template
+#  annotation.tbl      -- NCBI feature table
+#  annotation.fsa      -- Genome FASTA copy
+#  annotation.sqn      -- Sequin file (if table2asn installed)
+#  template.sbt        -- Submission template
+#  structure_fixed.gff3 -- repaired GFF3 (only when --fix-structure applied repairs)
 ```
 
 ## Before submitting to NCBI

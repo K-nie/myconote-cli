@@ -1,32 +1,45 @@
-# myconote sort
+# myconote-cli sort
 
-Standardises scaffold names and removes sequences below a minimum length threshold.
+Reorders contigs longest-first and filters out sequences below a minimum length.
+By **default it is lossless**: original contig seqids are preserved end-to-end.
+Renaming to NCBI-style short IDs is opt-in via `--ncbi-clean`.
 
 ```bash
-myconote sort --genome mygenome.fas --out 01_sorted/
+# Default (lossless): reorder + drop anything under 500 bp, keep original names
+myconote-cli sort assembly.fa --min-length 500
+
+# NCBI-ready: also rename to scaffold_N and save the lift-over table
+myconote-cli sort assembly.fa --min-length 500 --ncbi-clean --rename-table rename.tsv
 ```
 
 ## Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--genome` | required | Input genome FASTA |
-| `--out` | required | Output directory |
-| `--min-length` | 500 | Minimum scaffold length (bp) to retain |
-| `--prefix` | `scaffold` | Scaffold name prefix |
-| `--threads` | 4 | CPU threads |
+| `<genome.fa>` | required | Input genome FASTA (positional) |
+| `--output`, `-o` | `<input>_sorted.fa` | Output FASTA file |
+| `--min-length <bp>` | `0` | Discard contigs shorter than this |
+| `--ncbi-clean` (alias `--rename-contigs`) | off | Rename contigs to `<prefix>_N` for NCBI's short-name requirement |
+| `--prefix <str>` | `scaffold` | ID prefix when `--ncbi-clean` is set |
+| `--rename-table <file>` | — | Write the old→new ID table (TSV); use with `--ncbi-clean` |
+| `--keep-desc` | off (strip) | Keep the original description after the ID |
+| `--sort-by-name` | off (by length) | Sort alphabetically instead of by length |
 
 ## Output files
 
 | File | Description |
 |------|-------------|
-| `genome.fas` | Renamed, filtered genome FASTA |
-| `sort_report.txt` | Scaffold count, total length, N50 before/after |
-| `name_map.tsv` | Mapping of original → new scaffold names |
+| `<input>_sorted.fa` | Reordered, length-filtered genome FASTA (original seqids unless `--ncbi-clean`) |
+| `<rename-table>.tsv` | old→new ID mapping — only when `--ncbi-clean` + `--rename-table` are used |
 
 ## Notes
 
 !!! tip
-    Always run `sort` first. Downstream tools require clean, consistently named scaffolds.
+    Run `sort` first to drop junk-length contigs and get a deterministic order.
+    The lossless default means your downstream GFF3 keeps the accessions you
+    know; only add `--ncbi-clean` when preparing an NCBI submission.
 
-Scaffolds are renamed to `scaffold_0001`, `scaffold_0002`, etc. by default. Use `--prefix` to customise (e.g., `--prefix chr` for chromosome-scale assemblies).
+With `--ncbi-clean`, contigs are renamed to `scaffold_1`, `scaffold_2`, … (not
+zero-padded). Use `--prefix` to customise (e.g. `--prefix chr` for
+chromosome-scale assemblies), and `--rename-table` to keep the lift-over map so
+`submit` (and your own records) can trace back to the originals.

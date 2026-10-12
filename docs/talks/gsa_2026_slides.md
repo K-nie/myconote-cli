@@ -13,6 +13,14 @@ style: |
   .cite { font-size: 55%; color: #666; font-style: italic; }
 ---
 
+<!--
+ARCHIVED TALK (GSA 2026, MycoNote-CLI v0.2.0). Kept as a historical artifact.
+The tool has changed substantially since: current release is v0.7.13, scope was
+narrowed to fungi, and the `place` (functional placement) and `phylogeny`
+commands plus the Y1000+ integration were REMOVED. Do not treat the slides
+below as a current feature description — see README.md / docs/ for the live tool.
+-->
+
 <!-- _paginate: false -->
 <!-- _header: "" -->
 <!-- _footer: "" -->
@@ -76,7 +84,7 @@ FASTA →  ├─ GlimmerHMM ─┼→ EVM consensus → GFF3 → annotate
 
 - Weighted evidence integration — one bad predictor does not sink the call
 - Ploidy-aware allelic duplicate detection
-- **18 NCBI genetic code tables** supported
+- **25 NCBI genetic code tables** supported
 
 ---
 

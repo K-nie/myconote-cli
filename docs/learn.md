@@ -62,7 +62,14 @@ The catalogue is split into four tracks. Lessons within each track can be comple
 | 19 | **Reproducibility Manifests** | ~8 min | `quant_bundle.json` / `ase_bundle.json`, SHA256 hashing, byte-identical re-runs |
 | 20 | **NCBI Codon Tables (Candida CTG focus)** | ~12 min | 25 NCBI tables, Table 12, silent-mistranslation failure mode |
 
-**Total: ~217 minutes (~3.6 hours)** covering the full pipeline plus modern features added in v0.5+.
+### Evidence and training track (lessons 21-22)
+
+| # | Lesson | Duration | Topics |
+|---|--------|----------|--------|
+| 21 | **Protein Hints: miniprot Evidence** | ~10 min | `predict --protein-hints`, the diamond prefilter, `--protein-hints-min-identity` (close relatives beat remote proteins) |
+| 22 | **Self-Training Augustus Models** | ~10 min | `predict --augustus-training self`, prerequisites (companion scripts + `species/generic/`), why stock usually wins |
+
+**Total: ~237 minutes (~4 hours)** covering the full pipeline plus modern features added since v0.5.
 
 ---
 

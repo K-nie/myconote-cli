@@ -1,7 +1,7 @@
-# myconote train
+# myconote-cli train
 
 ```bash
-myconote train --help
+myconote-cli train --help
 ```
 
 See the [Pipeline Overview](overview.md) for how `train` fits into the full workflow.

@@ -54,8 +54,7 @@ User input
 | `<stage>` | Pipeline stage to interpret: sort, mask, train, predict, update, annotate, submit |
 | `--dir <path>` | Stage output directory (default: auto-discovered) |
 | `--paste` | Read from stdin instead of scanning a directory |
-| `--stdin-format <fmt>` | Override format detection: auto, gff, vcf, log, error |
-| `--model <name>` | Override LLM model |
+| `--model <name>` | Override the LLM model (any installed Ollama model) |
 | `--endpoint <url>` | Override Ollama endpoint |
 | `--no-llm` | Skip LLM call, print rule-based findings only |
 | `--verbose` | Show all findings with evidence |
@@ -98,7 +97,11 @@ If Ollama is not running and `--no-llm` is not set, the tool prints rule-based f
 
 ## Smart model selection
 
-The tool auto-detects system RAM and selects the most capable model:
+From a curated, stable tier list, the tool picks the most capable model that
+**both** fits your system RAM **and is already pulled** in Ollama — so the AI
+path engages out of the box instead of failing on an un-installed model (it
+falls back to rules-only if nothing suitable is pulled). The tiers are a fixed
+snapshot, not an auto-updating "latest":
 
 | Available RAM | Model | Quality |
 |---------------|-------|---------|
@@ -108,7 +111,19 @@ The tool auto-detects system RAM and selects the most capable model:
 | 12+ GB | qwen2.5:14b | Good quality |
 | 8+ GB | llama3.1:8b | Baseline |
 
-Override with `--model <name>` or `MYCONOTE_CHAT_MODEL` environment variable.
+To use a newer model, `ollama pull <model>` and pass it with `--model <name>`
+(or set `MYCONOTE_CHAT_MODEL`). Any installed Ollama model works.
+
+## Responsible use and data privacy
+
+AI interpretation is a **starting point, not a substitute for human and
+contextual judgement** — weigh every output against your own domain expertise
+and the biology of your system, and verify it independently before it informs a
+decision or a publication. By default all inference runs **locally via Ollama**,
+so your data stays on your machine. If you point `--endpoint` or a provider at a
+remote service, your inputs leave the machine — **review your organization's
+policies on AI use and data handling before sending sensitive or unpublished
+data to any model.** Every `explain` run prints this notice.
 
 ## Configuration
 

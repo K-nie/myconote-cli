@@ -22,13 +22,16 @@ myconote-cli setup           # download all databases (~2.5 GB)
 
 ---
 
-## 2. Sort and clean scaffolds
+## 2. Sort and length-filter contigs
 
 ```bash
 myconote-cli sort assembly.fa --min-length 500
 ```
 
-Renames scaffolds to clean IDs (scaffold_001, scaffold_002...), sorts by length, and filters short contigs.
+Reorders contigs longest-first and drops short ones. **Lossless by default** —
+your original contig names pass through unchanged. For an NCBI submission, add
+`--ncbi-clean` (optionally `--rename-table rename.tsv`) to rename to
+`scaffold_1`, `scaffold_2`, … and record the lift-over map.
 
 ---
 
@@ -68,16 +71,20 @@ myconote-cli predict assembly_masked.fa \
   --threads 8
 ```
 
-Runs Augustus + SNAP, merges predictions with the Evidence Modeler consensus, and produces a clean GFF3 with sequential locus tags.
+Runs Augustus + SNAP (+ GeneMark when configured), merges predictions with MycoNote's agreement-weighted consensus, and writes a clean `consensus.gff3` with sequential locus tags.
 
 **Advanced options:**
 ```bash
-# Add protein evidence for better predictions
-myconote-cli predict assembly_masked.fa --kingdom fungi \
-  --protein-fasta swissprot.fasta --locus-prefix MYORG
+# Clade-appropriate Augustus model (instead of the S288C default off-Saccharomycotina)
+myconote-cli predict assembly_masked.fa --kingdom fungi --clade basidiomycota
 
-# Use custom evidence weights
-myconote-cli predict assembly_masked.fa --weights weights.toml
+# Add protein hints (miniprot → Augustus), keeping only close relatives
+myconote-cli predict assembly_masked.fa --kingdom fungi \
+  --protein-hints orthodb_fungi.fa --protein-hints-min-identity 70
+
+# Feed a protein DB to GeneMark EP+/ETP+ (ProtHint), not standalone hints
+myconote-cli predict assembly_masked.fa --kingdom fungi \
+  --genemark-mode ep --protein-fasta swissprot.fasta --locus-prefix MYORG
 
 # Handle diploid/polyploid genomes
 myconote-cli predict assembly_masked.fa --ploidy 2

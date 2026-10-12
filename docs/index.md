@@ -24,8 +24,8 @@ RNA-seq is a first-class input at four distinct points: `train` and `update` use
 
 ## Key Features
 
-- **23 CLI commands** covering the full fungal genome annotation lifecycle
-- **15 annotation sources** -- MMseqs2, Pfam (hmmsearch), InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms, and more
+- **26 CLI commands** covering the full fungal genome annotation lifecycle
+- **11 annotation sources** -- MMseqs2 (Swiss-Prot), Pfam (hmmsearch), InterProScan, EggNOG, CAZyme (dbCAN), MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms
 - **Multi-tool gene prediction** -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, configurable EVM consensus
 - **RNA-seq expression quantification** -- `quant` wraps fastp + salmon with a decoy-aware index, emits tximport-ready `quant.sf` per sample plus wide count and TPM matrices
 - **DESeq2 differential expression** -- `de-template` emits a ready-to-run R script (tximport → DESeq2 → apeglm shrinkage → volcano + MA plots); no R runtime dependency in the CLI itself

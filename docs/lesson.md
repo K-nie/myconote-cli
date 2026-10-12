@@ -128,15 +128,16 @@ Run `myconote-cli check` and identify:
 Most genome assemblers output contigs in arbitrary order with long, non-informative headers like `NODE_1_length_2474448_cov_85.2`. The `sort` command:
 
 - Orders contigs from longest to shortest (annotation tools perform best on long contigs)
-- Renames headers to clean sequential IDs (`scaffold_1`, `scaffold_2`, ...)
 - Filters out very short contigs that add noise without contributing gene models
-- Saves a rename table so you can trace back to original IDs
+- **Preserves your original contig names by default** (lossless)
+- Optionally renames headers to clean sequential IDs (`scaffold_1`, `scaffold_2`, …) with `--ncbi-clean`, and saves a rename table so you can trace back to the originals
 
 ### Running `sort`
 
 ```bash
+# NCBI-ready: rename to scaffold_N and keep the lift-over table
 myconote-cli sort genome.fa \
-    --prefix scaffold \
+    --ncbi-clean --prefix scaffold \
     --min-length 1000 \
     --rename-table rename_table.tsv \
     -o sorted.fa
@@ -164,13 +165,13 @@ Sort the practice genome, then answer:
 
 ```bash
 myconote-cli sort tests/data/candida_tropicalis.fas \
-    --min-length 10000 \
+    --min-length 10000 --ncbi-clean \
     -o ct_sorted.fa
 ```
 
 1. How many contigs passed the 10,000 bp filter?
 2. What fraction of the total assembly length do they represent?
-3. What would the first contig header look like in `ct_sorted.fa`?
+3. With `--ncbi-clean`, what would the first contig header look like in `ct_sorted.fa`? (And what would it be *without* that flag?)
 
 ---
 
@@ -248,23 +249,25 @@ Myconote runs up to four ab initio gene predictors simultaneously and combines t
 | GlimmerHMM | Generalised HMM | 2 |
 | GeneMark-ES | Self-training HMM | 4 |
 
-EVM produces a consensus gene set that is generally more accurate than any single predictor alone.
+MycoNote's agreement-weighted consensus merge produces a gene set that is generally more accurate than any single predictor alone.
 
 ### Running `predict`
 
 ```bash
 myconote-cli predict sorted.fa.masked \
     --kingdom fungi \
-    --augustus --snap --glimmerhmm \
+    --glimmerhmm \
     --threads 8 \
-    --out predict_out/
+    --output predict_out/
 ```
 
-Key options:
+Augustus and SNAP run by default; add `--glimmerhmm` and/or `--genemark-mode` to
+bring in more predictors, or `--no-snap` to drop one. Key options:
 
-- `--kingdom` — sets the default Augustus species model, BUSCO lineage, and EVM weights
+- `--kingdom` — sets the default Augustus species model and BUSCO lineage
+- `--clade saccharomycotina|pezizomycotina|basidiomycota` — pick a clade-appropriate fungal default instead of S288C
 - `--species` — override the Augustus species model (default: `saccharomyces_cerevisiae_S288C`)
-- `--hints` — provide a protein or EST hints GFF for hint-guided prediction (improves accuracy)
+- `--protein-hints <proteins.fa>` — add protein evidence (miniprot → Augustus hints); see `predict --help` for the identity gate
 
 ### Choosing an Augustus species model
 
@@ -289,13 +292,13 @@ Run prediction on the practice genome and examine the output:
 
 ```bash
 myconote-cli predict tests/data/candida_tropicalis.fas.masked \
-    --kingdom fungi --threads 4 --out ct_predict/
+    --kingdom fungi --threads 4 --output ct_predict/
 ```
 
 Then check the gene statistics:
 
 ```bash
-myconote-cli stats ct_predict/evm.gff3
+myconote-cli stats ct_predict/consensus.gff3
 ```
 
 1. How many genes were predicted?
@@ -312,39 +315,45 @@ myconote-cli stats ct_predict/evm.gff3
 
 Gene prediction gives you *where* genes are. Functional annotation tells you *what* they do by comparing predicted proteins against curated databases:
 
-| Module | Database | Provides |
-|--------|----------|----------|
-| `--mmseqs` | Swiss-Prot / UniRef | Gene names, species of best hit |
-| `--pfam` | Pfam-A | Protein domain families |
-| `--eggnog` | EggNOG / COG | GO terms, KEGG pathways, COG categories |
-| `--cazyme` | CAZy | Carbohydrate-active enzyme families |
-| `--merops` | MEROPS | Protease families |
-| `--busco` | BUSCO fungi_odb10 | Completeness assessment |
-| `--antismash` | antiSMASH | Secondary metabolite gene clusters |
+`annotate` takes the gene GFF3 as a positional argument and the genome via
+`--fasta`. The **core sources run by default** (MMseqs2, Pfam, BUSCO); the rest
+are **opt-in** with the flag shown:
+
+| Source | Flag | Provides |
+|--------|------|----------|
+| MMseqs2 | default on | Gene names, species of best hit |
+| Pfam | default on (`--no-pfam`) | Protein domain families |
+| BUSCO | default on (`--no-busco`) | Completeness assessment |
+| EggNOG | `--eggnog` | GO terms, KEGG pathways, COG categories |
+| CAZyme | `--cazyme` | Carbohydrate-active enzyme families |
+| MEROPS | `--merops` | Protease families |
+| antiSMASH | `--antismash` | Secondary metabolite gene clusters |
 
 ### Running `annotate`
 
-**Option A: Core annotation only (fast, ~30 min)**
+**Option A: Core annotation (default, fast)**
 
 ```bash
-myconote-cli annotate sorted.fa.masked \
-    --gff evm.gff3 \
-    --pfam --busco \
+myconote-cli annotate predict_out/consensus.gff3 \
+    --fasta sorted.fa.masked \
     --threads 8 \
-    --out annotation/
+    --output annotation/
 ```
 
-**Option B: Full annotation (recommended)**
+**Option B: Full annotation (recommended for publication)**
 
 ```bash
-myconote-cli annotate sorted.fa.masked \
-    --gff evm.gff3 \
-    --eggnog --pfam --cazyme --merops --busco --antismash \
+myconote-cli annotate predict_out/consensus.gff3 \
+    --fasta sorted.fa.masked \
+    --eggnog --cazyme --merops --antismash --secretome --trnascan \
     --threads 8 \
-    --out annotation/
+    --output annotation/
 ```
 
-I recommend Option B for a publication-quality annotation because it provides GO terms, KEGG pathways, and secondary metabolite clusters that are expected in most fungal genome papers.
+Option B adds GO terms, KEGG pathways, and secondary-metabolite clusters
+expected in most fungal genome papers. Since v0.7.8 the EggNOG step runs ~4×
+faster (`--dmnd_iterate no` by default); pass `--eggnog-iterate` to restore the
+slower, maximum-recall path.
 
 > **Note:** Option B requires the eggNOG database (~50 GB). If it is not yet downloaded, Myconote will skip the `--eggnog` step and warn you.
 
@@ -355,7 +364,7 @@ I recommend Option B for a publication-quality annotation because it provides GO
 After annotation, examine the functional coverage:
 
 ```bash
-myconote-cli stats annotation/final.gff3 --format json | python3 -c "
+myconote-cli stats annotation/annotated.gff3 --format json | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 print('Total genes:', d['gene_count'])
@@ -384,7 +393,7 @@ Instead, export your annotation and hand off to:
 ### Convert once, use everywhere
 
 ```bash
-myconote-cli convert annotation/final.gff3 \
+myconote-cli convert annotation/annotated.gff3 \
     --to genbank \
     --fasta sorted.fa \
     -o final.gbk
@@ -397,14 +406,14 @@ clinker final.gbk other_species.gbk -o synteny.html
 
 ```bash
 # For R/Python analysis
-myconote-cli convert annotation/final.gff3 --to table -o genes.tsv
+myconote-cli convert annotation/annotated.gff3 --to table -o genes.tsv
 
 # For Geneious / SnapGene
-myconote-cli convert annotation/final.gff3 --to genbank \
+myconote-cli convert annotation/annotated.gff3 --to genbank \
     --fasta sorted.fa -o annotation.gbk
 
 # Protein sequences for BLAST or OrthoFinder
-myconote-cli convert annotation/final.gff3 --to protein -o proteins.faa
+myconote-cli convert annotation/annotated.gff3 --to protein -o proteins.faa
 ```
 
 ---
@@ -421,7 +430,7 @@ myconote-cli convert annotation/final.gff3 --to protein -o proteins.faa
 
 ---
 
-## Additional Capabilities (v0.2.0)
+## Additional Capabilities
 
 Since the initial workshop lesson was written, myconote-cli has gained several major features:
 
@@ -452,7 +461,7 @@ myconote-cli predict genome.fa --weights my_weights.toml
 
 ### Interactive self-paced tutorial
 ```bash
-myconote-cli learn    # 8 lessons, swirl-style
+myconote-cli learn    # 22 lessons, swirl-style
 ```
 
 ### Docker / Singularity containers

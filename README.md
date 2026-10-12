@@ -77,7 +77,7 @@ myconote-cli setup --check  # shows annotation database download status
 ## Quick start
 
 ```bash
-# 1. Sort and rename contigs (longest first)
+# 1. Sort + length-filter contigs (longest first; lossless — add --ncbi-clean to rename)
 myconote-cli sort genome.fa --min-length 500
 
 # 2. Soft-mask repeats
@@ -104,7 +104,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 
 | Command | Description |
 |---------|-------------|
-| `sort` | Sort contigs by length, rename headers, filter short scaffolds |
+| `sort` | Sort/filter contigs by length; lossless by default (rename headers with `--ncbi-clean`) |
 | `mask` | Identify and soft-mask repeats (5 engines: self, repeatmasker, repeatmodeler, both, full) |
 | `train` | RNA-seq-guided training of Augustus and SNAP via Trinity + PASA |
 | `predict` | Multi-tool gene prediction (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + protein evidence + EVM consensus), or BRAKER 1/2/3 as a single-engine alternative via `--use-braker` |

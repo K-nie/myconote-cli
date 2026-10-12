@@ -4,7 +4,15 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.9] – [0.7.13] — 2026-10-08 … 2026-10-12
+
+Released in sequence (Cargo.toml is 0.7.13):
+
+- **0.7.9** (2026-10-08) — clade-aware default Augustus species (`--clade`); `sort` lossless by default with opt-in `--ncbi-clean`; `submit --fix-structure` structural pre-validation/repair.
+- **0.7.10** (2026-10-09) — self-training companion-script discovery + loud stock-species fallback (FIX A); `--protein-hints` diamond prefilter before miniprot (FIX B).
+- **0.7.11** (2026-10-09) — `setup --db augustus-fungi` provisions the `species/generic/` template; opt-in `--protein-hints-min-identity` gate.
+- **0.7.12** (2026-10-11) — native GenBank writer emits the `source` feature so Augustus `etraining` accepts the training set (self-training now runs end to end).
+- **0.7.13** (2026-10-12) — consensus `gene`/`mRNA` bounds span all CDS children; `submit` `.sbt` includes the mandatory `cit` (Cit-sub) block.
 
 ### Fixed
 

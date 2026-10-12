@@ -149,7 +149,7 @@ myconote-cli setup chat-corpus   # ~50 MB, CC-BY licensed papers only
 After installation:
 
 ```bash
-myconote-cli learn    # interactive tutorial (8 lessons, ~1 hour)
+myconote-cli learn    # interactive tutorial (22 lessons, ~4 hours)
 ```
 
 Or jump straight to the [Quick Start](quickstart.md) guide.

@@ -1,7 +1,7 @@
-# myconote mask
+# myconote-cli mask
 
 ```bash
-myconote mask --help
+myconote-cli mask --help
 ```
 
 See the [Pipeline Overview](overview.md) for how `mask` fits into the full workflow.

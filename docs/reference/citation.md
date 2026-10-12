@@ -2,7 +2,7 @@
 
 If you use Myconote_CLI in your research, please cite:
 
-> Narh-Madey, B. (2026). *Myconote_CLI: A modular genome annotation pipeline for fungi and other eukaryotes*. Hittington Lab, University of Wisconsin–Madison. https://github.com/K-nie/myconote-cli
+> Narh-Madey, B. (2026). *Myconote_CLI: A modular genome annotation pipeline for fungi and other eukaryotes*. Hittinger Lab, University of Wisconsin–Madison. https://github.com/K-nie/myconote-cli
 
 ## BibTeX
 
@@ -12,7 +12,7 @@ If you use Myconote_CLI in your research, please cite:
   title   = {Myconote\_CLI: A modular genome annotation pipeline},
   year    = {2026},
   url     = {https://github.com/K-nie/myconote-cli},
-  version = {0.2.0}
+  version = {0.7.13}
 }
 ```
 

@@ -2258,6 +2258,8 @@ Augustus species (MycoNote via explicit <code>--species</code>; funannotate via
 </tr>
 </tbody>
 </table>
+<p><strong>MycoNote re-verified on v0.7.13 (2026-10-12, cluster 146680, 6 genomes × 3 reps, means):</strong>
+sce 0.901/0.789, cal 0.933/0.803, ylp 0.909/0.726, ani 0.900/0.445, ncr 0.897/0.564, cne 0.925/0.527 (loose/strict gene F1). <strong>Strict F1 is identical to the table above on all six genomes; loose F1 is within noise</strong> (marginally higher on sce/cal/cne, consistent with the v0.7.13 parent-bounds fix tightening locus overlap). This confirms the recent work (clade default, lossless sort, submit fixes, EggNog speedup, parent-bounds/.sbt fixes, self-train/protein-hints) changed <strong>correctness / usability / submission</strong>, not accuracy — no regression. Competitor arms (funannotate / MAKER / BRAKER) are unchanged and not re-run.</p>
 <p><strong>Honest reading.</strong> MycoNote is <strong>competitive, not the accuracy leader</strong>:
 - <em>Loose gene F1</em> — MycoNote is lowest/near-lowest on every genome; funannotate leads.
 - <em>Strict gene F1</em> — a split with funannotate (each wins 3/6); MAKER leads the

@@ -119,6 +119,9 @@ pub fn all_lessons() -> Vec<Lesson> {
         lesson_18_augustus_fungi(),
         lesson_19_reproducibility(),
         lesson_20_genetic_codes(),
+        // ── Evidence & training track (lessons 21-22) ───────────────────────
+        lesson_21_protein_hints(),
+        lesson_22_self_training(),
     ]
 }
 
@@ -1458,7 +1461,7 @@ job 80%."
             LessonItem::Text(
 "WHERE TO GO NEXT
 
-Lessons 9-20 cover the modern features added since v0.5.0:
+Lessons 9-22 cover the modern features added since v0.5.0:
 
   9.  RNA-seq quantification (`quant`)
   10. SRA/ENA download (`fetch-rna`)
@@ -1472,6 +1475,8 @@ Lessons 9-20 cover the modern features added since v0.5.0:
   18. Augustus fungal species bundle (`setup --db augustus-fungi`)
   19. Reproducibility manifests (`quant_bundle.json`, `ase_bundle.json`)
   20. NCBI codon tables (Candida CTG focus)
+  21. Protein hints (`predict --protein-hints`)
+  22. Self-training Augustus (`predict --augustus-training self`)
 
 Each lesson is self-contained and assumes only the prerequisites
 introduced in lessons 1-7. Skip ahead freely — the catalogue is
@@ -2952,13 +2957,14 @@ the file."
             LessonItem::Checkpoint("Genetic-code biology mastered"),
 
             LessonItem::Text(
-"YOU'VE COMPLETED THE FULL CATALOGUE.
+"THE FULL CATALOGUE AT A GLANCE
 
-20 lessons covering:
-  Foundation track  (1-8): pipeline basics through NCBI submission
-  RNA-seq track     (9-14): quant, fetch-rna, de-template, ase
-  Predictors track  (15-16): BRAKER, GeneMark variants
-  Quality track     (17-20): clean, augustus-fungi, reproducibility, codon tables
+22 lessons covering:
+  Foundation track      (1-8): pipeline basics through NCBI submission
+  RNA-seq track         (9-14): quant, fetch-rna, de-template, ase
+  Predictors track      (15-16): BRAKER, GeneMark variants
+  Quality track         (17-20): clean, augustus-fungi, reproducibility, codon tables
+  Evidence & training   (21-22): protein hints, Augustus self-training
 
 Where to go from here:
   - Read the manuscript: docs/paper/myconote_manuscript.md
@@ -2967,6 +2973,143 @@ Where to go from here:
 
 Good luck with your annotations."
             ),
+        ],
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LESSON 21: Protein Hints (`predict --protein-hints`)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn lesson_21_protein_hints() -> Lesson {
+    Lesson {
+        title: "Protein Hints: miniprot Evidence",
+        description: "Add protein evidence to prediction — the diamond prefilter and the close-relative identity gate.",
+        est_minutes: 10,
+        items: vec![
+            LessonItem::Text(
+"PROTEIN HINTS
+
+Ab-initio predictors call genes from the genome sequence alone.
+Protein evidence from related species can sharpen exon boundaries
+and rescue genes the models miss.
+
+`predict --protein-hints proteins.fa` aligns a protein FASTA to the
+genome with miniprot (fast splice-aware protein-to-genome) and feeds
+the alignments to Augustus as hints — the same idea BRAKER and
+GALBA use.",
+            ),
+
+            LessonItem::Info("Why a prefilter?",
+"A whole-kingdom protein set (e.g. OrthoDB `Fungi.fa`, ~3.9 GB) is
+far too large to hand straight to miniprot — an early run was still
+aligning after 12 h. So MycoNote first runs `diamond blastx` of the
+genome against the protein DB and keeps only proteins with a real
+hit, capped at `--protein-hints-max` (default 50000). If diamond is
+missing it falls back to a bounded subset. This step is non-fatal:
+if nothing survives, prediction proceeds ab-initio.",
+            ),
+
+            LessonItem::CodeExample(
+                "Predict with protein hints, keeping only close relatives (≥ 70% identity):",
+                "myconote-cli predict masked.fa --kingdom fungi --species aspergillus_nidulans \\\n  --protein-hints orthodb_fungi.fa --protein-hints-min-identity 70 \\\n  --output predict_out",
+            ),
+
+            LessonItem::Info("Close relatives beat remote proteins",
+"More proteins is not better. Distant homologs produce weak, partial
+miniprot alignments that add noise, not signal (BRAKER3 and GALBA
+both report higher accuracy from a close-relative set than a large
+remote one). `--protein-hints-min-identity <P>` keeps only diamond
+hits at or above P% identity (default 0 = keep all), which is
+MycoNote's version of funannotate's 80%-identity exonerate gate.",
+            ),
+
+            LessonItem::Question {
+                prompt: "True or False: feeding the largest possible protein database always improves protein-hint accuracy.",
+                kind: QuestionKind::TrueFalse { answer: false },
+                hint: Some("Think about what a distantly related protein aligns like."),
+                explanation: Some("False. Remote proteins add low-identity, partial alignments that are noise. A close-relative set (or an identity gate) does better."),
+            },
+
+            LessonItem::Text(
+"HONEST CAVEAT
+
+Protein hints are opt-in and do not always help. MycoNote's
+consensus is dominated by its ab-initio predictors, so on
+well-annotated model fungi the hints may not change the final gene
+set. Use them when annotating a genome with good close-relative
+proteomes and weak ab-initio support — and measure, don't assume.",
+            ),
+
+            LessonItem::Checkpoint("Protein hints and the identity gate understood"),
+        ],
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LESSON 22: Self-Training Augustus (`predict --augustus-training self`)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn lesson_22_self_training() -> Lesson {
+    Lesson {
+        title: "Self-Training Augustus Models",
+        description: "When to self-train Augustus, what it needs, and why the curated stock model usually wins on well-represented fungi.",
+        est_minutes: 10,
+        items: vec![
+            LessonItem::Text(
+"SELF-TRAINING AUGUSTUS
+
+Augustus predicts best with a species model tuned to your organism.
+`predict --augustus-training self` builds one on the fly: it runs a
+first-pass prediction, turns those gene models into a training set,
+registers a new species with `new_species.pl`, and fits the model
+with `etraining` — then predicts with that fresh model.
+
+The default is `--augustus-training stock` (a curated pre-trained
+species). `self` is the alternative for organisms far from any
+bundled model.",
+            ),
+
+            LessonItem::Info("Prerequisites",
+"Self-training needs two things from the Augustus install:
+  1. The companion scripts (`new_species.pl`, `etraining`,
+     `gff2gbSmallDNA.pl`) beside the `augustus` binary.
+  2. The `species/generic/` template `new_species.pl` copies to
+     seed a new species — provisioned by `setup --db augustus-fungi`
+     (lesson 18).
+If either is missing, `predict` prints a loud banner saying
+self-training did NOT run and falls back to the stock species — it
+never silently pretends to have trained.",
+            ),
+
+            LessonItem::CodeExample(
+                "Self-train a model for a divergent fungus:",
+                "myconote-cli predict masked.fa --kingdom fungi \\\n  --augustus-training self --output predict_out",
+            ),
+
+            LessonItem::Info("Why stock is still the default",
+"A self-trained model is only as good as its training set — here,
+MycoNote's own first-pass ab-initio calls, with no slow
+`optimize_augustus.pl` meta-parameter search. On fungi that already
+have a hand-curated Augustus model (S. cerevisiae, N. crassa,
+Cryptococcus, Aspergillus), the curated stock model wins. Self-train
+earns its keep on a NOVEL fungus with no close stock species.",
+            ),
+
+            LessonItem::Question {
+                prompt: "For Neurospora crassa — which has a curated Augustus model — which gives the better annotation?",
+                kind: QuestionKind::MultipleChoice {
+                    choices: vec![
+                        "The curated stock model (--augustus-training stock)".to_string(),
+                        "A self-trained model (--augustus-training self)".to_string(),
+                    ],
+                    correct_index: 0,
+                },
+                hint: Some("Self-training trains on first-pass calls with no optimize pass."),
+                explanation: Some("Stock wins. A curated model beats one trained on unrefined first-pass calls; self-train is for organisms with no close curated model."),
+            },
+
+            LessonItem::Checkpoint("Self-training trade-offs understood"),
         ],
     }
 }
@@ -2984,8 +3127,8 @@ mod tests {
         let all = all_lessons();
         assert_eq!(
             all.len(),
-            20,
-            "expected 20 lessons in the catalogue (8 foundation + 12 v0.7.1 expansion)"
+            22,
+            "expected 22 lessons (8 foundation + 12 v0.7.1 expansion + 2 evidence/training)"
         );
     }
 

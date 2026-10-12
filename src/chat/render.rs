@@ -131,6 +131,44 @@ pub fn render_disclaimer() {
         C_YELLOW, C_RESET
     );
     println!();
+    println!(
+        "  {}RESPONSIBLE USE: AI assistance is a starting point, not a{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}substitute for human and contextual interpretation. Weigh{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}these outputs with your own domain expertise and the biology{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}of your system — the scientific judgement is yours, not the model's.{}",
+        C_YELLOW, C_RESET
+    );
+    println!();
+    println!(
+        "  {}DATA PRIVACY: interpretation runs locally via Ollama by default,{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}so your data stays on this machine. If you point --endpoint or a{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}provider at a remote service, your inputs leave the machine.{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}Review your organization's policies on AI use and data handling{}",
+        C_YELLOW, C_RESET
+    );
+    println!(
+        "  {}before sending sensitive or unpublished data to any model.{}",
+        C_YELLOW, C_RESET
+    );
+    println!();
 }
 
 #[cfg(test)]

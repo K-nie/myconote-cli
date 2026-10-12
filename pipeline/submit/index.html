@@ -1749,14 +1749,37 @@
 </tr>
 <tr>
 <td><code>--email &lt;address&gt;</code></td>
-<td>Contact email</td>
+<td>Contact email (written into <code>template.sbt</code>)</td>
+</tr>
+<tr>
+<td><code>--contact-first &lt;name&gt;</code></td>
+<td>Submitter first name (<code>template.sbt</code>)</td>
+</tr>
+<tr>
+<td><code>--contact-last &lt;name&gt;</code></td>
+<td>Submitter last name (<code>template.sbt</code>)</td>
+</tr>
+<tr>
+<td><code>--institution &lt;name&gt;</code></td>
+<td>Submitter institution (<code>template.sbt</code>)</td>
+</tr>
+<tr>
+<td><code>--fix-structure</code></td>
+<td>Repair safe structural problems before <code>table2asn</code> (synthesise missing gene/mRNA parents for orphan CDS); child coordinates are never altered</td>
 </tr>
 <tr>
 <td><code>--validate-only</code></td>
-<td>Only validate, do not generate files</td>
+<td>Only validate (including the structure check), do not generate files</td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Complete the <code>.sbt</code> or table2asn won't load it</p>
+<p><code>table2asn</code> requires a complete submission template. Provide
+<code>--contact-first</code>, <code>--contact-last</code>, <code>--institution</code> and <code>--email</code>, or it
+rejects the stub with <code>Error loading template file</code>. MycoNote warns when any
+of these is missing.</p>
+</div>
 <h2 id="validation-checks">Validation checks<a class="headerlink" href="#validation-checks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1807,10 +1830,11 @@
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Output files</span>
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>ls<span class="w"> </span>submit_out/
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1">#  annotation.tbl    -- NCBI feature table</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1">#  annotation.fsa    -- Genome FASTA copy</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c1">#  annotation.sqn    -- Sequin file (if table2asn installed)</span>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1">#  template.sbt      -- Submission template</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1">#  annotation.tbl      -- NCBI feature table</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1">#  annotation.fsa      -- Genome FASTA copy</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c1">#  annotation.sqn      -- Sequin file (if table2asn installed)</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1">#  template.sbt        -- Submission template</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1">#  structure_fixed.gff3 -- repaired GFF3 (only when --fix-structure applied repairs)</span>
 </code></pre></div>
 <h2 id="before-submitting-to-ncbi">Before submitting to NCBI<a class="headerlink" href="#before-submitting-to-ncbi" title="Permanent link">&para;</a></h2>
 <ol>

@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#myconote-stats" class="md-skip">
+        <a href="#myconote-cli-stats" class="md-skip">
           Skip to content
         </a>
       
@@ -1584,11 +1584,13 @@
   
 
 
-<h1 id="myconote-stats">myconote stats<a class="headerlink" href="#myconote-stats" title="Permanent link">&para;</a></h1>
-<p>Report assembly and annotation statistics.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote<span class="w"> </span>stats<span class="w"> </span>--genome<span class="w"> </span>genome.fas<span class="w"> </span>--gff<span class="w"> </span>annotation.gff3
+<h1 id="myconote-cli-stats">myconote-cli stats<a class="headerlink" href="#myconote-cli-stats" title="Permanent link">&para;</a></h1>
+<p>Report annotation statistics from a GFF3 (gene/exon/transcript counts, lengths,
+structure). The GFF3 is a positional argument.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>genes.gff3<span class="w"> </span>--taxon<span class="w"> </span>fungi
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>genes.gff3<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>stats.json
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>genes.gff3<span class="w"> </span>--chromosome<span class="w"> </span>scaffold_1
 </code></pre></div>
-<p>Reports include scaffold N50, gene count, average gene length, exon count, BUSCO completeness score, and GC content.</p>
 <h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1600,32 +1602,48 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--genome</code></td>
+<td><code>&lt;annotation.gff3&gt;</code></td>
 <td>required</td>
-<td>Genome FASTA</td>
+<td>Input annotation GFF3 (positional)</td>
 </tr>
 <tr>
-<td><code>--gff</code></td>
+<td><code>--format &lt;json\|csv\|human&gt;</code></td>
+<td><code>human</code></td>
+<td>Output format</td>
+</tr>
+<tr>
+<td><code>--taxon &lt;group&gt;</code></td>
 <td>—</td>
-<td>Annotation GFF3 (optional)</td>
+<td>Taxonomic group for benchmarking context</td>
 </tr>
 <tr>
-<td><code>--busco-lineage</code></td>
-<td><code>fungi_odb10</code></td>
-<td>BUSCO lineage dataset</td>
+<td><code>--chromosome &lt;chr&gt;</code></td>
+<td>—</td>
+<td>Focus on one or more specific sequences</td>
 </tr>
 <tr>
-<td><code>--out</code></td>
-<td>stdout</td>
-<td>Write report to file</td>
+<td><code>--region &lt;chr:start-end&gt;</code></td>
+<td>—</td>
+<td>Focus on a specific genomic region</td>
 </tr>
 <tr>
-<td><code>--format</code></td>
-<td><code>text</code></td>
-<td><code>text</code>, <code>json</code>, or <code>csv</code></td>
+<td><code>--exclude &lt;chr&gt;</code></td>
+<td>—</td>
+<td>Exclude a sequence from the stats</td>
+</tr>
+<tr>
+<td><code>--primary-only</code></td>
+<td>off</td>
+<td>Collapse isoforms to the primary transcript only</td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>stats</code> works on the annotation GFF3. For assembly-level metrics (contig
+N50, GC, BUSCO completeness), use the <code>sort</code> report and <code>annotate</code>'s BUSCO
+output.</p>
+</div>
 
 
 

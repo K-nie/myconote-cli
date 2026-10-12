@@ -1651,10 +1651,10 @@
 
 
 <h1 id="pipeline-overview">Pipeline Overview<a class="headerlink" href="#pipeline-overview" title="Permanent link">&para;</a></h1>
-<p>Myconote_CLI organises genome annotation into six sequential commands. Each command produces standard-format output files that feed directly into the next step.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────────┐   ┌─────────┐   ┌──────────┐
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  sort   │ → │  mask   │ → │  train  │ → │   predict   │ → │ update  │ → │ annotate │
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>└─────────┘   └─────────┘   └─────────┘   └─────────────┘   └─────────┘   └──────────┘
+<p>MycoNote-CLI organises genome annotation into seven sequential commands. Each command produces standard-format output files that feed directly into the next step.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────┐  ┌──────┐  ┌───────┐  ┌─────────┐  ┌────────┐  ┌──────────┐  ┌────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│ sort │→ │ mask │→ │ train │→ │ predict │→ │ update │→ │ annotate │→ │ submit │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>└──────┘  └──────┘  └───────┘  └─────────┘  └────────┘  └──────────┘  └────────┘
 </code></pre></div>
 <table>
 <thead>
@@ -1669,7 +1669,7 @@
 <tr>
 <td>1</td>
 <td><code>sort</code></td>
-<td>Standardise scaffold names, filter short sequences</td>
+<td>Reorder + length-filter contigs (lossless by default; <code>--ncbi-clean</code> to rename)</td>
 <td>Built-in</td>
 </tr>
 <tr>
@@ -1687,8 +1687,8 @@
 <tr>
 <td>4</td>
 <td><code>predict</code></td>
-<td>Predict gene models ab initio</td>
-<td>Augustus, GlimmerHMM, SNAP, EVM</td>
+<td>Predict gene models ab initio + consensus</td>
+<td>Augustus, GlimmerHMM, SNAP, GeneMark, miniprot</td>
 </tr>
 <tr>
 <td>5</td>
@@ -1700,11 +1700,16 @@
 <td>6</td>
 <td><code>annotate</code></td>
 <td>Assign functional annotations</td>
-<td>BLAST, eggNOG, dbCAN, InterProScan</td>
+<td>MMseqs2, eggNOG, dbCAN, InterProScan</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>submit</code></td>
+<td>Prepare NCBI GenBank submission</td>
+<td>table2asn, built-in validation</td>
 </tr>
 </tbody>
 </table>
-<p>| 7 | <code>submit</code> | Prepare NCBI GenBank submission | table2asn, built-in validation |</p>
 <p>You can start the pipeline at any step if you already have intermediate files. For example, if you have a masked genome and trained Augustus parameters, you can jump straight to <code>predict</code>.</p>
 <hr />
 <h2 id="multi-genome-mode">Multi-genome mode<a class="headerlink" href="#multi-genome-mode" title="Permanent link">&para;</a></h2>
@@ -1722,7 +1727,8 @@
 <p>See <a href="../../analysis/explain/">explain documentation</a> for details.</p>
 <hr />
 <h2 id="common-flags">Common flags<a class="headerlink" href="#common-flags" title="Permanent link">&para;</a></h2>
-<p>Most pipeline commands accept:</p>
+<p>Pipeline commands take the input as a <strong>positional argument</strong> (not a <code>--genome</code>
+flag) and write to a path given by <code>--output</code>/<code>-o</code>. Common flags:</p>
 <table>
 <thead>
 <tr>
@@ -1732,28 +1738,24 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--genome</code></td>
-<td>Input genome FASTA</td>
+<td><code>&lt;input&gt;</code> (positional)</td>
+<td>Input genome FASTA / GFF3 for that stage</td>
 </tr>
 <tr>
-<td><code>--out</code></td>
-<td>Output directory (created if absent)</td>
+<td><code>--output</code>, <code>-o</code></td>
+<td>Output path (file or directory, per command)</td>
 </tr>
 <tr>
 <td><code>--threads</code></td>
-<td>CPU threads (default: 4)</td>
+<td>CPU threads where the stage uses them (e.g. <code>predict</code>, <code>annotate</code>; <code>sort</code> has none)</td>
 </tr>
 <tr>
 <td><code>--kingdom</code></td>
 <td><code>fungi</code> (default, primary use case). <code>plant</code> / <code>animal</code> / <code>insect</code> / <code>protist</code> accepted but experimental — see the multi-kingdom note on the home page.</td>
 </tr>
 <tr>
-<td><code>--species</code></td>
-<td>Override Augustus species model</td>
-</tr>
-<tr>
-<td><code>--config</code></td>
-<td>Path to a TOML config file</td>
+<td><code>--species</code> / <code>--clade</code></td>
+<td>Override the Augustus species model (<code>predict</code>); <code>--clade</code> picks a clade-appropriate fungal default</td>
 </tr>
 </tbody>
 </table>

@@ -1624,9 +1624,14 @@
 
 
 <h1 id="databases">Databases<a class="headerlink" href="#databases" title="Permanent link">&para;</a></h1>
-<p>Myconote_CLI uses several external databases for functional annotation. Run <code>myconote db setup</code> to download and index them.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote<span class="w"> </span>db<span class="w"> </span>setup<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w">        </span><span class="c1"># minimal set (~5 GB)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote<span class="w"> </span>db<span class="w"> </span>setup<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--all<span class="w">  </span><span class="c1"># full set including eggNOG (~75 GB)</span>
+<p>MycoNote-CLI uses several external databases for functional annotation. Use
+<code>myconote-cli setup</code> to download and index them. Databases live in
+<code>~/.myconote/dbs</code> by default.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--list<span class="w">                 </span><span class="c1"># show all databases + download status</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--dbs<span class="w"> </span>swiss-prot<span class="w"> </span>pfam<span class="w">  </span><span class="c1"># download a specific set</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--db<span class="w"> </span>augustus-fungi<span class="w">    </span><span class="c1"># curated fungal Augustus species (~50) + the</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">                                          </span><span class="c1"># species/generic/ self-training template</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--dbs<span class="w"> </span>eggnog<span class="w">           </span><span class="c1"># ~50 GB — only if you need COG/KEGG</span>
 </code></pre></div>
 <hr />
 <h2 id="database-summary">Database summary<a class="headerlink" href="#database-summary" title="Permanent link">&para;</a></h2>
@@ -1643,7 +1648,7 @@
 <tr>
 <td>UniProtKB/Swiss-Prot</td>
 <td>~250 MB</td>
-<td>BLAST</td>
+<td>MMseqs2 homology</td>
 <td>Curated protein annotations</td>
 </tr>
 <tr>
@@ -1661,7 +1666,7 @@
 <tr>
 <td>Pfam</td>
 <td>~350 MB</td>
-<td>Domain annotation</td>
+<td>Domain annotation (hmmsearch)</td>
 <td>Protein family HMMs</td>
 </tr>
 <tr>
@@ -1683,33 +1688,42 @@
 <td>Downloaded by RepeatModeler2 during <code>mask</code></td>
 </tr>
 <tr>
+<td>augustus-fungi</td>
+<td>~small</td>
+<td><code>predict</code> / <code>train</code></td>
+<td>~50 curated fungal species + the <code>species/generic/</code> template needed for <code>--augustus-training self</code></td>
+</tr>
+<tr>
 <td>Ollama + LLM model</td>
 <td>4-48 GB</td>
 <td><code>explain</code> (AI interpreter)</td>
-<td>Local LLM, auto-selected by RAM. Setup: <code>myconote-cli setup ollama</code></td>
+<td>Local LLM, auto-selected by RAM from pulled models. Setup: <code>myconote-cli setup --dbs ollama</code></td>
 </tr>
 <tr>
 <td>Chat paper corpus</td>
 <td>~50 MB</td>
 <td><code>explain</code> (citations)</td>
-<td>Q1 open-access papers (CC-BY). Setup: <code>myconote-cli setup chat-corpus</code></td>
+<td>Q1 open-access papers (CC-BY). Setup: <code>myconote-cli setup --dbs chat-corpus</code></td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="storage-layout">Storage layout<a class="headerlink" href="#storage-layout" title="Permanent link">&para;</a></h2>
-<p>By default databases are stored in <code>~/.myconote/db/</code>. Override with <code>--db-dir</code> or the <code>MYCONOTE_DB</code> environment variable.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MYCONOTE_DB</span><span class="o">=</span>/data/myconote_databases
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>myconote<span class="w"> </span>db<span class="w"> </span>setup<span class="w"> </span>--kingdom<span class="w"> </span>fungi
+<p>By default databases are stored in <code>~/.myconote/dbs</code>. Override per-run with
+<code>--db-dir &lt;dir&gt;</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--dbs<span class="w"> </span>swiss-prot<span class="w"> </span>pfam<span class="w"> </span>--db-dir<span class="w"> </span>/data/myconote_databases
 </code></pre></div>
 <hr />
 <h2 id="checking-database-status">Checking database status<a class="headerlink" href="#checking-database-status" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote<span class="w"> </span>db<span class="w"> </span>status
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--list<span class="w">    </span><span class="c1"># what is available and whether it's downloaded</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>--check<span class="w">   </span><span class="c1"># verify existing databases are intact</span>
 </code></pre></div>
-<p>Reports which databases are present, their versions, and when they were last updated.</p>
+<p>Re-download anything with <code>--force</code>, or preview a download with <code>--dry-run</code>.</p>
 <div class="admonition warning">
 <p class="admonition-title">eggNOG database</p>
-<p>The eggNOG database is ~50 GB compressed and requires ~50 GB additional space during indexing. Only download it if you need COG/KEGG assignments beyond what BLAST + dbCAN provide.</p>
+<p>The eggNOG database is ~50 GB compressed and needs ~50 GB more during
+indexing. Download it only if you need COG/KEGG assignments beyond what the
+Swiss-Prot (MMseqs2) + dbCAN annotations provide.</p>
 </div>
 
 

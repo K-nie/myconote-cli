@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#myconote-sort" class="md-skip">
+        <a href="#myconote-cli-sort" class="md-skip">
           Skip to content
         </a>
       
@@ -1628,9 +1628,15 @@
   
 
 
-<h1 id="myconote-sort">myconote sort<a class="headerlink" href="#myconote-sort" title="Permanent link">&para;</a></h1>
-<p>Standardises scaffold names and removes sequences below a minimum length threshold.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote<span class="w"> </span>sort<span class="w"> </span>--genome<span class="w"> </span>mygenome.fas<span class="w"> </span>--out<span class="w"> </span>01_sorted/
+<h1 id="myconote-cli-sort">myconote-cli sort<a class="headerlink" href="#myconote-cli-sort" title="Permanent link">&para;</a></h1>
+<p>Reorders contigs longest-first and filters out sequences below a minimum length.
+By <strong>default it is lossless</strong>: original contig seqids are preserved end-to-end.
+Renaming to NCBI-style short IDs is opt-in via <code>--ncbi-clean</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Default (lossless): reorder + drop anything under 500 bp, keep original names</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>assembly.fa<span class="w"> </span>--min-length<span class="w"> </span><span class="m">500</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># NCBI-ready: also rename to scaffold_N and save the lift-over table</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>assembly.fa<span class="w"> </span>--min-length<span class="w"> </span><span class="m">500</span><span class="w"> </span>--ncbi-clean<span class="w"> </span>--rename-table<span class="w"> </span>rename.tsv
 </code></pre></div>
 <h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
@@ -1643,29 +1649,44 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--genome</code></td>
+<td><code>&lt;genome.fa&gt;</code></td>
 <td>required</td>
-<td>Input genome FASTA</td>
+<td>Input genome FASTA (positional)</td>
 </tr>
 <tr>
-<td><code>--out</code></td>
-<td>required</td>
-<td>Output directory</td>
+<td><code>--output</code>, <code>-o</code></td>
+<td><code>&lt;input&gt;_sorted.fa</code></td>
+<td>Output FASTA file</td>
 </tr>
 <tr>
-<td><code>--min-length</code></td>
-<td>500</td>
-<td>Minimum scaffold length (bp) to retain</td>
+<td><code>--min-length &lt;bp&gt;</code></td>
+<td><code>0</code></td>
+<td>Discard contigs shorter than this</td>
 </tr>
 <tr>
-<td><code>--prefix</code></td>
+<td><code>--ncbi-clean</code> (alias <code>--rename-contigs</code>)</td>
+<td>off</td>
+<td>Rename contigs to <code>&lt;prefix&gt;_N</code> for NCBI's short-name requirement</td>
+</tr>
+<tr>
+<td><code>--prefix &lt;str&gt;</code></td>
 <td><code>scaffold</code></td>
-<td>Scaffold name prefix</td>
+<td>ID prefix when <code>--ncbi-clean</code> is set</td>
 </tr>
 <tr>
-<td><code>--threads</code></td>
-<td>4</td>
-<td>CPU threads</td>
+<td><code>--rename-table &lt;file&gt;</code></td>
+<td>—</td>
+<td>Write the old→new ID table (TSV); use with <code>--ncbi-clean</code></td>
+</tr>
+<tr>
+<td><code>--keep-desc</code></td>
+<td>off (strip)</td>
+<td>Keep the original description after the ID</td>
+</tr>
+<tr>
+<td><code>--sort-by-name</code></td>
+<td>off (by length)</td>
+<td>Sort alphabetically instead of by length</td>
 </tr>
 </tbody>
 </table>
@@ -1679,25 +1700,26 @@
 </thead>
 <tbody>
 <tr>
-<td><code>genome.fas</code></td>
-<td>Renamed, filtered genome FASTA</td>
+<td><code>&lt;input&gt;_sorted.fa</code></td>
+<td>Reordered, length-filtered genome FASTA (original seqids unless <code>--ncbi-clean</code>)</td>
 </tr>
 <tr>
-<td><code>sort_report.txt</code></td>
-<td>Scaffold count, total length, N50 before/after</td>
-</tr>
-<tr>
-<td><code>name_map.tsv</code></td>
-<td>Mapping of original → new scaffold names</td>
+<td><code>&lt;rename-table&gt;.tsv</code></td>
+<td>old→new ID mapping — only when <code>--ncbi-clean</code> + <code>--rename-table</code> are used</td>
 </tr>
 </tbody>
 </table>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Always run <code>sort</code> first. Downstream tools require clean, consistently named scaffolds.</p>
+<p>Run <code>sort</code> first to drop junk-length contigs and get a deterministic order.
+The lossless default means your downstream GFF3 keeps the accessions you
+know; only add <code>--ncbi-clean</code> when preparing an NCBI submission.</p>
 </div>
-<p>Scaffolds are renamed to <code>scaffold_0001</code>, <code>scaffold_0002</code>, etc. by default. Use <code>--prefix</code> to customise (e.g., <code>--prefix chr</code> for chromosome-scale assemblies).</p>
+<p>With <code>--ncbi-clean</code>, contigs are renamed to <code>scaffold_1</code>, <code>scaffold_2</code>, … (not
+zero-padded). Use <code>--prefix</code> to customise (e.g. <code>--prefix chr</code> for
+chromosome-scale assemblies), and <code>--rename-table</code> to keep the lift-over map so
+<code>submit</code> (and your own records) can trace back to the originals.</p>
 
 
 

@@ -1451,10 +1451,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#repeatmasker-libraries" class="md-nav__link">
+  <a href="#repeatmasker-clades" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RepeatMasker libraries
+        RepeatMasker clades
       
     </span>
   </a>
@@ -1462,10 +1462,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#busco-lineages" class="md-nav__link">
+  <a href="#busco-lineages-suggested" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BUSCO lineages
+        BUSCO lineages (suggested)
       
     </span>
   </a>
@@ -1582,10 +1582,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#repeatmasker-libraries" class="md-nav__link">
+  <a href="#repeatmasker-clades" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RepeatMasker libraries
+        RepeatMasker clades
       
     </span>
   </a>
@@ -1593,10 +1593,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#busco-lineages" class="md-nav__link">
+  <a href="#busco-lineages-suggested" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BUSCO lineages
+        BUSCO lineages (suggested)
       
     </span>
   </a>
@@ -1629,7 +1629,10 @@
 
 
 <h1 id="kingdom-defaults">Kingdom Defaults<a class="headerlink" href="#kingdom-defaults" title="Permanent link">&para;</a></h1>
-<p>Myconote_CLI ships with sensible per-kingdom defaults so you don't need to specify every parameter manually. Pass <code>--kingdom</code> to any pipeline command to activate these defaults.</p>
+<p>MycoNote-CLI ships with sensible per-kingdom defaults so you don't need to
+specify every parameter manually. Pass <code>--kingdom</code> to a pipeline command to
+activate these defaults. Fungi is the primary, validated target; the other
+kingdoms are an experimental scaffold (see the Supported Kingdoms note).</p>
 <h2 id="augustus-species-models">Augustus species models<a class="headerlink" href="#augustus-species-models" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1643,7 +1646,7 @@
 <tr>
 <td>Fungi</td>
 <td><code>saccharomyces_cerevisiae_S288C</code></td>
-<td>Ascomycota; good general-purpose fungal model</td>
+<td>Ascomycota; see <code>--clade</code> below for a clade-aware default</td>
 </tr>
 <tr>
 <td>Plant</td>
@@ -1656,52 +1659,73 @@
 <td><em>Homo sapiens</em></td>
 </tr>
 <tr>
+<td>Insect</td>
+<td><code>fly</code></td>
+<td><em>Drosophila melanogaster</em></td>
+</tr>
+<tr>
 <td>Protist</td>
-<td><code>tetrahymena</code></td>
-<td><em>Tetrahymena thermophila</em></td>
+<td><code>toxoplasma</code></td>
+<td><em>Toxoplasma gondii</em></td>
 </tr>
 </tbody>
 </table>
 <p>Override with <code>--species &lt;model&gt;</code> to use any installed Augustus species.</p>
-<h2 id="repeatmasker-libraries">RepeatMasker libraries<a class="headerlink" href="#repeatmasker-libraries" title="Permanent link">&para;</a></h2>
+<div class="admonition tip">
+<p class="admonition-title">Clade-aware fungal default (<code>--clade</code>)</p>
+<p>For fungi, <code>saccharomyces_cerevisiae_S288C</code> is a Saccharomycotina model and
+a poor default off that clade. Instead of hard-coding it, pass
+<code>predict --clade saccharomycotina|pezizomycotina|basidiomycota</code> to pick a
+clade-appropriate model (Pezizomycotina → <code>aspergillus_nidulans</code>,
+Basidiomycota → <code>cryptococcus_neoformans_neoformans_JEC21</code>). A fungal run
+with neither <code>--species</code> nor <code>--clade</code> still uses S288C but prints a warning.</p>
+</div>
+<h2 id="repeatmasker-clades">RepeatMasker clades<a class="headerlink" href="#repeatmasker-clades" title="Permanent link">&para;</a></h2>
+<p>These match the per-kingdom clade MycoNote passes to repeat masking:</p>
 <table>
 <thead>
 <tr>
 <th>Kingdom</th>
-<th>Library</th>
+<th>Clade</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Fungi</td>
-<td>Fungi clade from Dfam</td>
+<td>Fungi</td>
 </tr>
 <tr>
 <td>Plant</td>
-<td>Viridiplantae clade</td>
+<td>Viridiplantae</td>
 </tr>
 <tr>
 <td>Animal</td>
-<td>Metazoa clade</td>
+<td>Metazoa</td>
+</tr>
+<tr>
+<td>Insect</td>
+<td>Insecta</td>
 </tr>
 <tr>
 <td>Protist</td>
-<td>Full Dfam library</td>
+<td>Protista</td>
 </tr>
 </tbody>
 </table>
-<h2 id="busco-lineages">BUSCO lineages<a class="headerlink" href="#busco-lineages" title="Permanent link">&para;</a></h2>
+<h2 id="busco-lineages-suggested">BUSCO lineages (suggested)<a class="headerlink" href="#busco-lineages-suggested" title="Permanent link">&para;</a></h2>
+<p>Only <code>fungi_odb10</code> is wired as a default; for other kingdoms set the lineage
+explicitly with <code>--busco-lineage</code>. Conventional choices:</p>
 <table>
 <thead>
 <tr>
 <th>Kingdom</th>
-<th>Default lineage</th>
+<th>Suggested lineage</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Fungi</td>
-<td><code>fungi_odb10</code></td>
+<td><code>fungi_odb10</code> (default)</td>
 </tr>
 <tr>
 <td>Plant</td>
@@ -1712,12 +1736,16 @@
 <td><code>metazoa_odb10</code></td>
 </tr>
 <tr>
+<td>Insect</td>
+<td><code>insecta_odb10</code></td>
+</tr>
+<tr>
 <td>Protist</td>
 <td><code>eukaryota_odb10</code></td>
 </tr>
 </tbody>
 </table>
-<p>Override with <code>--busco-lineage</code> on <code>myconote stats</code> or <code>myconote annotate</code>.</p>
+<p>Override with <code>--busco-lineage</code> on <code>myconote-cli annotate</code>.</p>
 
 
 

@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#myconote-predict" class="md-skip">
+        <a href="#myconote-cli-predict" class="md-skip">
           Skip to content
         </a>
       
@@ -786,6 +786,39 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-the-augustus-species-model-clade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the Augustus species model (--clade)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protein-hints-protein-hints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protein hints (--protein-hints)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#self-training-augustus-augustus-training-self" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-training Augustus (--augustus-training self)
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#choosing-a-genemark-mode" class="md-nav__link">
@@ -1627,6 +1660,39 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#choosing-the-augustus-species-model-clade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing the Augustus species model (--clade)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protein-hints-protein-hints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protein hints (--protein-hints)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#self-training-augustus-augustus-training-self" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-training Augustus (--augustus-training self)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#choosing-a-genemark-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1740,10 +1806,92 @@
   
 
 
-<h1 id="myconote-predict">myconote predict<a class="headerlink" href="#myconote-predict" title="Permanent link">&para;</a></h1>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote<span class="w"> </span>predict<span class="w"> </span>--help
+<h1 id="myconote-cli-predict">myconote-cli predict<a class="headerlink" href="#myconote-cli-predict" title="Permanent link">&para;</a></h1>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>--help
 </code></pre></div>
 <p>See the <a href="../overview/">Pipeline Overview</a> for how <code>predict</code> fits into the full workflow.</p>
+<h2 id="choosing-the-augustus-species-model-clade">Choosing the Augustus species model (<code>--clade</code>)<a class="headerlink" href="#choosing-the-augustus-species-model-clade" title="Permanent link">&para;</a></h2>
+<p>Augustus needs a species model. By default a fungal run uses
+<code>saccharomyces_cerevisiae_S288C</code>, but that is a Saccharomycotina model and a
+poor choice off that clade — so instead of hard-coding it, pass <code>--clade</code> to get
+a clade-appropriate default:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--clade<span class="w"> </span>pezizomycotina
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th><code>--clade</code></th>
+<th>Default model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>saccharomycotina</code></td>
+<td><code>saccharomyces_cerevisiae_S288C</code></td>
+</tr>
+<tr>
+<td><code>pezizomycotina</code></td>
+<td><code>aspergillus_nidulans</code></td>
+</tr>
+<tr>
+<td><code>basidiomycota</code></td>
+<td><code>cryptococcus_neoformans_neoformans_JEC21</code></td>
+</tr>
+</tbody>
+</table>
+<p>An explicit <code>--species &lt;model&gt;</code> always wins. A fungal run with neither
+<code>--species</code> nor <code>--clade</code> still uses S288C but prints a warning (BUSCO
+completeness can fall below 15 % off-Saccharomycotina).</p>
+<h2 id="protein-hints-protein-hints">Protein hints (<code>--protein-hints</code>)<a class="headerlink" href="#protein-hints-protein-hints" title="Permanent link">&para;</a></h2>
+<p>Add protein evidence from related species as Augustus hints via miniprot. The
+protein DB is prefiltered with <code>diamond blastx</code> so a whole-kingdom OrthoDB set
+does not stall miniprot:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--species<span class="w"> </span>aspergillus_nidulans<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--protein-hints<span class="w"> </span>orthodb_fungi.fa<span class="w"> </span>--protein-hints-min-identity<span class="w"> </span><span class="m">70</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--protein-hints &lt;proteins.fa&gt;</code></td>
+<td>off</td>
+<td>Protein FASTA → miniprot → Augustus hints</td>
+</tr>
+<tr>
+<td><code>--protein-hints-evalue &lt;E&gt;</code></td>
+<td><code>1e-5</code></td>
+<td>diamond e-value for the prefilter</td>
+</tr>
+<tr>
+<td><code>--protein-hints-max &lt;N&gt;</code></td>
+<td><code>50000</code></td>
+<td>Max proteins fed to miniprot (<code>0</code> = unbounded)</td>
+</tr>
+<tr>
+<td><code>--protein-hints-min-identity &lt;P&gt;</code></td>
+<td><code>0</code></td>
+<td>Keep only prefilter hits ≥ P% identity — raise it to drop distant, low-identity homologs (close relatives beat remote proteins)</td>
+</tr>
+</tbody>
+</table>
+<p>This path is non-fatal: if diamond/miniprot are absent or nothing survives the
+prefilter, prediction proceeds ab-initio. (Distinct from <code>--protein-fasta</code>,
+which feeds GeneMark EP+/ETP+ via ProtHint — see below.)</p>
+<h2 id="self-training-augustus-augustus-training-self">Self-training Augustus (<code>--augustus-training self</code>)<a class="headerlink" href="#self-training-augustus-augustus-training-self" title="Permanent link">&para;</a></h2>
+<p><code>--augustus-training stock</code> (default) uses a curated pre-trained species.
+<code>--augustus-training self</code> instead trains a genome-specific model on the fly
+(first-pass prediction → <code>new_species.pl</code> → <code>etraining</code>). It needs the Augustus
+companion scripts and the <code>species/generic/</code> template from
+<code>setup --db augustus-fungi</code>; if either is missing, <code>predict</code> prints a loud
+banner and falls back to the stock species (it never silently pretends to
+train). On fungi with a curated model, <code>stock</code> usually wins — self-train earns
+its keep on a novel fungus with no close stock species.</p>
 <h2 id="choosing-a-genemark-mode">Choosing a GeneMark mode<a class="headerlink" href="#choosing-a-genemark-mode" title="Permanent link">&para;</a></h2>
 <p><code>gmes_petap.pl</code> ships four self-training algorithms. Pick one with
 <code>--genemark-mode &lt;mode&gt;</code>; if you don't pass the flag, GeneMark is skipped.</p>
@@ -1794,13 +1942,13 @@ splice-site hints (<code>prothint.gff</code> + <code>evidence.gff</code>) before
 installer tarball under <code>&lt;install&gt;/ProtHint/bin/</code> and with the bioconda
 <code>braker3</code> package; there is no standalone bioconda recipe.</p>
 <p>For the protein database, OrthoDB fungi is the standard choice:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>wget<span class="w"> </span>https://data.orthodb.org/v11/odb11v0_proteins_fungi.fa.gz
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>gunzip<span class="w"> </span>odb11v0_proteins_fungi.fa.gz
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span>--genemark-mode<span class="w"> </span>ep<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span>--protein-fasta<span class="w"> </span>odb11v0_proteins_fungi.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">16</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>wget<span class="w"> </span>https://data.orthodb.org/v11/odb11v0_proteins_fungi.fa.gz
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>gunzip<span class="w"> </span>odb11v0_proteins_fungi.fa.gz
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span>--genemark-mode<span class="w"> </span>ep<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span>--protein-fasta<span class="w"> </span>odb11v0_proteins_fungi.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">16</span>
 </code></pre></div>
 <h3 id="backward-compatibility">Backward compatibility<a class="headerlink" href="#backward-compatibility" title="Permanent link">&para;</a></h3>
 <p>The pre-0.6.0 flags still work and are translated automatically:</p>
@@ -1821,12 +1969,12 @@ licensed tarball is on <code>PATH</code>.</p>
 internally cross-trains Augustus and GeneMark with hints from both evidence
 types; BRAKER3 is widely held to be the current gold standard for fungal gene
 prediction quality.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span>--use-braker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span>--braker-rna-bam<span class="w"> </span>rnaseq_sample1.bam<span class="w"> </span>--braker-rna-bam<span class="w"> </span>rnaseq_sample2.bam<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span>--braker-proteins<span class="w"> </span>odb11v0_proteins_fungi.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">16</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>--use-braker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span>--braker-rna-bam<span class="w"> </span>rnaseq_sample1.bam<span class="w"> </span>--braker-rna-bam<span class="w"> </span>rnaseq_sample2.bam<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span>--braker-proteins<span class="w"> </span>odb11v0_proteins_fungi.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">16</span>
 </code></pre></div>
 <p><code>--use-braker</code> short-circuits the standard ab-initio + EVM consensus stack;
 MycoNote-CLI does <strong>not</strong> run Augustus / SNAP / GlimmerHMM / GeneMark / miniprot

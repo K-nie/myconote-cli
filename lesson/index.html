@@ -1703,15 +1703,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#additional-capabilities-v020" class="md-nav__link">
+  <a href="#additional-capabilities" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Additional Capabilities (v0.2.0)
+        Additional Capabilities
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Additional Capabilities (v0.2.0)">
+    <nav class="md-nav" aria-label="Additional Capabilities">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2354,15 +2354,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#additional-capabilities-v020" class="md-nav__link">
+  <a href="#additional-capabilities" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Additional Capabilities (v0.2.0)
+        Additional Capabilities
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Additional Capabilities (v0.2.0)">
+    <nav class="md-nav" aria-label="Additional Capabilities">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2578,16 +2578,17 @@
 <p>Most genome assemblers output contigs in arbitrary order with long, non-informative headers like <code>NODE_1_length_2474448_cov_85.2</code>. The <code>sort</code> command:</p>
 <ul>
 <li>Orders contigs from longest to shortest (annotation tools perform best on long contigs)</li>
-<li>Renames headers to clean sequential IDs (<code>scaffold_1</code>, <code>scaffold_2</code>, ...)</li>
 <li>Filters out very short contigs that add noise without contributing gene models</li>
-<li>Saves a rename table so you can trace back to original IDs</li>
+<li><strong>Preserves your original contig names by default</strong> (lossless)</li>
+<li>Optionally renames headers to clean sequential IDs (<code>scaffold_1</code>, <code>scaffold_2</code>, …) with <code>--ncbi-clean</code>, and saves a rename table so you can trace back to the originals</li>
 </ul>
 <h3 id="running-sort">Running <code>sort</code><a class="headerlink" href="#running-sort" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>genome.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>--prefix<span class="w"> </span>scaffold<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--min-length<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--rename-table<span class="w"> </span>rename_table.tsv<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>-o<span class="w"> </span>sorted.fa
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># NCBI-ready: rename to scaffold_N and keep the lift-over table</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>genome.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--ncbi-clean<span class="w"> </span>--prefix<span class="w"> </span>scaffold<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--min-length<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>--rename-table<span class="w"> </span>rename_table.tsv<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span>-o<span class="w"> </span>sorted.fa
 </code></pre></div>
 <p>The output includes a summary:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Sorting genome: genome.fa
@@ -2605,13 +2606,13 @@
 <h3 id="challenge-21">Challenge 2.1<a class="headerlink" href="#challenge-21" title="Permanent link">&para;</a></h3>
 <p>Sort the practice genome, then answer:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>myconote-cli<span class="w"> </span>sort<span class="w"> </span>tests/data/candida_tropicalis.fas<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span>--min-length<span class="w"> </span><span class="m">10000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span>--min-length<span class="w"> </span><span class="m">10000</span><span class="w"> </span>--ncbi-clean<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span>-o<span class="w"> </span>ct_sorted.fa
 </code></pre></div>
 <ol>
 <li>How many contigs passed the 10,000 bp filter?</li>
 <li>What fraction of the total assembly length do they represent?</li>
-<li>What would the first contig header look like in <code>ct_sorted.fa</code>?</li>
+<li>With <code>--ncbi-clean</code>, what would the first contig header look like in <code>ct_sorted.fa</code>? (And what would it be <em>without</em> that flag?)</li>
 </ol>
 <hr />
 <h2 id="episode-3-repeat-masking">Episode 3: Repeat Masking<a class="headerlink" href="#episode-3-repeat-masking" title="Permanent link">&para;</a></h2>
@@ -2705,19 +2706,21 @@
 </tr>
 </tbody>
 </table>
-<p>EVM produces a consensus gene set that is generally more accurate than any single predictor alone.</p>
+<p>MycoNote's agreement-weighted consensus merge produces a gene set that is generally more accurate than any single predictor alone.</p>
 <h3 id="running-predict">Running <code>predict</code><a class="headerlink" href="#running-predict" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>sorted.fa.masked<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span>--augustus<span class="w"> </span>--snap<span class="w"> </span>--glimmerhmm<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span>--glimmerhmm<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span>--out<span class="w"> </span>predict_out/
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span>--output<span class="w"> </span>predict_out/
 </code></pre></div>
-<p>Key options:</p>
+<p>Augustus and SNAP run by default; add <code>--glimmerhmm</code> and/or <code>--genemark-mode</code> to
+bring in more predictors, or <code>--no-snap</code> to drop one. Key options:</p>
 <ul>
-<li><code>--kingdom</code> — sets the default Augustus species model, BUSCO lineage, and EVM weights</li>
+<li><code>--kingdom</code> — sets the default Augustus species model and BUSCO lineage</li>
+<li><code>--clade saccharomycotina|pezizomycotina|basidiomycota</code> — pick a clade-appropriate fungal default instead of S288C</li>
 <li><code>--species</code> — override the Augustus species model (default: <code>saccharomyces_cerevisiae_S288C</code>)</li>
-<li><code>--hints</code> — provide a protein or EST hints GFF for hint-guided prediction (improves accuracy)</li>
+<li><code>--protein-hints &lt;proteins.fa&gt;</code> — add protein evidence (miniprot → Augustus hints); see <code>predict --help</code> for the identity gate</li>
 </ul>
 <h3 id="choosing-an-augustus-species-model">Choosing an Augustus species model<a class="headerlink" href="#choosing-an-augustus-species-model" title="Permanent link">&para;</a></h3>
 <p>The default species model for fungi is <code>saccharomyces_cerevisiae_S288C</code>. If your organism is more closely related to a different well-studied fungus, override the default:</p>
@@ -2734,10 +2737,10 @@
 <h3 id="challenge-41">Challenge 4.1<a class="headerlink" href="#challenge-41" title="Permanent link">&para;</a></h3>
 <p>Run prediction on the practice genome and examine the output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>tests/data/candida_tropicalis.fas.masked<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--threads<span class="w"> </span><span class="m">4</span><span class="w"> </span>--out<span class="w"> </span>ct_predict/
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--threads<span class="w"> </span><span class="m">4</span><span class="w"> </span>--output<span class="w"> </span>ct_predict/
 </code></pre></div>
 <p>Then check the gene statistics:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>ct_predict/evm.gff3
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>ct_predict/consensus.gff3
 </code></pre></div>
 <ol>
 <li>How many genes were predicted?</li>
@@ -2749,75 +2752,80 @@
 <p><strong>Time:</strong> ~40 minutes</p>
 <h3 id="what-functional-annotation-does">What functional annotation does<a class="headerlink" href="#what-functional-annotation-does" title="Permanent link">&para;</a></h3>
 <p>Gene prediction gives you <em>where</em> genes are. Functional annotation tells you <em>what</em> they do by comparing predicted proteins against curated databases:</p>
+<p><code>annotate</code> takes the gene GFF3 as a positional argument and the genome via
+<code>--fasta</code>. The <strong>core sources run by default</strong> (MMseqs2, Pfam, BUSCO); the rest
+are <strong>opt-in</strong> with the flag shown:</p>
 <table>
 <thead>
 <tr>
-<th>Module</th>
-<th>Database</th>
+<th>Source</th>
+<th>Flag</th>
 <th>Provides</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>--mmseqs</code></td>
-<td>Swiss-Prot / UniRef</td>
+<td>MMseqs2</td>
+<td>default on</td>
 <td>Gene names, species of best hit</td>
 </tr>
 <tr>
-<td><code>--pfam</code></td>
-<td>Pfam-A</td>
+<td>Pfam</td>
+<td>default on (<code>--no-pfam</code>)</td>
 <td>Protein domain families</td>
 </tr>
 <tr>
-<td><code>--eggnog</code></td>
-<td>EggNOG / COG</td>
-<td>GO terms, KEGG pathways, COG categories</td>
-</tr>
-<tr>
-<td><code>--cazyme</code></td>
-<td>CAZy</td>
-<td>Carbohydrate-active enzyme families</td>
-</tr>
-<tr>
-<td><code>--merops</code></td>
-<td>MEROPS</td>
-<td>Protease families</td>
-</tr>
-<tr>
-<td><code>--busco</code></td>
-<td>BUSCO fungi_odb10</td>
+<td>BUSCO</td>
+<td>default on (<code>--no-busco</code>)</td>
 <td>Completeness assessment</td>
 </tr>
 <tr>
-<td><code>--antismash</code></td>
+<td>EggNOG</td>
+<td><code>--eggnog</code></td>
+<td>GO terms, KEGG pathways, COG categories</td>
+</tr>
+<tr>
+<td>CAZyme</td>
+<td><code>--cazyme</code></td>
+<td>Carbohydrate-active enzyme families</td>
+</tr>
+<tr>
+<td>MEROPS</td>
+<td><code>--merops</code></td>
+<td>Protease families</td>
+</tr>
+<tr>
 <td>antiSMASH</td>
+<td><code>--antismash</code></td>
 <td>Secondary metabolite gene clusters</td>
 </tr>
 </tbody>
 </table>
 <h3 id="running-annotate">Running <code>annotate</code><a class="headerlink" href="#running-annotate" title="Permanent link">&para;</a></h3>
-<p><strong>Option A: Core annotation only (fast, ~30 min)</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>sorted.fa.masked<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span>--gff<span class="w"> </span>evm.gff3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span>--pfam<span class="w"> </span>--busco<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span>--out<span class="w"> </span>annotation/
+<p><strong>Option A: Core annotation (default, fast)</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span>--fasta<span class="w"> </span>sorted.fa.masked<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span>--output<span class="w"> </span>annotation/
 </code></pre></div>
-<p><strong>Option B: Full annotation (recommended)</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>sorted.fa.masked<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span>--gff<span class="w"> </span>evm.gff3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span>--eggnog<span class="w"> </span>--pfam<span class="w"> </span>--cazyme<span class="w"> </span>--merops<span class="w"> </span>--busco<span class="w"> </span>--antismash<span class="w"> </span><span class="se">\</span>
+<p><strong>Option B: Full annotation (recommended for publication)</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>predict_out/consensus.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span>--fasta<span class="w"> </span>sorted.fa.masked<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span>--eggnog<span class="w"> </span>--cazyme<span class="w"> </span>--merops<span class="w"> </span>--antismash<span class="w"> </span>--secretome<span class="w"> </span>--trnascan<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span>--threads<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span>--out<span class="w"> </span>annotation/
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span>--output<span class="w"> </span>annotation/
 </code></pre></div>
-<p>I recommend Option B for a publication-quality annotation because it provides GO terms, KEGG pathways, and secondary metabolite clusters that are expected in most fungal genome papers.</p>
+<p>Option B adds GO terms, KEGG pathways, and secondary-metabolite clusters
+expected in most fungal genome papers. Since v0.7.8 the EggNOG step runs ~4×
+faster (<code>--dmnd_iterate no</code> by default); pass <code>--eggnog-iterate</code> to restore the
+slower, maximum-recall path.</p>
 <blockquote>
 <p><strong>Note:</strong> Option B requires the eggNOG database (~50 GB). If it is not yet downloaded, Myconote will skip the <code>--eggnog</code> step and warn you.</p>
 </blockquote>
 <hr />
 <h3 id="challenge-51">Challenge 5.1<a class="headerlink" href="#challenge-51" title="Permanent link">&para;</a></h3>
 <p>After annotation, examine the functional coverage:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotation/final.gff3<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotation/annotated.gff3<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">"</span>
 <a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="s2">import json, sys</span>
 <a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="s2">d = json.load(sys.stdin)</span>
 <a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="s2">print('Total genes:', d['gene_count'])</span>
@@ -2839,7 +2847,7 @@ Instead, export your annotation and hand off to:</p>
   ribbons from multiple <code>.gbk</code> files.</li>
 </ul>
 <h3 id="convert-once-use-everywhere">Convert once, use everywhere<a class="headerlink" href="#convert-once-use-everywhere" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/final.gff3<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/annotated.gff3<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span>--to<span class="w"> </span>genbank<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span>--fasta<span class="w"> </span>sorted.fa<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span>-o<span class="w"> </span>final.gbk
@@ -2849,14 +2857,14 @@ Instead, export your annotation and hand off to:</p>
 </code></pre></div>
 <h3 id="converting-to-other-formats">Converting to other formats<a class="headerlink" href="#converting-to-other-formats" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># For R/Python analysis</span>
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/final.gff3<span class="w"> </span>--to<span class="w"> </span>table<span class="w"> </span>-o<span class="w"> </span>genes.tsv
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>table<span class="w"> </span>-o<span class="w"> </span>genes.tsv
 <a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
 <a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># For Geneious / SnapGene</span>
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/final.gff3<span class="w"> </span>--to<span class="w"> </span>genbank<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>genbank<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span>--fasta<span class="w"> </span>sorted.fa<span class="w"> </span>-o<span class="w"> </span>annotation.gbk
 <a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>
 <a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="c1"># Protein sequences for BLAST or OrthoFinder</span>
-<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/final.gff3<span class="w"> </span>--to<span class="w"> </span>protein<span class="w"> </span>-o<span class="w"> </span>proteins.faa
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotation/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>protein<span class="w"> </span>-o<span class="w"> </span>proteins.faa
 </code></pre></div>
 <hr />
 <h2 id="key-points">Key Points<a class="headerlink" href="#key-points" title="Permanent link">&para;</a></h2>
@@ -2870,7 +2878,7 @@ Instead, export your annotation and hand off to:</p>
 <li>Two tools (SignalP 6, GeneMark-ES) require manual download due to licensing</li>
 </ul>
 <hr />
-<h2 id="additional-capabilities-v020">Additional Capabilities (v0.2.0)<a class="headerlink" href="#additional-capabilities-v020" title="Permanent link">&para;</a></h2>
+<h2 id="additional-capabilities">Additional Capabilities<a class="headerlink" href="#additional-capabilities" title="Permanent link">&para;</a></h2>
 <p>Since the initial workshop lesson was written, myconote-cli has gained several major features:</p>
 <h3 id="trna-prediction">tRNA prediction<a class="headerlink" href="#trna-prediction" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>genes.gff3<span class="w"> </span>--fasta<span class="w"> </span>genome.fa<span class="w"> </span>--trnascan
@@ -2888,7 +2896,7 @@ Instead, export your annotation and hand off to:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>myconote-cli<span class="w"> </span>predict<span class="w"> </span>genome.fa<span class="w"> </span>--weights<span class="w"> </span>my_weights.toml
 </code></pre></div>
 <h3 id="interactive-self-paced-tutorial">Interactive self-paced tutorial<a class="headerlink" href="#interactive-self-paced-tutorial" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>myconote-cli<span class="w"> </span>learn<span class="w">    </span><span class="c1"># 8 lessons, swirl-style</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>myconote-cli<span class="w"> </span>learn<span class="w">    </span><span class="c1"># 22 lessons, swirl-style</span>
 </code></pre></div>
 <h3 id="docker-singularity-containers">Docker / Singularity containers<a class="headerlink" href="#docker-singularity-containers" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>:/data<span class="w"> </span>myconote-cli<span class="w"> </span>predict<span class="w"> </span>/data/genome.fa<span class="w"> </span>--kingdom<span class="w"> </span>fungi

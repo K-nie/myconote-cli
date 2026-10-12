@@ -1305,6 +1305,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#responsible-use-and-data-privacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Responsible use and data privacy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1831,6 +1842,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#responsible-use-and-data-privacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Responsible use and data privacy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2051,12 +2073,8 @@
 <td>Read from stdin instead of scanning a directory</td>
 </tr>
 <tr>
-<td><code>--stdin-format &lt;fmt&gt;</code></td>
-<td>Override format detection: auto, gff, vcf, log, error</td>
-</tr>
-<tr>
 <td><code>--model &lt;name&gt;</code></td>
-<td>Override LLM model</td>
+<td>Override the LLM model (any installed Ollama model)</td>
 </tr>
 <tr>
 <td><code>--endpoint &lt;url&gt;</code></td>
@@ -2100,7 +2118,11 @@
 </code></pre></div>
 <p>If Ollama is not running and <code>--no-llm</code> is not set, the tool prints rule-based findings with a note: "LLM unavailable -- showing rule-based findings only."</p>
 <h2 id="smart-model-selection">Smart model selection<a class="headerlink" href="#smart-model-selection" title="Permanent link">&para;</a></h2>
-<p>The tool auto-detects system RAM and selects the most capable model:</p>
+<p>From a curated, stable tier list, the tool picks the most capable model that
+<strong>both</strong> fits your system RAM <strong>and is already pulled</strong> in Ollama — so the AI
+path engages out of the box instead of failing on an un-installed model (it
+falls back to rules-only if nothing suitable is pulled). The tiers are a fixed
+snapshot, not an auto-updating "latest":</p>
 <table>
 <thead>
 <tr>
@@ -2137,7 +2159,17 @@
 </tr>
 </tbody>
 </table>
-<p>Override with <code>--model &lt;name&gt;</code> or <code>MYCONOTE_CHAT_MODEL</code> environment variable.</p>
+<p>To use a newer model, <code>ollama pull &lt;model&gt;</code> and pass it with <code>--model &lt;name&gt;</code>
+(or set <code>MYCONOTE_CHAT_MODEL</code>). Any installed Ollama model works.</p>
+<h2 id="responsible-use-and-data-privacy">Responsible use and data privacy<a class="headerlink" href="#responsible-use-and-data-privacy" title="Permanent link">&para;</a></h2>
+<p>AI interpretation is a <strong>starting point, not a substitute for human and
+contextual judgement</strong> — weigh every output against your own domain expertise
+and the biology of your system, and verify it independently before it informs a
+decision or a publication. By default all inference runs <strong>locally via Ollama</strong>,
+so your data stays on your machine. If you point <code>--endpoint</code> or a provider at a
+remote service, your inputs leave the machine — <strong>review your organization's
+policies on AI use and data handling before sending sensitive or unpublished
+data to any model.</strong> Every <code>explain</code> run prints this notice.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="config-file-myconoteconfigtoml">Config file (<code>~/.myconote/config.toml</code>)<a class="headerlink" href="#config-file-myconoteconfigtoml" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">[chat]</span>

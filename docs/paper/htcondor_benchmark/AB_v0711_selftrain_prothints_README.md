@@ -134,21 +134,34 @@ using species: neurospora_crassa (stock / pre-trained fallback)
 ```
 
 The SNAP self-training path failed on the same run (`fathom … -categorize 1000
-failed`). Both training engines rejecting the same input points to one upstream
-cause: the first-pass training-gene set (its GFF→GenBank conversion) is
-malformed or empty. Because training aborts, prediction falls back to the stock
-species and the metrics are byte-identical to baseline:
+failed`). Root cause (found 2026-10-11, fixed in **v0.7.12**, `a2b09aa`):
+MycoNote's native GenBank writer omitted the `source  1..<len>` feature that
+Augustus `etraining` uses to set each record's sequence bounds. Without it,
+every CDS was rejected as "out of range. Ignoring it." (6963/8703 on ncr), the
+training set emptied, etraining exited non-zero, and prediction fell back to the
+stock species — giving the byte-identical pre-fix numbers (ncr 0.8971/0.5638,
+cne 0.9217/0.5267). Verified: canonical `gff2gbSmallDNA.pl` records (which carry
+`source`) etrain with 0 out-of-range; injecting `source` into MycoNote's own
+records drops out-of-range 6963→0 and etraining completes.
 
-| genome | baseline loose/strict | self-train loose/strict | Δ |
-|--------|-----------------------|-------------------------|---|
-| ncr    | 0.897 / 0.564         | 0.8971 / 0.5638         | ~0 |
-| cne    | 0.921 / 0.526         | 0.9217 / 0.5267         | ~0 |
+**With the fix (v0.7.12), self-training runs end to end but underperforms the
+stock species.** etraining completes (0 out-of-range), `ncr_trained` /
+`cne_trained` are built and used:
 
-No successful self-train has ever been observed across four fix cycles, so there
-is no evidence fixing the etraining-GFF bug would lift F1. The etraining failure
-is filed as a standalone correctness bug (predict now fails *loudly* — the
-banner names which gate failed — rather than silently falling back), decoupled
-from the accuracy question.
+| genome | stock baseline loose/strict | self-trained loose/strict | n genes |
+|--------|-----------------------------|---------------------------|---------|
+| ncr    | 0.897 / 0.564               | 0.796 / 0.525             | 7336    |
+| cne    | 0.921 / 0.526               | 0.788 / 0.515             | 4642 (stock ~7253) |
+
+Self-training **lowers** F1 by 0.10–0.13 (loose) here. Expected: the training
+set is MycoNote's own first-pass ab-initio calls (errors propagate), there is no
+`optimize_augustus.pl` meta-parameter pass, and these benchmark fungi already
+have excellent hand-curated stock Augustus models. For a *novel* fungus with no
+close stock species the trade could differ, but on well-represented model fungi
+stock wins. This **reinforces** the accuracy-thread closure: the lever now works
+and still does not help. A residual non-fatal etraining warning
+(`stopCodonExcludedFromCDS`; MycoNote's CDS excludes the stop codon) is a model-
+tuning item, not a training blocker.
 
 ### Protein hints (clusters 145951 no-gate, 146282 gate70)
 

@@ -422,12 +422,14 @@ protocol, results, and log evidence are in
 Outcome: **neither lifts F1.** Each cycle corrected a real mechanical defect and
 produced no accuracy gain.
 
-- **Self-training** cleared three successive blockers (silent fallback → script
-  discovery → missing `species/generic/` template, provisioned in v0.7.11) only
-  to hit `etraining` rejecting MycoNote's first-pass training-gene GFF (SNAP's
-  `fathom` fails on the same input). Training aborts, prediction falls back to
-  the stock species, and F1 is byte-identical to baseline. Filed as a standalone
-  correctness bug; predict now fails *loudly* instead of silently.
+- **Self-training** cleared four successive blockers (silent fallback → script
+  discovery → missing `species/generic/` template → the missing GenBank `source`
+  feature that made `etraining` reject every CDS as "out of range", fixed in
+  v0.7.12). It now runs end to end — but the self-trained model **underperforms
+  the stock species** (ncr 0.796/0.525, cne 0.788/0.515 vs stock 0.897/0.564 and
+  0.921/0.526): training on first-pass ab-initio calls propagates their errors,
+  there is no `optimize_augustus.pl` pass, and these fungi already have curated
+  stock models. The lever works and still does not help here.
 - **Protein hints** demonstrably do not help the architecture: the v0.7.11
   `--protein-hints-min-identity` gate filtered the prefiltered set as designed
   (cne 312→207 proteins at 70 % identity) with F1 unchanged and strict below

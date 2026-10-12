@@ -441,23 +441,39 @@ durable advantages above stand, and the accuracy-via-these-levers thread is
 closed. The v0.7.11 code (generic provisioning, loud-failing self-train
 preflight, opt-in identity gate) stays: each is correct on its own merit.
 
-### funannotate-weakness coverage (summary)
+### funannotate-weakness coverage — progress from the detailed scan (before → after)
 
 A systematic audit of funannotate's full issue tracker (1,093 issues) + docs
-mapped ~22 distinct weakness themes against MycoNote. MycoNote cleanly
-**resolves ~4** (Augustus-PPX path avoided, DB-free default masking, no
-Python-legacy in core, no CodingQuarry failures), **partially mitigates ~8**
-(install footprint, DB/BUSCO provisioning, EggNog speed, SignalP/Phobius
-licensing, IPRScan→REST, submission, determinism, Augustus-training class),
-**still shares ~6** (GeneMark license, Augustus binary, PASA lock, tRNAscan,
-contig-rename, silent-drop design), is **unverified on ~2** (large-assembly
-scaling, table2asn validation), and **introduces ~3 of its own** (the
-S288C-for-all-fungi default, BUSCO offline-dataset fallback, IPRScan
-network-only). Several of these are addressed by later versions: v0.7.9 adds a
-clade-aware species default + loud guard (S288C), opt-in lossless contig naming,
-and submit structural pre-validation. **MycoNote does not remove funannotate's
-hard external-tool dependencies (GeneMark, Augustus, emapper, PASA) — it
-repackages and speeds up around them.**
+mapped ~22 distinct weakness themes against MycoNote. The table below scores
+MycoNote **before** the correction work (pre-v0.7.8 baseline) vs **after**
+(v0.7.12), for the themes the corrections touched. Each "after" status is
+verified against the current source, not intent.
+
+| funannotate weakness (from the scan) | before (≤v0.7.7) | after (v0.7.12) | what changed |
+|---|---|---|---|
+| Wrong species model on divergent fungi (MycoNote's S288C-for-all default — self-introduced) | **introduced** | **resolved** | v0.7.9 clade-aware default (`FungalClade` + `resolve_augustus_species`) + loud guard when a naive run would fall back to S288C off-Saccharomycotina |
+| Contig renaming loses the user's original seqids | **shared** | **resolved** | v0.7.9 default now preserves original seqids through `sort`; renaming is opt-in (`--ncbi-clean` / `--rename-contigs`) and emits a lift-over table |
+| NCBI submission failures (malformed structure) | **partial** | **resolved** | v0.7.9 `submit` structural pre-validation (`check_structure`/`repair_structure`): orphan/missing Parent, CDS-outside-mRNA |
+| EggNog functional-annotation runtime | **partial** | **resolved** | v0.7.8 `--dmnd_iterate no` default — measured 4.4× faster at identical recall (46 min vs ~3.4 h on a 10,655-protein proteome) |
+| Augustus self-training silently no-ops / fails | **partial/broken** | **resolved (capability)** | v0.7.10 script discovery + loud preflight; v0.7.11 `species/generic/` provisioning; v0.7.12 GenBank `source` feature → `etraining` now completes end to end. *Caveat: the trained model underperforms stock on model fungi — the capability works and fails loudly, but is not an accuracy win* |
+| No protein evidence option (funannotate uses exonerate/miniprot) | **shared/missing** | **mitigated** | v0.7.11 opt-in `--protein-hints` with a literature-aligned identity gate (`--protein-hints-min-identity`); runs, but does not lift MycoNote's ab-initio-driven consensus |
+
+**Net progress from the scan corrections:** of the themes we could act on, **4
+move to fully resolved** (S288C default, contig-rename, submission, EggNog
+speed), **1 capability is repaired** (self-training now runs and fails loudly
+instead of silently — though it doesn't beat stock here), and **1 new capability
+is added** (opt-in protein evidence). Self-introduced weaknesses drop from 3 → 2
+(BUSCO offline-dataset fallback and IPRScan network-only remain); shared
+weaknesses drop as contig-rename is resolved.
+
+**Unchanged (honest):** MycoNote does **not** remove funannotate's hard
+external-tool dependencies — GeneMark license, Augustus binary, PASA lock,
+tRNAscan — it repackages and speeds up around them. Large-assembly scaling and
+table2asn validation remain unverified. And the corrections are **weakness-
+coverage / usability progress, not accuracy progress**: the standing benchmark
+picture vs funannotate is unchanged (MycoNote wins nucleotide F1 mostly, splits
+strict, trails loose), because the two accuracy levers (self-train, protein
+hints) provably do not lift MycoNote's consensus.
 
 ## Caveats for the manuscript
 

@@ -549,7 +549,10 @@ fn print_explain_help() {
     println!();
     println!("  {}Options:{}", C_BOLD, C_RESET);
     println!("    --dir <path>       Working directory (default: auto-discover)");
-    println!("    --model <name>     Ollama model (default: llama3.1)");
+    println!("    --model <name>     Ollama model. Default: the best pulled model from a");
+    println!("                       curated, stable tier list that fits your RAM. Pass any");
+    println!("                       installed Ollama model here — pull a newer one with");
+    println!("                       `ollama pull <model>` and name it to use it instead.");
     println!("    --endpoint <url>   Ollama endpoint (default: http://localhost:11434)");
     println!("    --no-llm           Rules-only mode: no Ollama needed");
     println!("    --verbose          Show all findings with evidence");

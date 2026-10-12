@@ -44,6 +44,9 @@ pub struct ModelTier {
 }
 
 /// Select the most capable model that fits in the available system memory.
+/// This is the "what you *should* pull" recommendation used by `setup`; it does
+/// not consider what is actually installed. For the runtime default the chat
+/// path uses `default_runtime_model`, which prefers a model already pulled.
 pub fn recommend_model() -> &'static str {
     let available_gb = detect_available_memory_gb();
 
@@ -55,6 +58,56 @@ pub fn recommend_model() -> &'static str {
 
     // Fallback: smallest model
     "llama3.1:8b"
+}
+
+/// List the model names Ollama currently has pulled (`ollama list`, first
+/// column). Returns an empty list if Ollama is absent or the call fails — the
+/// caller treats "unknown" the same as "nothing pulled".
+fn pulled_models() -> Vec<String> {
+    let out = match std::process::Command::new("ollama").arg("list").output() {
+        Ok(o) if o.status.success() => o,
+        _ => return Vec::new(),
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    text.lines()
+        .skip(1) // header: NAME  ID  SIZE  MODIFIED
+        .filter_map(|l| l.split_whitespace().next())
+        .filter(|n| !n.is_empty())
+        .map(|n| n.to_string())
+        .collect()
+}
+
+/// Choose the runtime default model, preferring one that is already pulled so
+/// the AI path engages out of the box instead of 404-ing on an un-pulled
+/// RAM-tier pick and silently dropping to rules-only. Pure (memory + pulled
+/// list injected) so it is unit-testable.
+///
+/// Order: (1) the best-quality tier that BOTH fits RAM and is pulled; (2) any
+/// pulled tier (the user pulled it deliberately); (3) any pulled model at all;
+/// (4) the RAM-based recommendation when nothing is pulled — it may 404, but
+/// the chat path degrades to rules-only and `setup` says which model to pull.
+fn choose_model(available_gb: u64, pulled: &[String]) -> String {
+    let is_pulled = |name: &str| pulled.iter().any(|m| m == name);
+
+    for tier in MODEL_TIERS {
+        if available_gb >= tier.min_ram_gb && is_pulled(tier.name) {
+            return tier.name.to_string();
+        }
+    }
+    for tier in MODEL_TIERS {
+        if is_pulled(tier.name) {
+            return tier.name.to_string();
+        }
+    }
+    if let Some(first) = pulled.first() {
+        return first.clone();
+    }
+    recommend_model().to_string()
+}
+
+/// Runtime default model: `choose_model` over the live memory + pulled list.
+pub fn default_runtime_model() -> String {
+    choose_model(detect_available_memory_gb(), &pulled_models())
 }
 
 /// Detect available system memory in GB.
@@ -98,7 +151,7 @@ impl Default for ChatConfig {
         Self {
             enabled: true,
             endpoint: DEFAULT_ENDPOINT.to_string(),
-            model: recommend_model().to_string(),
+            model: default_runtime_model(),
             api_key: None,
             provider: "ollama".to_string(),
             timeout_s: DEFAULT_TIMEOUT_S,
@@ -254,6 +307,36 @@ mod tests {
             "recommended model '{}' not in tiers",
             model
         );
+    }
+
+    #[test]
+    fn choose_model_prefers_ram_fitting_pulled_tier() {
+        // 16 GB, both mistral (16) and llama3.1:8b (8) pulled → best that fits.
+        let pulled = vec!["mistral-small:22b".to_string(), "llama3.1:8b".to_string()];
+        assert_eq!(choose_model(16, &pulled), "mistral-small:22b");
+    }
+
+    #[test]
+    fn choose_model_skips_unpulled_ram_pick_for_a_pulled_smaller_one() {
+        // 16 GB would recommend mistral (16), but it is NOT pulled; only the
+        // 8b baseline is. The resolver must pick the pulled one, not 404.
+        let pulled = vec!["llama3.1:8b".to_string()];
+        assert_eq!(choose_model(16, &pulled), "llama3.1:8b");
+    }
+
+    #[test]
+    fn choose_model_uses_a_pulled_non_tier_model_over_an_unpulled_tier() {
+        // User only has llama2 (not a tier). Better to use it than 404 on an
+        // un-pulled tier model.
+        let pulled = vec!["llama2:latest".to_string()];
+        assert_eq!(choose_model(16, &pulled), "llama2:latest");
+    }
+
+    #[test]
+    fn choose_model_falls_back_to_recommendation_when_nothing_pulled() {
+        let model = choose_model(16, &[]);
+        let valid: Vec<&str> = MODEL_TIERS.iter().map(|t| t.name).collect();
+        assert!(valid.contains(&model.as_str()), "fallback must be a tier");
     }
 
     #[test]

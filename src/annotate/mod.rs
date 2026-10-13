@@ -30,6 +30,7 @@ use crate::utils::error::{MycoNoteError, Result};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -271,6 +272,11 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
         + if config.run_antismash    { 1 } else { 0 };
     let mut step = 0usize;
 
+    // Per-functional-source wall time, one entry per source that actually ran.
+    // Disabled sources are never pushed. Feeds the benchmark's per-source
+    // annotate-timing figure (annotate_timings.tsv, written at the end).
+    let mut timings: Vec<(&'static str, f64)> = Vec::new();
+
     // ── Extract CDS protein sequences ─────────────────────────────────────────
     step += 1;
     progress::step(step, total_steps, "Extracting protein sequences…");
@@ -299,6 +305,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     if config.run_mmseqs {
         step += 1;
         progress::step(step, total_steps, "MMseqs2 homology (Swiss-Prot)…");
+        let t_mmseqs = Instant::now();
         let swissprot = resolve_swissprot(config);
         match swissprot {
             Some(db) => {
@@ -317,12 +324,14 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 eprintln!("     Run: myconote annotate --download-dbs");
             }
         }
+        timings.push(("mmseqs", t_mmseqs.elapsed().as_secs_f64()));
     }
 
     // ── InterProScan (EBI REST API) ───────────────────────────────────────────
     if config.run_interproscan {
         step += 1;
         progress::step(step, total_steps, "InterProScan (EBI REST API)…");
+        let t_ipr = Instant::now();
         if config.interproscan_email.is_empty() {
             eprintln!("  ⚠  InterProScan requires --email <address> (EBI policy)");
         } else {
@@ -340,6 +349,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 Err(e) => eprintln!("  ⚠  InterProScan failed: {}", e),
             }
         }
+        timings.push(("interproscan", t_ipr.elapsed().as_secs_f64()));
     }
 
     // ── GO term assignment (from MMseqs2 UniProt hits) ────────────────────────
@@ -374,6 +384,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     if config.run_pfam {
         step += 1;
         progress::step(step, total_steps, "Pfam domain search (hmmscan)…");
+        let t_pfam = Instant::now();
         let pfam_db = resolve_pfam(config);
         match pfam_db {
             Some(db) => {
@@ -392,6 +403,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 eprintln!("     Run: myconote annotate --download-dbs");
             }
         }
+        timings.push(("pfam", t_pfam.elapsed().as_secs_f64()));
     }
 
     // ── BUSCO completeness ────────────────────────────────────────────────────
@@ -403,6 +415,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
             total_steps,
             &format!("BUSCO completeness ({})…", lineage),
         );
+        let t_busco = Instant::now();
         let pb2 = progress::spinner(format!("Running BUSCO (lineage: {})…", lineage));
         let busco_dir = config.out_dir.join("busco");
         match busco::run(&proteins_fa, lineage, &busco_dir, config.threads) {
@@ -421,10 +434,12 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
             }
             Err(e) => progress::warn_spinner(&pb2, format!("BUSCO failed (non-fatal): {}", e)),
         }
+        timings.push(("busco", t_busco.elapsed().as_secs_f64()));
     }
 
     // ── tRNAscan-SE tRNA prediction ──────────────────────────────────────────
     if config.run_trnascan {
+        let t_trna = Instant::now();
         let pb_trna = progress::spinner("Running tRNAscan-SE…");
         let trna_dir = config.out_dir.join("trnascan");
         let trna_cfg = trnascan::TrnaScanConfig {
@@ -451,10 +466,12 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 progress::warn_spinner(&pb_trna, format!("tRNAscan-SE failed (non-fatal): {}", e))
             }
         }
+        timings.push(("trnascan", t_trna.elapsed().as_secs_f64()));
     }
 
     // ── MEROPS protease annotation ────────────────────────────────────────────
     if config.run_merops {
+        let t_merops = Instant::now();
         let merops_dir = config.out_dir.join("merops");
         let db_dir = config
             .merops_db
@@ -478,12 +495,14 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
             Ok(_) => progress::warn_spinner(&pb2, "MEROPS: no database found or no hits"),
             Err(e) => progress::warn_spinner(&pb2, format!("MEROPS failed (non-fatal): {}", e)),
         }
+        timings.push(("merops", t_merops.elapsed().as_secs_f64()));
     }
 
     // ── EggNog-mapper (COG/NOG orthology + KEGG + GO) ─────────────────────────
     if config.run_eggnog {
         step += 1;
         progress::step(step, total_steps, "EggNog-mapper (COG/NOG + KEGG)…");
+        let t_eggnog = Instant::now();
         // Users can either point at an existing emapper.annotations file or
         // let us run emapper.py end-to-end. The pre-computed path is useful
         // on HPC where emapper takes hours and is typically run once per
@@ -559,12 +578,14 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 Err(e) => progress::warn_spinner(&pb2, format!("parse failed: {}", e)),
             }
         }
+        timings.push(("eggnog", t_eggnog.elapsed().as_secs_f64()));
     }
 
     // ── CAZyme annotation (dbCAN preferred, DIAMOND fallback) ─────────────────
     if config.run_cazyme {
         step += 1;
         progress::step(step, total_steps, "CAZyme families (dbCAN / DIAMOND)…");
+        let t_cazyme = Instant::now();
         let cazyme_dir = config.out_dir.join("cazyme");
         let pb2 = progress::spinner("Running CAZyme annotation…");
         let overview: Option<PathBuf> = if cazyme::dbcan_available() {
@@ -638,12 +659,14 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 Err(e) => progress::warn_spinner(&pb2, format!("CAZyme parse failed: {}", e)),
             }
         }
+        timings.push(("cazyme", t_cazyme.elapsed().as_secs_f64()));
     }
 
     // ── Secretome (signal peptide + transmembrane) ────────────────────────────
     if config.run_secretome {
         step += 1;
         progress::step(step, total_steps, "Secretome (SignalP / DeepSig + TMHMM)…");
+        let t_secretome = Instant::now();
         let sec_dir = config.out_dir.join("secretome");
         let pb2 = progress::spinner("Running signal-peptide prediction…");
         match secretome::run_signalp(&proteins_fa, &sec_dir, &config.signalp_organism) {
@@ -711,12 +734,14 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 progress::warn_spinner(&pb2, format!("signal-peptide tool unavailable: {}", e))
             }
         }
+        timings.push(("secretome", t_secretome.elapsed().as_secs_f64()));
     }
 
     // ── antiSMASH biosynthetic gene clusters ──────────────────────────────────
     if config.run_antismash {
         step += 1;
         progress::step(step, total_steps, "antiSMASH (biosynthetic gene clusters)…");
+        let t_antismash = Instant::now();
         let pb2 = progress::spinner("Loading / running antiSMASH…");
         // Users typically run antiSMASH separately (it's slow and stateful);
         // --antismash-dir lets them point at a pre-computed output directory.
@@ -771,6 +796,7 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
                 Err(e) => progress::warn_spinner(&pb2, format!("antiSMASH parse failed: {}", e)),
             }
         }
+        timings.push(("antismash", t_antismash.elapsed().as_secs_f64()));
     }
 
     // ── Write annotated GFF3 ──────────────────────────────────────────────────
@@ -840,6 +866,26 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
         "  Annotated: {:.1}% of genes have a functional description",
         results.annotated_fraction() * 100.0
     );
+
+    // ── Per-source wall-time timings ──────────────────────────────────────────
+    //
+    // One row per functional source that actually ran. Feeds the benchmark's
+    // per-source annotate-timing figure (the Pfam/hmmsearch bottleneck finding
+    // needs error bars across genomes). Best-effort: a write failure here is
+    // logged but never fails the run.
+    let timings_tsv = config.out_dir.join("annotate_timings.tsv");
+    match write_timings_tsv(&timings_tsv, &timings) {
+        Ok(()) => {
+            let total_secs: f64 = timings.iter().map(|(_, s)| s).sum();
+            println!(
+                "  ⏱  Per-source timings → {} ({} source(s), {:.1}s total)",
+                timings_tsv.display(),
+                timings.len(),
+                total_secs
+            );
+        }
+        Err(e) => eprintln!("  ⚠  Could not write per-source timings TSV: {}", e),
+    }
 
     Ok(results)
 }
@@ -1233,6 +1279,21 @@ fn write_annotation_tsv(path: &Path, results: &AnnotationResults) -> Result<()> 
     Ok(())
 }
 
+/// Write per-functional-source wall-time measurements to a TSV.
+///
+/// One row per source that actually ran (`source\tseconds`), in run order.
+/// Seconds are formatted to the millisecond. Consumed by the benchmark harness
+/// to build the per-source annotate-timing figure, so the write is best-effort:
+/// the caller treats a failure as non-fatal (see `run_annotation`).
+fn write_timings_tsv(path: &Path, timings: &[(&'static str, f64)]) -> std::io::Result<()> {
+    let mut f = std::fs::File::create(path)?;
+    writeln!(f, "source\tseconds")?;
+    for (source, seconds) in timings {
+        writeln!(f, "{}\t{:.3}", source, seconds)?;
+    }
+    Ok(())
+}
+
 /// Human-readable annotation report.
 fn write_report(path: &Path, config: &AnnotateConfig, results: &AnnotationResults) -> Result<()> {
     let mut f = std::fs::File::create(path).map_err(MycoNoteError::Io)?;
@@ -1392,5 +1453,62 @@ scaffold_001\tmyconote\tstop_codon\t2951\t2953\t.\t+\t0\tID=SCE_000001-stop_codo
         write_annotated_gff(&input, &out, &AnnotationResults::default()).unwrap();
         let gff = std::fs::read_to_string(&out).unwrap();
         assert_eq!(cds_end_for(&gff, "SCE_000001"), 2953);
+    }
+
+    // Per-source timings accumulate one entry per source that ran, and the TSV
+    // writer round-trips them (header + one row per source, source\tseconds).
+    #[test]
+    fn timings_vec_populates_and_tsv_round_trips() {
+        // Simulate the accumulation that run_annotation performs: a push per
+        // enabled source, mirroring the Vec<(&'static str, f64)> it builds.
+        let mut timings: Vec<(&'static str, f64)> = Vec::new();
+        for source in ["mmseqs", "pfam", "busco"] {
+            let t = Instant::now();
+            // trivial work so elapsed() is non-negative and well-defined
+            let _ = (0..1000).sum::<u64>();
+            timings.push((source, t.elapsed().as_secs_f64()));
+        }
+        assert_eq!(timings.len(), 3, "one entry per source that ran");
+        assert!(
+            timings.iter().all(|(_, s)| *s >= 0.0),
+            "elapsed seconds are non-negative"
+        );
+
+        let dir = tempfile::tempdir().unwrap();
+        let tsv = dir.path().join("annotate_timings.tsv");
+        write_timings_tsv(&tsv, &timings).unwrap();
+
+        let contents = std::fs::read_to_string(&tsv).unwrap();
+        let lines: Vec<&str> = contents.lines().collect();
+        assert_eq!(lines[0], "source\tseconds", "header row");
+        assert_eq!(
+            lines.len(),
+            1 + timings.len(),
+            "header + one row per source"
+        );
+
+        // Each data row round-trips the source name and a parseable seconds value.
+        for (i, (source, _)) in timings.iter().enumerate() {
+            let cols: Vec<&str> = lines[i + 1].split('\t').collect();
+            assert_eq!(cols.len(), 2, "two columns per row");
+            assert_eq!(cols[0], *source, "source name preserved in order");
+            assert!(
+                cols[1].parse::<f64>().is_ok(),
+                "seconds column parses as f64: {:?}",
+                cols[1]
+            );
+        }
+    }
+
+    // An empty timings vector (no sources enabled) still writes a valid,
+    // header-only TSV rather than failing.
+    #[test]
+    fn timings_tsv_header_only_when_no_sources() {
+        let dir = tempfile::tempdir().unwrap();
+        let tsv = dir.path().join("annotate_timings.tsv");
+        let empty: Vec<(&'static str, f64)> = Vec::new();
+        write_timings_tsv(&tsv, &empty).unwrap();
+        let contents = std::fs::read_to_string(&tsv).unwrap();
+        assert_eq!(contents, "source\tseconds\n");
     }
 }

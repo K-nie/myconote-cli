@@ -4,6 +4,19 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.14] — 2026-10-13
+
+### Added
+
+- **`annotate` writes per-source wall-time instrumentation.** Each enabled
+  functional source (mmseqs, interproscan, pfam, busco, trnascan, merops,
+  eggnog, cazyme, secretome, antismash) is timed with `std::time::Instant` and
+  recorded to `<out_dir>/annotate_timings.tsv` (`source\tseconds`, one row per
+  source that actually ran; disabled sources are omitted). A one-line summary
+  prints to stdout. Measurement only — annotation results are unchanged, and a
+  timings-write failure is non-fatal. Feeds the benchmark's per-source
+  annotate-timing figure (the Pfam/hmmsearch bottleneck).
+
 ## [0.7.9] – [0.7.13] — 2026-10-08 … 2026-10-12
 
 Released in sequence (Cargo.toml is 0.7.13):

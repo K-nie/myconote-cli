@@ -1,0 +1,15 @@
+database	version_or_release	used_by	notes
+eggNOG	5.0.2 (emapper 2.1.15)	annotate --eggnog	emapperdb-5.0.2; DIAMOND backend
+Swiss-Prot	CONFIRM_FROM_CLUSTER	annotate (MMseqs2 homology)	UniProtKB/Swiss-Prot release; record the release tag at run time
+Pfam-A	CONFIRM_FROM_CLUSTER	annotate --pfam (hmmsearch)	Pfam-A.hmm release; ~30,134 profiles observed in the v0.7.13 run
+dbCAN (CAZyme)	CONFIRM_FROM_CLUSTER	annotate --cazyme	DIAMOND db
+MEROPS	CONFIRM_FROM_CLUSTER	annotate --merops	DIAMOND db
+BUSCO lineages	odb10 (fungi_odb10; clade-specific: saccharomycetes/eurotiomycetes/sordariomycetes/tremellomycetes)	annotate BUSCO	record each lineage odb10 release
+OrthoDB	v11 (Fungi partition)	BRAKER protein evidence	odb11v0 fungi
+Augustus (MycoNote)	3.3.3	predict	NOT AVX2-compiled; runs full node pool
+Augustus (funannotate/BRAKER)	3.5.0	predict	AVX2-compiled; requires AVX2 nodes
+GeneMark-ES	gmes_linux_64 (v4)	predict / funannotate / BRAKER	licensed; gmes_linux_64_4
+
+# CONFIRM_FROM_CLUSTER entries are pending: fill the exact release tags/dates at
+# production run time (ssh glbrc; ls ~/.myconote/dbs/*). GLBRC was unreachable
+# when this file was created (2026-10-13 SSH outage).

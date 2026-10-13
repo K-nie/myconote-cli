@@ -36,6 +36,16 @@ when_to_transfer_output = ON_EXIT
 # Notification
 notification = Never
 
+# Fair-timing: pin ALL tools to the SAME AVX2-capable node class. AVX2 nodes are
+# a superset (they also run MycoNote/MAKER's non-AVX2 binaries), and it is the
+# only class where funannotate/BRAKER's AVX2-compiled Augustus 3.5.0 can run, so
+# it is the common hardware for a fair wall-time comparison. Portability
+# (MycoNote/MAKER also run the non-AVX2 pool) is measured on a separate axis.
+requirements = (TARGET.has_avx2 =?= true)
+# For the headline timing production run, additionally pin each genome's full
+# tool x rep block to ONE machine for a true repeated-measures comparison, e.g.:
+#   requirements = (TARGET.has_avx2 =?= true) && (Machine == "scarcityNN.glbrc.org")
+
 # Submit one job per (genome, replicate) combination.
 # 6 genomes x 3 replicates = 18 jobs total.
 queue genome_id, rep from (

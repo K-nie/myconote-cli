@@ -1,0 +1,5 @@
+tool	mean_min	sd	n
+myconote	25.98	17.73	18
+funannotate	77.01	22.15	18
+maker	30.19	19.30	18
+braker	NA	NA	0  # performance.json all-zero (unusable)

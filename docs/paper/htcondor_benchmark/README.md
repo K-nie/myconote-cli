@@ -345,13 +345,30 @@ per-run data in `data/per_run_accuracy_v0.7.13.tsv` and
 | cne | 0.924 / **0.949** / 0.936 / 0.940 | 0.526 / 0.492 / 0.541 / **0.651** | 0.945 / 0.947 / 0.947 / **0.961** |
 | **wins** | fun 3, BRAKER 3 | MAKER 3, BRAKER 3 | BRAKER 5, MAKER 1 |
 
-**Speed — gene-prediction wall-time, matched AVX2 nodes (mean of 18 runs):**
-MycoNote **26.0 min**, MAKER 30.2 min, funannotate 77.0 min. MycoNote is the
-fastest full-annotation prediction (≈3× funannotate) and on par with MAKER,
-which does prediction only. **BRAKER wall-time is omitted** — its
-`performance.json` instrumentation records all-zeros and is unusable (a known
-BRAKER issue); its runtime is only a `braker.log` log-span estimate, not
-directly comparable.
+**Speed — work-matched (mean of 18 runs).** MAKER and BRAKER do **no functional
+annotation** (prediction only), so they appear only in the prediction comparison,
+never in an end-to-end claim. Per-test figures + data: `figures/`, `data/`.
+
+| stage | MycoNote | funannotate | MAKER |
+|-------|----------|-------------|-------|
+| gene prediction | **26.0 min** | 77.0 min | 30.2 min |
+| functional annotation, matched sources (no EggNog) | 17.2 min | **9.0 min** | — none — |
+| functional annotation, MycoNote full (+EggNog) | 73.2 min | — | — |
+| **end-to-end at matched sources** | **~43 min** | ~86 min | n/a |
+
+- **Prediction: MycoNote fastest** (~3× funannotate; ~on par with MAKER, which
+  does prediction only).
+- **End-to-end at matched functional output: MycoNote ~2× faster** (~43 vs ~86
+  min). The un-matched comparison looked like funannotate was faster end-to-end
+  only because MycoNote's `annotate` also ran EggNog (orthology/GO/KEGG) that
+  funannotate did not.
+- **Functional annotation at matched sources: funannotate is faster** (9 vs 17
+  min) — the one sub-stage where funannotate edges MycoNote (queued optimization
+  item, not a positioning problem).
+- **EggNog** adds ~56 min for orthology funannotate/MAKER/BRAKER don't produce —
+  a completeness advantage (see `data/completeness.tsv`), not a speed penalty.
+- **BRAKER wall-time is omitted** — its `performance.json` records all-zeros
+  (a known BRAKER instrumentation issue), leaving only a log-span estimate.
 
 **Honest reading of the definitive run.** MycoNote is **competitive, not the
 accuracy leader on any axis**: it is lowest/near-lowest on loose gene F1,

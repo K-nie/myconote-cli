@@ -2674,7 +2674,7 @@
 <h2 id="episode-4-gene-prediction">Episode 4: Gene Prediction<a class="headerlink" href="#episode-4-gene-prediction" title="Permanent link">&para;</a></h2>
 <p><strong>Time:</strong> ~45 minutes</p>
 <h3 id="how-multi-tool-prediction-works">How multi-tool prediction works<a class="headerlink" href="#how-multi-tool-prediction-works" title="Permanent link">&para;</a></h3>
-<p>Myconote runs up to four ab initio gene predictors simultaneously and combines their predictions using <strong>EvidenceModeler (EVM)</strong>. Each predictor is assigned a weight based on its reliability for the target kingdom:</p>
+<p>Myconote runs up to four ab initio gene predictors and combines their predictions with its <strong>own agreement-weighted consensus</strong> — an EVM-<em>inspired</em> weighted-evidence scheme that does <strong>not</strong> invoke the external EvidenceModeler tool. Each predictor is assigned a weight based on its reliability for the target kingdom:</p>
 <table>
 <thead>
 <tr>
@@ -2905,7 +2905,6 @@ Instead, export your annotation and hand off to:</p>
 <h2 id="further-reading">Further Reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Augustus: <a href="https://bioinf.uni-greifswald.de/augustus/">https://bioinf.uni-greifswald.de/augustus/</a></li>
-<li>EvidenceModeler: <a href="https://evidencemodeler.github.io/">https://evidencemodeler.github.io/</a></li>
 <li>BUSCO: <a href="https://busco.ezlab.org/">https://busco.ezlab.org/</a></li>
 <li>antiSMASH: <a href="https://antismash.secondarymetabolites.org/">https://antismash.secondarymetabolites.org/</a></li>
 <li>eggNOG-mapper: <a href="http://eggnog-mapper.embl.de/">http://eggnog-mapper.embl.de/</a></li>
@@ -2915,7 +2914,7 @@ Instead, export your annotation and hand off to:</p>
 <h2 id="instructor-notes">Instructor Notes<a class="headerlink" href="#instructor-notes" title="Permanent link">&para;</a></h2>
 <p><strong>Episode 1 (Setup):</strong> Allow extra time — conda environment creation and Rust compilation can take 5–10 minutes on first run. Pre-build the binary ahead of time for a classroom setting.</p>
 <p><strong>Episode 3 (Masking):</strong> RepeatModeler on a 13 Mbp fungal genome takes ~1–2 hours. For a workshop, pre-run masking and provide the <code>.masked</code> file so participants start from Episode 4.</p>
-<p><strong>Episode 4 (Prediction):</strong> Full EVM prediction on 13 Mbp takes ~30–60 minutes depending on threads. Same advice — provide pre-computed output for time-constrained workshops.</p>
+<p><strong>Episode 4 (Prediction):</strong> Full consensus prediction on 13 Mbp takes ~30–60 minutes depending on threads. Same advice — provide pre-computed output for time-constrained workshops.</p>
 <p><strong>Episode 5 (Annotation):</strong> Without eggNOG (~50 GB), annotation runs in ~15 minutes. The <code>--pfam --busco</code> flags alone are sufficient for the challenges.</p>
 
 

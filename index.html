@@ -1715,9 +1715,10 @@
 <hr />
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
+<li><strong>Fastest prediction, competitive accuracy</strong> -- in a four-tool benchmark (vs funannotate, MAKER, BRAKER; 6 fungal genomes × 3 reps), MycoNote has the fastest gene prediction (~3× funannotate) and is ~2× faster end-to-end at matched functional output; accuracy is competitive (BRAKER3 leads overall). See <a href="https://github.com/K-nie/myconote-cli/tree/main/docs/paper/htcondor_benchmark">the benchmark</a>.</li>
 <li><strong>26 CLI commands</strong> covering the full fungal genome annotation lifecycle</li>
 <li><strong>11 annotation sources</strong> -- MMseqs2 (Swiss-Prot), Pfam (hmmsearch), InterProScan, EggNOG, CAZyme (dbCAN), MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms</li>
-<li><strong>Multi-tool gene prediction</strong> -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, configurable EVM consensus</li>
+<li><strong>Multi-tool gene prediction</strong> -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, agreement-weighted consensus</li>
 <li><strong>RNA-seq expression quantification</strong> -- <code>quant</code> wraps fastp + salmon with a decoy-aware index, emits tximport-ready <code>quant.sf</code> per sample plus wide count and TPM matrices</li>
 <li><strong>DESeq2 differential expression</strong> -- <code>de-template</code> emits a ready-to-run R script (tximport → DESeq2 → apeglm shrinkage → volcano + MA plots); no R runtime dependency in the CLI itself</li>
 <li><strong>SRA / ENA ingestion</strong> -- <code>fetch-rna</code> pulls public RNA-seq by run, study, BioProject, sample, or experiment accession; ENA REST default, sra-toolkit fallback</li>
@@ -1732,7 +1733,7 @@
 <li><strong>Reproducibility</strong> -- workflow reports (JSON), per-run bundles for quant and explain, database version tracking, output validation</li>
 <li><strong>Docker + Singularity</strong> containers for HPC and cloud environments</li>
 <li><strong>CI/CD</strong> -- GitHub Actions (fmt, clippy, test, build, security audit)</li>
-<li><strong>390+ tests</strong> passing on real fungal genome data (<em>Brettanomyces bruxellensis</em>, <em>Candida tropicalis</em>)</li>
+<li><strong>500+ tests</strong> passing on real fungal genome data (<em>Brettanomyces bruxellensis</em>, <em>Candida tropicalis</em>)</li>
 </ul>
 <h3 id="multi-kingdom-note">Multi-kingdom note<a class="headerlink" href="#multi-kingdom-note" title="Permanent link">&para;</a></h3>
 <p><code>--kingdom plant|animal|insect|protist</code> continues to work because the non-fungal Augustus species lists, BUSCO lineages, and intron-size ranges are still registered in the code. They are <strong>not</strong> validated on large non-fungal genomes and are not a supported use case at this release. Treat them as experimental; for serious plant / animal annotation, BRAKER or MAKER are the right tools.</p>

@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
-"""Publication-grade benchmark figures: MycoNote vs funannotate vs MAKER vs BRAKER.
+"""Per-test publication-grade benchmark figures + data files.
 
-Reads the per-tool/genome/rep ``metrics.json`` tree produced by the HTCondor
-benchmark and renders a multi-panel accuracy + speed figure.
+Produces ONE figure (PDF + 300 dpi PNG) and ONE data TSV per test, so each
+comparison stands on its own and is work-matched (gene predictors and complete
+annotation pipelines are never conflated on a speed axis):
 
-Nature-style conventions (fixed, not optional):
-  * lowercase bold panel letters (a, b, c, d), top-left of each panel
-  * sans-serif in-figure text; no titles rendered on the figure itself
-  * colourblind-safe palette (Okabe-Ito); line weights >= 0.5 pt
-  * composed to double-column width (183 mm)
-  * output: editable vector PDF + 300 dpi PNG
+  Test 1  accuracy             — loose/strict/nt gene F1, all 4 tools  (figure_accuracy)
+  Test 2  prediction_speed     — gene-prediction wall-time, all 4 tools (figure_prediction_speed)
+  Test 3  annotation_matched   — functional-annotation wall-time at MATCHED sources:
+                                 MycoNote (no EggNog) vs funannotate, with MycoNote-full
+                                 (with EggNog) shown for reference  (figure_annotation_matched)
+  Test 4  completeness         — functional outputs each tool produces (table/TSV)
+  Test 5  portability          — node-class availability (table/TSV)
+
+Nature-style conventions: lowercase bold panel letters, sans-serif, Okabe-Ito
+colourblind-safe palette, no titles on the figure, editable vector PDF + 300 dpi.
 
 Inputs
 ------
---results-dir : the benchmark `results/` dir containing <tool>/<genome>/rep<N>/metrics.json
-                and (optional) time_predict.log / time_mask.log / time_sort.log per run.
---out-dir     : where to write figure_benchmark.pdf / .png (default: <results-dir>/../figures).
-
-Usage
------
-    python3 make_figures.py --results-dir ../results --out-dir ../figures
-
-Reps are averaged per (tool, genome); missing reps/tools are handled gracefully
-(a tool with no data for a genome is simply absent from that group, not zero).
+--results-dir : benchmark results/ with <tool>/<genome>/rep<N>/metrics.json and
+                timing logs (time_predict.log, time_annotate.log, time_maker.log),
+                plus myconote_matched/<genome>/rep<N>/time_annotate.log for Test 3.
+--out-dir     : where figures + *.tsv land (default: <results-dir>/../figures).
 """
 
 import argparse
@@ -30,6 +29,7 @@ import glob
 import json
 import os
 import re
+import statistics as st
 import sys
 
 import matplotlib
@@ -38,202 +38,213 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-# ── Fixed conventions ────────────────────────────────────────────────────────
 TOOLS = ["myconote", "funannotate", "maker", "braker"]
-TOOL_LABELS = {
-    "myconote": "MycoNote",
-    "funannotate": "funannotate",
-    "maker": "MAKER",
-    "braker": "BRAKER",
-}
-# Okabe-Ito colourblind-safe palette (no red/green as the sole distinction).
-TOOL_COLORS = {
-    "myconote": "#0072B2",  # blue
-    "funannotate": "#E69F00",  # orange
-    "maker": "#009E73",  # bluish green
-    "braker": "#CC79A7",  # reddish purple
-}
-# Genome display order (Saccharomycotina → Pezizomycotina → Basidiomycota).
+TOOL_LABELS = {"myconote": "MycoNote", "funannotate": "funannotate", "maker": "MAKER", "braker": "BRAKER"}
+TOOL_COLORS = {"myconote": "#0072B2", "funannotate": "#E69F00", "maker": "#009E73", "braker": "#CC79A7"}
 GENOMES = ["sce", "cal", "ylp", "ani", "ncr", "cne"]
-
-MM = 1.0 / 25.4  # mm → inches
-DOUBLE_COL_W = 183 * MM
+MM = 1.0 / 25.4
+SINGLE_W, DOUBLE_W = 89 * MM, 183 * MM
 
 
 def _rc():
-    """Nature-style rcParams: sans-serif, small legible text, thin clean lines."""
-    plt.rcParams.update(
-        {
-            "font.family": "sans-serif",
-            "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
-            "font.size": 7,
-            "axes.labelsize": 7,
-            "axes.titlesize": 7,
-            "xtick.labelsize": 6.5,
-            "ytick.labelsize": 6.5,
-            "legend.fontsize": 6.5,
-            "axes.linewidth": 0.6,
-            "xtick.major.width": 0.6,
-            "ytick.major.width": 0.6,
-            "lines.linewidth": 0.8,
-            "pdf.fonttype": 42,  # editable text in the PDF
-            "ps.fonttype": 42,
-            "svg.fonttype": "none",
-        }
-    )
+    plt.rcParams.update({
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+        "font.size": 7, "axes.labelsize": 7, "xtick.labelsize": 6.5, "ytick.labelsize": 6.5,
+        "legend.fontsize": 6.5, "axes.linewidth": 0.6, "xtick.major.width": 0.6,
+        "ytick.major.width": 0.6, "lines.linewidth": 0.8,
+        "pdf.fonttype": 42, "ps.fonttype": 42, "svg.fonttype": "none",
+    })
 
 
-# ── Data loading ─────────────────────────────────────────────────────────────
-def load_metrics(results_dir):
-    """Return nested dict: data[metric][tool][genome] = list of per-rep values.
-
-    metric ∈ {loose, strict, nt}. Only genomes/tools with real metrics.json
-    files contribute; everything else is simply absent.
-    """
-    data = {m: {t: {g: [] for g in GENOMES} for t in TOOLS} for m in ("loose", "strict", "nt")}
-    for t in TOOLS:
-        for g in GENOMES:
-            for m in sorted(glob.glob(os.path.join(results_dir, t, g, "rep*", "metrics.json"))):
-                try:
-                    d = json.load(open(m))
-                    gl = d["gene_level"]
-                    data["loose"][t][g].append(gl["loose"]["F1"])
-                    data["strict"][t][g].append(gl["strict"]["F1"])
-                    data["nt"][t][g].append(d["nucleotide_level"]["F1"])
-                except (KeyError, ValueError, OSError) as e:
-                    print(f"  [skip] {m}: {e}", file=sys.stderr)
-    return data
-
-
-def _parse_time_log(path):
-    """Minutes from a `/usr/bin/time -v` log (Elapsed wall-clock), else None."""
-    try:
-        txt = open(path).read()
-    except OSError:
-        return None
-    # GNU time: "Elapsed (wall clock) time (h:mm:ss or m:ss): 1:23:45"
-    m = re.search(r"Elapsed.*?:\s*([0-9:.]+)\s*$", txt, re.MULTILINE)
-    if not m:
-        return None
-    parts = [float(x) for x in m.group(1).split(":")]
-    secs = 0.0
-    for p in parts:
-        secs = secs * 60 + p
-    return secs / 60.0
-
-
-def load_timing(results_dir):
-    """Return timing[tool][stage] = list of per-run minutes, for the predict stage.
-
-    Speed is reported for the gene-prediction stage (time_predict.log), the one
-    directly comparable across all four tools. Missing logs are skipped.
-    """
-    timing = {t: [] for t in TOOLS}
-    for t in TOOLS:
-        for log in glob.glob(os.path.join(results_dir, t, "*", "rep*", "time_predict.log")):
-            mins = _parse_time_log(log)
-            if mins is not None:
-                timing[t].append(mins)
-    return timing
-
-
-# ── Plotting ─────────────────────────────────────────────────────────────────
-def _grouped_bars(ax, data_metric, ylabel):
-    """Grouped bars: x = genome, bars = tools (mean over reps, sd whiskers)."""
-    present_tools = [t for t in TOOLS if any(data_metric[t][g] for g in GENOMES)]
-    n = len(present_tools)
-    width = 0.8 / max(n, 1)
-    x = np.arange(len(GENOMES))
-    for i, t in enumerate(present_tools):
-        means, sds = [], []
-        for g in GENOMES:
-            vals = data_metric[t][g]
-            means.append(np.mean(vals) if vals else np.nan)
-            sds.append(np.std(vals) if len(vals) > 1 else 0.0)
-        ax.bar(
-            x + (i - (n - 1) / 2) * width,
-            means,
-            width,
-            yerr=sds,
-            label=TOOL_LABELS[t],
-            color=TOOL_COLORS[t],
-            edgecolor="black",
-            linewidth=0.4,
-            error_kw={"elinewidth": 0.5, "capsize": 1.5, "capthick": 0.5},
-        )
-    ax.set_xticks(x)
-    ax.set_xticklabels([g for g in GENOMES])
-    ax.set_ylabel(ylabel)
-    ax.set_ylim(0, 1.0)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.tick_params(length=2)
-
-
-def _speed_bars(ax, timing):
-    """Per-tool gene-prediction wall-time (mean ± sd minutes). Lower is better."""
-    present = [t for t in TOOLS if timing[t]]
-    if not present:
-        ax.text(0.5, 0.5, "prediction timing not available\n(run after jobs finish)",
-                ha="center", va="center", transform=ax.transAxes, fontsize=6.5, color="#555")
-        ax.set_axis_off()
-        return
-    means = [np.mean(timing[t]) for t in present]
-    sds = [np.std(timing[t]) if len(timing[t]) > 1 else 0.0 for t in present]
-    x = np.arange(len(present))
-    ax.bar(x, means, 0.6, yerr=sds, color=[TOOL_COLORS[t] for t in present],
-           edgecolor="black", linewidth=0.4,
-           error_kw={"elinewidth": 0.5, "capsize": 1.5, "capthick": 0.5})
-    ax.set_xticks(x)
-    ax.set_xticklabels([TOOL_LABELS[t] for t in present], rotation=20, ha="right")
-    ax.set_ylabel("Gene-prediction wall-time (min)")
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.tick_params(length=2)
+def _save(fig, out_dir, stem):
+    os.makedirs(out_dir, exist_ok=True)
+    for ext, kw in ((".pdf", {}), (".png", {"dpi": 300})):
+        p = os.path.join(out_dir, stem + ext)
+        fig.savefig(p, bbox_inches="tight", **kw)
+        print(f"  wrote {p}")
+    plt.close(fig)
 
 
 def _panel_letter(ax, letter):
-    ax.text(-0.14, 1.04, letter, transform=ax.transAxes,
-            fontsize=9, fontweight="bold", va="bottom", ha="right")
+    ax.text(-0.16, 1.04, letter, transform=ax.transAxes, fontsize=9,
+            fontweight="bold", va="bottom", ha="right")
 
 
-def make_figure(data, timing, out_dir):
-    _rc()
+def _write_tsv(out_dir, name, header, rows):
     os.makedirs(out_dir, exist_ok=True)
-    fig, axes = plt.subplots(2, 2, figsize=(DOUBLE_COL_W, DOUBLE_COL_W * 0.72))
-    (a, b), (c, d) = axes
+    p = os.path.join(out_dir, name)
+    with open(p, "w") as f:
+        f.write("\t".join(header) + "\n")
+        for r in rows:
+            f.write("\t".join(str(x) for x in r) + "\n")
+    print(f"  wrote {p}")
 
-    _grouped_bars(a, data["loose"], "Gene-level loose F1")
-    _panel_letter(a, "a")
-    _grouped_bars(b, data["strict"], "Gene-level strict F1")
-    _panel_letter(b, "b")
-    _grouped_bars(c, data["nt"], "Nucleotide F1")
-    _panel_letter(c, "c")
-    _speed_bars(d, timing)
-    _panel_letter(d, "d")
 
-    # Single shared legend (tools), placed below the panels — no title on figure.
-    handles = [plt.Rectangle((0, 0), 1, 1, color=TOOL_COLORS[t], ec="black", lw=0.4)
-               for t in TOOLS]
-    fig.legend(handles, [TOOL_LABELS[t] for t in TOOLS], ncol=4,
-               loc="lower center", frameon=False, bbox_to_anchor=(0.5, 0.015))
+# ── data loaders ─────────────────────────────────────────────────────────────
+def _mins(path):
+    try:
+        t = open(path).read()
+    except OSError:
+        return None
+    m = re.search(r"Elapsed.*?:\s*([0-9:.]+)", t)
+    if not m:
+        return None
+    s = 0.0
+    for x in m.group(1).split(":"):
+        s = s * 60 + float(x)
+    return s / 60.0
 
-    fig.tight_layout(rect=[0, 0.07, 1, 1])
-    pdf = os.path.join(out_dir, "figure_benchmark.pdf")
-    png = os.path.join(out_dir, "figure_benchmark.png")
-    fig.savefig(pdf, bbox_inches="tight")  # vector
-    fig.savefig(png, dpi=300, bbox_inches="tight")
-    print(f"  wrote {pdf}")
-    print(f"  wrote {png}")
+
+def load_accuracy(R):
+    d = {m: {t: {g: [] for g in GENOMES} for t in TOOLS} for m in ("loose", "strict", "nt")}
+    for t in TOOLS:
+        for g in GENOMES:
+            for mj in sorted(glob.glob(os.path.join(R, t, g, "rep*", "metrics.json"))):
+                try:
+                    j = json.load(open(mj)); gl = j["gene_level"]
+                    d["loose"][t][g].append(gl["loose"]["F1"])
+                    d["strict"][t][g].append(gl["strict"]["F1"])
+                    d["nt"][t][g].append(j["nucleotide_level"]["F1"])
+                except (KeyError, ValueError, OSError) as e:
+                    print(f"  [skip] {mj}: {e}", file=sys.stderr)
+    return d
+
+
+def load_stage_minutes(R, subdir, fname):
+    """All per-run minutes for one stage of one tool-dir (list)."""
+    vals = []
+    for log in glob.glob(os.path.join(R, subdir, "*", "rep*", fname)):
+        v = _mins(log)
+        if v is not None:
+            vals.append(v)
+    return vals
+
+
+# ── Test 1: accuracy ─────────────────────────────────────────────────────────
+def _grouped(ax, metric):
+    present = [t for t in TOOLS if any(metric[t][g] for g in GENOMES)]
+    n = len(present); w = 0.8 / max(n, 1); x = np.arange(len(GENOMES))
+    for i, t in enumerate(present):
+        means = [np.mean(metric[t][g]) if metric[t][g] else np.nan for g in GENOMES]
+        sds = [np.std(metric[t][g]) if len(metric[t][g]) > 1 else 0 for g in GENOMES]
+        ax.bar(x + (i - (n - 1) / 2) * w, means, w, yerr=sds, label=TOOL_LABELS[t],
+               color=TOOL_COLORS[t], edgecolor="black", linewidth=0.4,
+               error_kw={"elinewidth": 0.5, "capsize": 1.5, "capthick": 0.5})
+    ax.set_xticks(x); ax.set_xticklabels(GENOMES); ax.set_ylim(0, 1.0)
+    ax.spines[["top", "right"]].set_visible(False); ax.tick_params(length=2)
+
+
+def test_accuracy(data, out_dir):
+    _rc()
+    fig, (a, b, c) = plt.subplots(1, 3, figsize=(DOUBLE_W, DOUBLE_W * 0.34))
+    _grouped(a, data["loose"]); a.set_ylabel("Gene-level loose F1"); _panel_letter(a, "a")
+    _grouped(b, data["strict"]); b.set_ylabel("Gene-level strict F1"); _panel_letter(b, "b")
+    _grouped(c, data["nt"]); c.set_ylabel("Nucleotide F1"); _panel_letter(c, "c")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=TOOL_COLORS[t], ec="black", lw=0.4) for t in TOOLS]
+    fig.legend(handles, [TOOL_LABELS[t] for t in TOOLS], ncol=4, loc="lower center",
+               frameon=False, bbox_to_anchor=(0.5, -0.04))
+    fig.tight_layout(rect=[0, 0.06, 1, 1])
+    _save(fig, out_dir, "figure_accuracy")
+    rows = []
+    for t in TOOLS:
+        for g in GENOMES:
+            for m in ("loose", "strict", "nt"):
+                vals = data[m][t][g]
+                if vals:
+                    rows.append([t, g, m, f"{np.mean(vals):.4f}", f"{(np.std(vals) if len(vals) > 1 else 0):.4f}", len(vals)])
+    _write_tsv(out_dir, "accuracy.tsv", ["tool", "genome", "metric", "mean_F1", "sd", "n"], rows)
+
+
+# ── Test 2: prediction speed (all 4; BRAKER timing unusable) ─────────────────
+def test_prediction_speed(R, out_dir):
+    _rc()
+    # myco/fun: time_predict.log ; maker: time_maker.log ; braker: unusable
+    pred = {
+        "myconote": load_stage_minutes(R, "myconote", "time_predict.log"),
+        "funannotate": load_stage_minutes(R, "funannotate", "time_predict.log"),
+        "maker": load_stage_minutes(R, "maker", "time_maker.log"),
+    }
+    present = [t for t in ["myconote", "funannotate", "maker"] if pred[t]]
+    fig, ax = plt.subplots(figsize=(SINGLE_W * 1.3, SINGLE_W * 1.0))
+    means = [np.mean(pred[t]) for t in present]
+    sds = [np.std(pred[t]) if len(pred[t]) > 1 else 0 for t in present]
+    x = np.arange(len(present))
+    ax.bar(x, means, 0.6, yerr=sds, color=[TOOL_COLORS[t] for t in present], edgecolor="black",
+           linewidth=0.4, error_kw={"elinewidth": 0.5, "capsize": 1.5, "capthick": 0.5})
+    ax.set_xticks(x); ax.set_xticklabels([TOOL_LABELS[t] for t in present])
+    ax.set_ylabel("Gene-prediction wall-time (min)")
+    ax.spines[["top", "right"]].set_visible(False); ax.tick_params(length=2)
+    _save(fig, out_dir, "figure_prediction_speed")
+    rows = [[t, f"{np.mean(pred[t]):.2f}", f"{(np.std(pred[t]) if len(pred[t]) > 1 else 0):.2f}", len(pred[t])] for t in present]
+    rows.append(["braker", "NA", "NA", "0  # performance.json all-zero (unusable)"])
+    _write_tsv(out_dir, "prediction_speed.tsv", ["tool", "mean_min", "sd", "n"], rows)
+
+
+# ── Test 3: functional-annotation speed at MATCHED sources ───────────────────
+def test_annotation_matched(R, out_dir):
+    _rc()
+    matched = load_stage_minutes(R, "myconote_matched", "time_annotate.log")  # no EggNog
+    fun = load_stage_minutes(R, "funannotate", "time_annotate.log")
+    full = load_stage_minutes(R, "myconote", "time_annotate.log")  # with EggNog, for reference
+    bars = []  # (label, color, vals, hatch)
+    if matched:
+        bars.append(("MycoNote\n(matched, no EggNog)", TOOL_COLORS["myconote"], matched, None))
+    if fun:
+        bars.append(("funannotate", TOOL_COLORS["funannotate"], fun, None))
+    if full:
+        bars.append(("MycoNote full\n(+ EggNog)", TOOL_COLORS["myconote"], full, "//"))
+    fig, ax = plt.subplots(figsize=(SINGLE_W * 1.5, SINGLE_W * 1.05))
+    x = np.arange(len(bars))
+    for i, (lab, col, vals, hatch) in enumerate(bars):
+        ax.bar(i, np.mean(vals), 0.6, yerr=(np.std(vals) if len(vals) > 1 else 0), color=col,
+               edgecolor="black", linewidth=0.4, hatch=hatch,
+               error_kw={"elinewidth": 0.5, "capsize": 1.5, "capthick": 0.5})
+    ax.set_xticks(x); ax.set_xticklabels([b[0] for b in bars])
+    ax.set_ylabel("Functional-annotation wall-time (min)")
+    ax.spines[["top", "right"]].set_visible(False); ax.tick_params(length=2)
+    _save(fig, out_dir, "figure_annotation_matched")
+    rows = []
+    for lab, _, vals, _ in bars:
+        rows.append([lab.replace("\n", " "), f"{np.mean(vals):.2f}", f"{(np.std(vals) if len(vals) > 1 else 0):.2f}", len(vals)])
+    _write_tsv(out_dir, "annotation_matched.tsv", ["arm", "mean_min", "sd", "n"], rows)
+
+
+# ── Test 4 & 5: capability tables (static facts, written as TSV) ─────────────
+def test_completeness(out_dir):
+    # functional outputs each tool produces out of the box in this benchmark
+    header = ["tool", "gene_structure", "swissprot", "pfam", "busco", "cazyme", "merops", "eggnog_orthology_GO_KEGG"]
+    rows = [
+        ["myconote", "yes", "yes", "yes", "yes", "yes", "yes", "yes"],
+        ["funannotate", "yes", "yes", "yes", "yes", "yes", "yes", "no"],
+        ["maker", "yes", "no", "no", "no", "no", "no", "no"],
+        ["braker", "yes", "no", "no", "no", "no", "no", "no"],
+    ]
+    _write_tsv(out_dir, "completeness.tsv", header, rows)
+
+
+def test_portability(out_dir):
+    header = ["tool", "augustus_build", "requires_avx2", "runs_non_avx2_pool"]
+    rows = [
+        ["myconote", "3.3.3", "no", "yes"],
+        ["maker", "n/a (SNAP/own)", "no", "yes"],
+        ["funannotate", "3.5.0 (AVX2)", "yes", "no"],
+        ["braker", "3.5.0 (AVX2)", "yes", "no"],
+    ]
+    _write_tsv(out_dir, "portability.tsv", header, rows)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--results-dir", required=True)
     ap.add_argument("--out-dir", default=None)
-    args = ap.parse_args()
-    out_dir = args.out_dir or os.path.join(os.path.dirname(args.results_dir.rstrip("/")), "figures")
-    data = load_metrics(args.results_dir)
-    timing = load_timing(args.results_dir)
-    make_figure(data, timing, out_dir)
+    a = ap.parse_args()
+    out = a.out_dir or os.path.join(os.path.dirname(a.results_dir.rstrip("/")), "figures")
+    print("Test 1 — accuracy"); test_accuracy(load_accuracy(a.results_dir), out)
+    print("Test 2 — prediction speed"); test_prediction_speed(a.results_dir, out)
+    print("Test 3 — annotation speed (matched sources)"); test_annotation_matched(a.results_dir, out)
+    print("Test 4 — completeness"); test_completeness(out)
+    print("Test 5 — portability"); test_portability(out)
 
 
 if __name__ == "__main__":

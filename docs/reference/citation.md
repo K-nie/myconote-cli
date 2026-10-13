@@ -24,7 +24,7 @@ Please also cite the tools Myconote_CLI wraps:
 |------|----------|
 | Augustus | Stanke et al. (2008) *Bioinformatics* |
 | RepeatModeler2/RepeatMasker | Flynn et al. (2020) *PNAS* |
-| EvidenceModeler | Haas et al. (2008) *Genome Biology* |
+| EvidenceModeler (methodological inspiration only — MycoNote uses its own agreement-weighted consensus, not EVM) | Haas et al. (2008) *Genome Biology* |
 | IQ-TREE2 | Minh et al. (2020) *Mol. Biol. Evol.* |
 | PASA | Haas et al. (2003) *Nucleic Acids Res.* |
 | Trinity | Grabherr et al. (2011) *Nature Biotechnology* |

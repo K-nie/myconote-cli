@@ -124,7 +124,7 @@ myconote-cli predict genome_masked.fa \
     --threads 16
 ```
 
-`--use-braker` short-circuits the standard ab-initio + EVM consensus stack;
+`--use-braker` short-circuits the standard ab-initio + agreement-weighted consensus stack;
 MycoNote-CLI does **not** run Augustus / SNAP / GlimmerHMM / GeneMark / miniprot
 when BRAKER is the engine, since BRAKER produces a complete `braker.gff3`
 that flows unchanged into the downstream `update`, `annotate`, and `submit`

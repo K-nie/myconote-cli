@@ -29,7 +29,7 @@ The catalogue is split into four tracks. Lessons within each track can be comple
 | 1 | **Welcome to MycoNote** | ~12 min | Pipeline overview, kingdoms, file formats, key concepts |
 | 2 | **Setup & Installation** | ~10 min | `install`, `setup`, `check`, `species` commands |
 | 3 | **Pre-processing: Sort & Mask** | ~10 min | `sort`, masking engines, soft vs hard masking |
-| 4 | **Gene Prediction** | ~14 min | Augustus, SNAP, EVM consensus, protein evidence, ploidy, weights |
+| 4 | **Gene Prediction** | ~14 min | Augustus, SNAP, agreement-weighted consensus, protein evidence, ploidy, weights |
 | 5 | **Functional Annotation** | ~15 min | Swiss-Prot, Pfam, BUSCO, tRNA, genetic codes, InterProScan |
 | 6 | **Advanced: Training & Evidence** | ~12 min | RNA-seq training, Trinity, PASA, custom evidence weights |
 | 7 | **NCBI Submission** | ~10 min | GFF3 validation, `.tbl` generation, table2asn, BioProject |

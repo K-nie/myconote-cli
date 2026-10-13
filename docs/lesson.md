@@ -240,7 +240,7 @@ What percentage of your genome was masked? Is this typical for a fungal genome?
 
 ### How multi-tool prediction works
 
-Myconote runs up to four ab initio gene predictors simultaneously and combines their predictions using **EvidenceModeler (EVM)**. Each predictor is assigned a weight based on its reliability for the target kingdom:
+Myconote runs up to four ab initio gene predictors and combines their predictions with its **own agreement-weighted consensus** — an EVM-*inspired* weighted-evidence scheme that does **not** invoke the external EvidenceModeler tool. Each predictor is assigned a weight based on its reliability for the target kingdom:
 
 | Predictor | Approach | Default weight (fungi) |
 |-----------|----------|------------------------|
@@ -474,7 +474,6 @@ docker run -v $(pwd):/data myconote-cli predict /data/genome.fa --kingdom fungi
 ## Further Reading
 
 - Augustus: [https://bioinf.uni-greifswald.de/augustus/](https://bioinf.uni-greifswald.de/augustus/)
-- EvidenceModeler: [https://evidencemodeler.github.io/](https://evidencemodeler.github.io/)
 - BUSCO: [https://busco.ezlab.org/](https://busco.ezlab.org/)
 - antiSMASH: [https://antismash.secondarymetabolites.org/](https://antismash.secondarymetabolites.org/)
 - eggNOG-mapper: [http://eggnog-mapper.embl.de/](http://eggnog-mapper.embl.de/)
@@ -488,6 +487,6 @@ docker run -v $(pwd):/data myconote-cli predict /data/genome.fa --kingdom fungi
 
 **Episode 3 (Masking):** RepeatModeler on a 13 Mbp fungal genome takes ~1–2 hours. For a workshop, pre-run masking and provide the `.masked` file so participants start from Episode 4.
 
-**Episode 4 (Prediction):** Full EVM prediction on 13 Mbp takes ~30–60 minutes depending on threads. Same advice — provide pre-computed output for time-constrained workshops.
+**Episode 4 (Prediction):** Full consensus prediction on 13 Mbp takes ~30–60 minutes depending on threads. Same advice — provide pre-computed output for time-constrained workshops.
 
 **Episode 5 (Annotation):** Without eggNOG (~50 GB), annotation runs in ~15 minutes. The `--pfam --busco` flags alone are sufficient for the challenges.

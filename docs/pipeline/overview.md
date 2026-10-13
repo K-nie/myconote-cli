@@ -69,7 +69,6 @@ flag) and write to a path given by `--output`/`-o`. Common flags:
 |----------|-------------|
 | `NCBI_EMAIL` | Used by BLAST remote queries |
 | `AUGUSTUS_CONFIG_PATH` | Override Augustus config directory |
-| `EVM_HOME` | Path to EvidenceModeler installation |
 | `MYCONOTE_CHAT_ENDPOINT` | Override Ollama endpoint for `explain` |
 | `MYCONOTE_CHAT_MODEL` | Override LLM model for `explain` |
 | `MYCONOTE_CHAT_API_KEY` | Optional API key for LLM endpoint |

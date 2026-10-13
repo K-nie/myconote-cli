@@ -24,9 +24,10 @@ RNA-seq is a first-class input at four distinct points: `train` and `update` use
 
 ## Key Features
 
+- **Fastest prediction, competitive accuracy** -- in a four-tool benchmark (vs funannotate, MAKER, BRAKER; 6 fungal genomes × 3 reps), MycoNote has the fastest gene prediction (~3× funannotate) and is ~2× faster end-to-end at matched functional output; accuracy is competitive (BRAKER3 leads overall). See [the benchmark](https://github.com/K-nie/myconote-cli/tree/main/docs/paper/htcondor_benchmark).
 - **26 CLI commands** covering the full fungal genome annotation lifecycle
 - **11 annotation sources** -- MMseqs2 (Swiss-Prot), Pfam (hmmsearch), InterProScan, EggNOG, CAZyme (dbCAN), MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome, GO terms
-- **Multi-tool gene prediction** -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, configurable EVM consensus
+- **Multi-tool gene prediction** -- Augustus, SNAP, GlimmerHMM, GeneMark, miniprot protein evidence, agreement-weighted consensus
 - **RNA-seq expression quantification** -- `quant` wraps fastp + salmon with a decoy-aware index, emits tximport-ready `quant.sf` per sample plus wide count and TPM matrices
 - **DESeq2 differential expression** -- `de-template` emits a ready-to-run R script (tximport → DESeq2 → apeglm shrinkage → volcano + MA plots); no R runtime dependency in the CLI itself
 - **SRA / ENA ingestion** -- `fetch-rna` pulls public RNA-seq by run, study, BioProject, sample, or experiment accession; ENA REST default, sra-toolkit fallback
@@ -41,7 +42,7 @@ RNA-seq is a first-class input at four distinct points: `train` and `update` use
 - **Reproducibility** -- workflow reports (JSON), per-run bundles for quant and explain, database version tracking, output validation
 - **Docker + Singularity** containers for HPC and cloud environments
 - **CI/CD** -- GitHub Actions (fmt, clippy, test, build, security audit)
-- **390+ tests** passing on real fungal genome data (*Brettanomyces bruxellensis*, *Candida tropicalis*)
+- **500+ tests** passing on real fungal genome data (*Brettanomyces bruxellensis*, *Candida tropicalis*)
 
 ### Multi-kingdom note
 

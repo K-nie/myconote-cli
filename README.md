@@ -23,6 +23,35 @@ Each step is a separate subcommand. All intermediate files use standard formats 
 
 ---
 
+## Performance (four-tool benchmark)
+
+Benchmarked against **funannotate, MAKER, and BRAKER** on 6 fungal genomes × 3
+replicates, all on the same AVX2-capable node class (full methods, per-test
+figures, and data: [`docs/paper/htcondor_benchmark/`](docs/paper/htcondor_benchmark/)).
+The results are reported honestly — MycoNote is **competitive, not the accuracy
+leader** (BRAKER3 is strongest overall); its advantages are speed, completeness,
+and portability:
+
+- **Fastest gene prediction** — 26 min mean vs funannotate's 77 min (~3×); on par
+  with MAKER (prediction-only).
+- **~2× faster end-to-end at matched functional output** — ~43 min vs
+  funannotate's ~86 min. (MAKER/BRAKER do no functional annotation, so they are
+  gene predictors, not complete pipelines, and appear only in the prediction and
+  accuracy comparisons.)
+- **Accuracy** — competitive: lowest/near-lowest on loose gene F1, mid-pack on
+  strict, and MycoNote beats funannotate on nucleotide F1 pairwise. No single
+  tool wins every axis; BRAKER3 leads overall.
+- **Portability** — MycoNote's Augustus 3.3.3 runs on any CPU; funannotate/BRAKER
+  use AVX2-compiled Augustus 3.5.0 and require AVX2 nodes.
+- **Completeness** — MycoNote produces EggNog orthology (GO/KEGG/COG) by default,
+  which funannotate (as-run) and MAKER/BRAKER do not.
+
+Honest caveat: at matched functional sources, funannotate's annotation is faster
+(9 vs 17 min) — a deliberate tradeoff, as MycoNote keeps the standard, portable
+`hmmsearch` for Pfam rather than add a pyhmmer/Python dependency.
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -107,7 +136,7 @@ myconote-cli submit annotate_out/annotated.gff3 --fasta genome.fa \
 | `sort` | Sort/filter contigs by length; lossless by default (rename headers with `--ncbi-clean`) |
 | `mask` | Identify and soft-mask repeats (5 engines: self, repeatmasker, repeatmodeler, both, full) |
 | `train` | RNA-seq-guided training of Augustus and SNAP via Trinity + PASA |
-| `predict` | Multi-tool gene prediction (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + protein evidence + EVM consensus), or BRAKER 1/2/3 as a single-engine alternative via `--use-braker` |
+| `predict` | Multi-tool gene prediction (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + protein evidence + agreement-weighted consensus; EVM-inspired, does NOT invoke EvidenceModeler), or BRAKER 1/2/3 as a single-engine alternative via `--use-braker` |
 | `update` | Refine gene models with RNA-seq evidence (PASA or lightweight UTR extension) |
 | `annotate` | Functional annotation (MMseqs2, Pfam, InterProScan, EggNOG, CAZyme, MEROPS, BUSCO, antiSMASH, tRNAscan-SE, secretome) |
 | `submit` | NCBI GenBank submission prep (GFF3 validation + .tbl + table2asn + .sqn) |

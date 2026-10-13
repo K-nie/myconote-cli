@@ -2272,13 +2272,60 @@ per-run data in <code>data/per_run_accuracy_v0.7.13.tsv</code> and
 </tr>
 </tbody>
 </table>
-<p><strong>Speed — gene-prediction wall-time, matched AVX2 nodes (mean of 18 runs):</strong>
-MycoNote <strong>26.0 min</strong>, MAKER 30.2 min, funannotate 77.0 min. MycoNote is the
-fastest full-annotation prediction (≈3× funannotate) and on par with MAKER,
-which does prediction only. <strong>BRAKER wall-time is omitted</strong> — its
-<code>performance.json</code> instrumentation records all-zeros and is unusable (a known
-BRAKER issue); its runtime is only a <code>braker.log</code> log-span estimate, not
-directly comparable.</p>
+<p><strong>Speed — work-matched (mean of 18 runs).</strong> MAKER and BRAKER do <strong>no functional
+annotation</strong> (prediction only), so they appear only in the prediction comparison,
+never in an end-to-end claim. Per-test figures + data: <code>figures/</code>, <code>data/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>stage</th>
+<th>MycoNote</th>
+<th>funannotate</th>
+<th>MAKER</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gene prediction</td>
+<td><strong>26.0 min</strong></td>
+<td>77.0 min</td>
+<td>30.2 min</td>
+</tr>
+<tr>
+<td>functional annotation, matched sources (no EggNog)</td>
+<td>17.2 min</td>
+<td><strong>9.0 min</strong></td>
+<td>— none —</td>
+</tr>
+<tr>
+<td>functional annotation, MycoNote full (+EggNog)</td>
+<td>73.2 min</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>end-to-end at matched sources</strong></td>
+<td><strong>~43 min</strong></td>
+<td>~86 min</td>
+<td>n/a</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Prediction: MycoNote fastest</strong> (~3× funannotate; ~on par with MAKER, which
+  does prediction only).</li>
+<li><strong>End-to-end at matched functional output: MycoNote ~2× faster</strong> (~43 vs ~86
+  min). The un-matched comparison looked like funannotate was faster end-to-end
+  only because MycoNote's <code>annotate</code> also ran EggNog (orthology/GO/KEGG) that
+  funannotate did not.</li>
+<li><strong>Functional annotation at matched sources: funannotate is faster</strong> (9 vs 17
+  min) — the one sub-stage where funannotate edges MycoNote (queued optimization
+  item, not a positioning problem).</li>
+<li><strong>EggNog</strong> adds ~56 min for orthology funannotate/MAKER/BRAKER don't produce —
+  a completeness advantage (see <code>data/completeness.tsv</code>), not a speed penalty.</li>
+<li><strong>BRAKER wall-time is omitted</strong> — its <code>performance.json</code> records all-zeros
+  (a known BRAKER instrumentation issue), leaving only a log-span estimate.</li>
+</ul>
 <p><strong>Honest reading of the definitive run.</strong> MycoNote is <strong>competitive, not the
 accuracy leader on any axis</strong>: it is lowest/near-lowest on loose gene F1,
 mid-pack on strict (MAKER leads the yeasts, BRAKER the intron-rich genomes), and

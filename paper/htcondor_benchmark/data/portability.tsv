@@ -1,0 +1,5 @@
+tool	augustus_build	requires_avx2	runs_non_avx2_pool
+myconote	3.3.3	no	yes
+maker	n/a (SNAP/own)	no	yes
+funannotate	3.5.0 (AVX2)	yes	no
+braker	3.5.0 (AVX2)	yes	no

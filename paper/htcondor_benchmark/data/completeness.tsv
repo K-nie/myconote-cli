@@ -1,0 +1,5 @@
+tool	gene_structure	swissprot	pfam	busco	cazyme	merops	eggnog_orthology_GO_KEGG
+myconote	yes	yes	yes	yes	yes	yes	yes
+funannotate	yes	yes	yes	yes	yes	yes	no
+maker	yes	no	no	no	no	no	no
+braker	yes	no	no	no	no	no	no

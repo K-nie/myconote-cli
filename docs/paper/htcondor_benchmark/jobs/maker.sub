@@ -20,6 +20,11 @@ when_to_transfer_output = ON_EXIT
 
 notification = Never
 
+# Fair-timing: pin to the same AVX2-capable node class as the other arms (AVX2
+# nodes are a superset that also runs MAKER's non-AVX2 binaries). Portability is
+# a separate axis. For the headline timing run, add a per-genome Machine pin.
+requirements = (TARGET.has_avx2 =?= true)
+
 queue genome_id, rep from (
     sce 1
     sce 2

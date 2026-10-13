@@ -159,13 +159,16 @@ def test_accuracy(data, out_dir):
 # ── Test 2: prediction speed (all 4; BRAKER timing unusable) ─────────────────
 def test_prediction_speed(R, out_dir):
     _rc()
-    # myco/fun: time_predict.log ; maker: time_maker.log ; braker: unusable
+    # Each tool logs its prediction/whole-run wall-time to a tool-specific file
+    # (BRAKER's /usr/bin/time wrapper writes time_braker.log; its internal
+    # performance.json is all-zeros and is NOT used).
     pred = {
         "myconote": load_stage_minutes(R, "myconote", "time_predict.log"),
         "funannotate": load_stage_minutes(R, "funannotate", "time_predict.log"),
         "maker": load_stage_minutes(R, "maker", "time_maker.log"),
+        "braker": load_stage_minutes(R, "braker", "time_braker.log"),
     }
-    present = [t for t in ["myconote", "funannotate", "maker"] if pred[t]]
+    present = [t for t in TOOLS if pred[t]]
     fig, ax = plt.subplots(figsize=(SINGLE_W * 1.3, SINGLE_W * 1.0))
     means = [np.mean(pred[t]) for t in present]
     sds = [np.std(pred[t]) if len(pred[t]) > 1 else 0 for t in present]
@@ -177,7 +180,9 @@ def test_prediction_speed(R, out_dir):
     ax.spines[["top", "right"]].set_visible(False); ax.tick_params(length=2)
     _save(fig, out_dir, "figure_prediction_speed")
     rows = [[t, f"{np.mean(pred[t]):.2f}", f"{(np.std(pred[t]) if len(pred[t]) > 1 else 0):.2f}", len(pred[t])] for t in present]
-    rows.append(["braker", "NA", "NA", "0  # performance.json all-zero (unusable)"])
+    for t in TOOLS:
+        if not pred[t]:
+            rows.append([t, "NA", "NA", "0  # timing log not found"])
     _write_tsv(out_dir, "prediction_speed.tsv", ["tool", "mean_min", "sd", "n"], rows)
 
 

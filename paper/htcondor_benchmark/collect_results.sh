@@ -48,6 +48,7 @@ GENOMES=()
 while IFS=$'\t' read -r id rest; do
     [[ "$id" == "id" ]] && continue
     [[ -z "$id" ]] && continue
+    [[ "$id" == \#* ]] && continue   # skip comment lines in genomes.tsv
     GENOMES+=("$id")
 done < "$CONFIG"
 

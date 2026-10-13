@@ -1707,15 +1707,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#results-complete-four-tool-run-myconote-v074076-era" class="md-nav__link">
+  <a href="#results-definitive-four-tool-run-matched-avx2-hardware-v0713" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)
+        Results (definitive four-tool run; matched AVX2 hardware, v0.7.13)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results-earlier-four-tool-run-myconote-v074076-era" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results (earlier four-tool run; MycoNote v0.7.4–0.7.6 era)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results (earlier four-tool run; MycoNote v0.7.4–0.7.6 era)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2196,7 +2207,88 @@ on a different cluster will need the same fixes.</p>
 </li>
 </ul>
 <hr />
-<h2 id="results-complete-four-tool-run-myconote-v074076-era">Results (complete four-tool run; MycoNote v0.7.4–0.7.6 era)<a class="headerlink" href="#results-complete-four-tool-run-myconote-v074076-era" title="Permanent link">&para;</a></h2>
+<h2 id="results-definitive-four-tool-run-matched-avx2-hardware-v0713">Results (definitive four-tool run; matched AVX2 hardware, v0.7.13)<a class="headerlink" href="#results-definitive-four-tool-run-matched-avx2-hardware-v0713" title="Permanent link">&para;</a></h2>
+<p><strong>2026-10-12 — all four tools re-run on the same AVX2-capable node class</strong> (72/72
+jobs: 4 tools × 6 genomes × 3 reps). Pinning to AVX2 nodes makes the wall-time
+comparison fair (funannotate/BRAKER's Augustus 3.5.0 is AVX2-compiled and can
+only run there; AVX2 nodes are a superset that also runs MycoNote/MAKER), while
+<strong>portability stays a separate finding</strong> — MycoNote and MAKER also run the
+non-AVX2 pool, which funannotate/BRAKER cannot. Per-genome means of 3 reps;
+per-run data in <code>data/per_run_accuracy_v0.7.13.tsv</code> and
+<code>data/per_run_predict_time_v0.7.13.tsv</code>; figure in
+<code>figures/figure_benchmark.{pdf,png}</code> (regenerate with <code>scripts/make_figures.py</code>).</p>
+<p><strong>Accuracy — loose / strict / nucleotide gene F1 (myco / funannotate / MAKER / BRAKER); bold = best of four</strong></p>
+<table>
+<thead>
+<tr>
+<th>genome</th>
+<th>loose gene F1</th>
+<th>strict gene F1</th>
+<th>nucleotide F1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sce</td>
+<td>0.900 / <strong>0.939</strong> / 0.912 / 0.916</td>
+<td>0.788 / 0.813 / <strong>0.827</strong> / 0.720</td>
+<td>0.985 / 0.968 / <strong>0.986</strong> / 0.980</td>
+</tr>
+<tr>
+<td>cal</td>
+<td>0.933 / 0.955 / 0.952 / <strong>0.958</strong></td>
+<td>0.803 / 0.805 / <strong>0.839</strong> / 0.706</td>
+<td>0.986 / 0.977 / 0.989 / <strong>0.990</strong></td>
+</tr>
+<tr>
+<td>ylp</td>
+<td>0.908 / <strong>0.946</strong> / 0.913 / 0.918</td>
+<td>0.726 / 0.668 / <strong>0.734</strong> / 0.730</td>
+<td>0.972 / 0.958 / 0.974 / <strong>0.978</strong></td>
+</tr>
+<tr>
+<td>ani</td>
+<td>0.899 / 0.921 / 0.919 / <strong>0.932</strong></td>
+<td>0.445 / 0.486 / 0.465 / <strong>0.524</strong></td>
+<td>0.941 / 0.936 / 0.944 / <strong>0.952</strong></td>
+</tr>
+<tr>
+<td>ncr</td>
+<td>0.897 / 0.909 / 0.898 / <strong>0.914</strong></td>
+<td>0.564 / 0.519 / 0.568 / <strong>0.649</strong></td>
+<td>0.964 / 0.936 / 0.964 / <strong>0.978</strong></td>
+</tr>
+<tr>
+<td>cne</td>
+<td>0.924 / <strong>0.949</strong> / 0.936 / 0.940</td>
+<td>0.526 / 0.492 / 0.541 / <strong>0.651</strong></td>
+<td>0.945 / 0.947 / 0.947 / <strong>0.961</strong></td>
+</tr>
+<tr>
+<td><strong>wins</strong></td>
+<td>fun 3, BRAKER 3</td>
+<td>MAKER 3, BRAKER 3</td>
+<td>BRAKER 5, MAKER 1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Speed — gene-prediction wall-time, matched AVX2 nodes (mean of 18 runs):</strong>
+MycoNote <strong>26.0 min</strong>, MAKER 30.2 min, funannotate 77.0 min. MycoNote is the
+fastest full-annotation prediction (≈3× funannotate) and on par with MAKER,
+which does prediction only. <strong>BRAKER wall-time is omitted</strong> — its
+<code>performance.json</code> instrumentation records all-zeros and is unusable (a known
+BRAKER issue); its runtime is only a <code>braker.log</code> log-span estimate, not
+directly comparable.</p>
+<p><strong>Honest reading of the definitive run.</strong> MycoNote is <strong>competitive, not the
+accuracy leader on any axis</strong>: it is lowest/near-lowest on loose gene F1,
+mid-pack on strict (MAKER leads the yeasts, BRAKER the intron-rich genomes), and
+beats funannotate on nucleotide F1 pairwise but trails BRAKER/MAKER in the full
+field. <strong>BRAKER3 is the strongest accuracy tool overall.</strong> MycoNote's defensible
+advantages are orthogonal to peak accuracy: <strong>fastest full-pipeline prediction,
+complete out-of-the-box functional annotation, x86-64-v2 portability</strong> (no AVX2
+requirement), and single-binary convenience.</p>
+<hr />
+<h2 id="results-earlier-four-tool-run-myconote-v074076-era">Results (earlier four-tool run; MycoNote v0.7.4–0.7.6 era)<a class="headerlink" href="#results-earlier-four-tool-run-myconote-v074076-era" title="Permanent link">&para;</a></h2>
 <p>All four tools completed 18/18 jobs (6 genomes × 3 replicates). Accuracy follows
 the Eilbeck et al. (2009) gene/nucleotide sensitivity–specificity–F1 scheme.
 Strict gene F1 uses the <strong>CDS-structure</strong> definition (<code>genes_match_strict</code>:

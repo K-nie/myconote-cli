@@ -41,9 +41,12 @@ in an end-to-end claim.
   The earlier "funannotate faster end-to-end" reading was an artifact of MycoNote
   also running EggNog, which funannotate did not.
 - **Functional annotation at matched sources: funannotate is faster** (9 vs 17 min).
-  This is the one sub-stage where funannotate edges MycoNote — a queued
-  optimization item (profile MMseqs2 / hmmsearch / BUSCO / DIAMOND), not a
-  positioning problem.
+  Profiled per-source (cne): the gap is **entirely Pfam/hmmsearch** (~11.7 min,
+  ~78% of the matched annotate; MMseqs2 ~2.8, BUSCO ~0.6, CAZyme/MEROPS ~0).
+  funannotate wins this sub-stage because it uses pyhmmer (same HMMER engine,
+  faster bindings). MycoNote deliberately keeps the standard, portable,
+  dependency-light `hmmsearch` binary — documented here as an honest cost, not a
+  positioning problem (MycoNote still wins prediction and matched end-to-end).
 - **EggNog** adds ~56 min for orthology/GO/KEGG that funannotate (as-run) and
   MAKER/BRAKER do not produce — a completeness advantage (Test 4), not a speed
   penalty.

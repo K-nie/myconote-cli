@@ -160,6 +160,155 @@ pub fn run_diamond_cazyme(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Native HMMER vs dbCAN HMM profiles (preferred — funannotate-comparable)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// This is the same method funannotate uses: hmmsearch the predicted proteins
+// against the dbCAN HMM database (dbCAN.hmm) and keep hits passing the canonical
+// dbCAN cutoffs. It calls hmmsearch directly (reusing the same engine as the
+// Pfam step) rather than the external run_dbcan pipeline, so it is self-contained
+// and insensitive to run_dbcan's cross-version CLI / overview.txt changes.
+//
+// DIAMOND-blastp against the full CAZyDB sequence set (run_diamond_cazyme above)
+// measures similarity to full-length multidomain proteins and massively
+// over-calls CAZymes; the HMM-profile search tests family-domain membership and
+// is the correct comparator for the benchmark.
+
+/// Run hmmsearch of `protein_fasta` against the dbCAN HMM database and return
+/// the path to the `--domtblout` table. A loose E-value pre-filter is applied
+/// here; the strict dbCAN cutoffs are enforced in `parse_dbcan_domtblout`.
+pub fn run_hmmer_cazyme(
+    protein_fasta: &Path,
+    dbcan_hmm: &Path,
+    out_dir: &Path,
+    threads: usize,
+) -> Result<PathBuf> {
+    std::fs::create_dir_all(out_dir).map_err(MycoNoteError::Io)?;
+
+    // Press the HMM database if the .h3i index is missing (dbCAN.hmm is usually
+    // shipped pre-pressed by funannotate setup; this is a safety net).
+    let h3i = dbcan_hmm.with_extension("hmm.h3i");
+    if !h3i.exists() {
+        let hmmpress = which::which("hmmpress").map_err(|_| {
+            MycoNoteError::UnsupportedFormat("hmmpress not found. Install hmmer.".to_string())
+        })?;
+        let press_ok = Command::new(&hmmpress)
+            .args(["-f", &dbcan_hmm.to_string_lossy()])
+            .status()
+            .map_err(MycoNoteError::Io)?;
+        if !press_ok.success() {
+            return Err(MycoNoteError::InvalidFormat(
+                "hmmpress (dbCAN) failed.".to_string(),
+            ));
+        }
+    }
+
+    let hmmsearch = which::which("hmmsearch").map_err(|_| {
+        MycoNoteError::UnsupportedFormat("hmmsearch not found. Install hmmer.".to_string())
+    })?;
+
+    let domtblout = out_dir.join("dbcan_hmmer.domtblout");
+    let hmm_s = dbcan_hmm.to_string_lossy();
+    let query_s = protein_fasta.to_string_lossy();
+    let dom_s = domtblout.to_string_lossy();
+
+    let status = Command::new(&hmmsearch)
+        .args([
+            "--domtblout",
+            dom_s.as_ref(),
+            "--cpu",
+            &threads.to_string(),
+            // Loose pre-filter; dbCAN E/coverage cutoffs applied in the parser.
+            "-E",
+            "1e-10",
+            "--domE",
+            "1e-10",
+            "--noali",
+            hmm_s.as_ref(),
+            query_s.as_ref(),
+        ])
+        .stdout(std::process::Stdio::null())
+        .status()
+        .map_err(MycoNoteError::Io)?;
+
+    if !status.success() {
+        return Err(MycoNoteError::InvalidFormat(
+            "hmmsearch (dbCAN) failed. Check that dbCAN.hmm is pressed (hmmpress).".to_string(),
+        ));
+    }
+
+    Ok(domtblout)
+}
+
+/// Parse an hmmsearch `--domtblout` table from the dbCAN HMM search and apply the
+/// canonical dbCAN cutoffs: HMM-profile coverage > 0.35, and domain i-E-value
+/// < 1e-15 (tightened to < 1e-18 when the aligned HMM span is <= 80 residues).
+/// Keeps the single best (lowest-E) hit per (gene, family). The CAZyme family is
+/// the HMM profile name with any trailing ".hmm" removed (e.g. `GH5.hmm` → `GH5`).
+pub fn parse_dbcan_domtblout(path: &Path) -> Result<HashMap<String, Vec<CazymeHit>>> {
+    let file = std::fs::File::open(path).map_err(MycoNoteError::Io)?;
+    let reader = BufReader::new(file);
+
+    // Best hit per (gene_id, family), by lowest e-value.
+    let mut best: HashMap<(String, String), CazymeHit> = HashMap::new();
+
+    for line_res in reader.lines() {
+        let line = line_res.map_err(MycoNoteError::Io)?;
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
+        let f: Vec<&str> = line.split_whitespace().collect();
+        if f.len() < 22 {
+            continue;
+        }
+
+        // hmmsearch --domtblout: col 0 = protein (target), col 3 = HMM (query),
+        // col 5 = query length (HMM model length), col 12 = domain i-E-value,
+        // col 15 = hmm coord from, col 16 = hmm coord to.
+        let gene_id = f[0].to_string();
+        let raw_name = f[3];
+        let family = raw_name
+            .strip_suffix(".hmm")
+            .unwrap_or(raw_name)
+            .to_string();
+        let hmm_len: f64 = f[5].parse().unwrap_or(0.0);
+        let evalue: f64 = f[12].parse().unwrap_or(f64::MAX);
+        let hmm_from: f64 = f[15].parse().unwrap_or(0.0);
+        let hmm_to: f64 = f[16].parse().unwrap_or(0.0);
+
+        if hmm_len <= 0.0 {
+            continue;
+        }
+        let aln_span = hmm_to - hmm_from; // residues aligned on the HMM model
+        let coverage = aln_span / hmm_len;
+        let e_cutoff = if aln_span > 80.0 { 1e-15 } else { 1e-18 };
+
+        if evalue > e_cutoff || coverage <= 0.35 {
+            continue;
+        }
+
+        let key = (gene_id.clone(), family.clone());
+        let entry = best.entry(key).or_insert_with(|| CazymeHit {
+            gene_id: gene_id.clone(),
+            family: family.clone(),
+            evalue,
+            coverage,
+            method: CazymeMethod::HMMER,
+        });
+        if evalue < entry.evalue {
+            entry.evalue = evalue;
+            entry.coverage = coverage;
+        }
+    }
+
+    let mut map: HashMap<String, Vec<CazymeHit>> = HashMap::new();
+    for ((gene, _family), hit) in best {
+        map.entry(gene).or_default().push(hit);
+    }
+    Ok(map)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Parse dbCAN2 overview.txt
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -334,5 +483,109 @@ fn cazyme_class_name(cls: &str) -> &'static str {
         "AA" => "Auxiliary Activities (AA) — redox enzymes (LPMO, laccase)",
         "CBM" => "Carbohydrate-Binding Modules (CBM) — substrate binding",
         _ => "Other CAZymes",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    // Build one hmmsearch --domtblout data row (22 whitespace-delimited fields).
+    // Only the columns the parser reads need to be meaningful:
+    //   0 target(protein), 3 query(HMM name), 5 qlen(HMM len),
+    //   12 dom i-Evalue, 15 hmm_from, 16 hmm_to.
+    fn domtbl_row(
+        protein: &str,
+        hmm: &str,
+        qlen: &str,
+        ievalue: &str,
+        hfrom: &str,
+        hto: &str,
+    ) -> String {
+        let mut f = vec!["-"; 23];
+        f[0] = protein;
+        f[3] = hmm;
+        f[5] = qlen;
+        f[12] = ievalue;
+        f[15] = hfrom;
+        f[16] = hto;
+        f[22] = "desc";
+        f.join(" ")
+    }
+
+    #[test]
+    fn dbcan_domtblout_applies_cutoffs_and_strips_hmm_suffix() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("dbcan_hmmer.domtblout");
+        let mut fh = std::fs::File::create(&p).unwrap();
+        writeln!(fh, "# comment line is skipped").unwrap();
+        // PASS: cov = (300-10)/400 = 0.725 > 0.35, aln span 290 > 80 so E<1e-15; E=1e-30 ok.
+        writeln!(
+            fh,
+            "{}",
+            domtbl_row("GENE1", "GH5.hmm", "400", "1e-30", "10", "300")
+        )
+        .unwrap();
+        // FAIL coverage: cov = (60-10)/400 = 0.125 <= 0.35.
+        writeln!(
+            fh,
+            "{}",
+            domtbl_row("GENE2", "GT2.hmm", "400", "1e-30", "10", "60")
+        )
+        .unwrap();
+        // FAIL e-value: aln span 290 > 80 needs E<1e-15; 1e-12 fails.
+        writeln!(
+            fh,
+            "{}",
+            domtbl_row("GENE3", "AA9.hmm", "400", "1e-12", "10", "300")
+        )
+        .unwrap();
+        // PASS short-domain rule: aln span 60 <= 80 needs E<1e-18; cov=(70-10)/70=0.857; E=1e-20 ok.
+        writeln!(
+            fh,
+            "{}",
+            domtbl_row("GENE4", "CBM1.hmm", "70", "1e-20", "10", "70")
+        )
+        .unwrap();
+
+        let map = parse_dbcan_domtblout(&p).unwrap();
+        // GENE1 and GENE4 pass; GENE2 and GENE3 are filtered out.
+        assert_eq!(
+            map.len(),
+            2,
+            "exactly two genes should pass the dbCAN cutoffs"
+        );
+        assert_eq!(map["GENE1"][0].family, "GH5", ".hmm suffix stripped");
+        assert_eq!(map["GENE1"][0].method, CazymeMethod::HMMER);
+        assert_eq!(map["GENE4"][0].family, "CBM1");
+        assert!(!map.contains_key("GENE2"), "low-coverage hit rejected");
+        assert!(!map.contains_key("GENE3"), "weak-e-value hit rejected");
+    }
+
+    #[test]
+    fn dbcan_domtblout_keeps_best_evalue_per_gene_family() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("d.domtblout");
+        let mut fh = std::fs::File::create(&p).unwrap();
+        // Same gene+family twice; the lower e-value must win.
+        writeln!(
+            fh,
+            "{}",
+            domtbl_row("GENE1", "GH18.hmm", "400", "1e-20", "10", "300")
+        )
+        .unwrap();
+        writeln!(
+            fh,
+            "{}",
+            domtbl_row("GENE1", "GH18.hmm", "400", "1e-40", "10", "300")
+        )
+        .unwrap();
+        let map = parse_dbcan_domtblout(&p).unwrap();
+        assert_eq!(map["GENE1"].len(), 1, "one entry per (gene, family)");
+        assert!(
+            (map["GENE1"][0].evalue - 1e-40).abs() < 1e-50,
+            "best (lowest) e-value kept"
+        );
     }
 }

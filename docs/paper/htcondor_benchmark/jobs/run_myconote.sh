@@ -19,9 +19,11 @@ GENOME_FA="$GENOME_DIR/genome.fa"
 REFERENCE_GFF="$GENOME_DIR/reference.gff3"
 
 # ── Database locations ─────────────────────────────────────────────────────
-# annotate DB-backed sources (--eggnog/--cazyme/--merops) plus Swiss-Prot and
-# Pfam auto-resolve from --db-dir. Default matches the tool's own default and
-# htcondor.conf; override MYCONOTE_DB_DIR (e.g. to shared storage) upstream.
+# annotate's Swiss-Prot, Pfam and --merops auto-resolve from --db-dir. Default
+# matches the tool's own default and htcondor.conf; override MYCONOTE_DB_DIR
+# (e.g. to shared storage) upstream. NOTE: --eggnog and --cazyme do NOT derive
+# their DBs from --db-dir — they take explicit --eggnog-db / --cazyme-db (set
+# below), so both must be passed or those two sources silently no-op.
 MYCONOTE_DB_DIR="${MYCONOTE_DB_DIR:-$HOME/.myconote/dbs}"
 # predict/train read Augustus species from this FIXED path (ignores --db-dir).
 export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.myconote/augustus_config}"
@@ -30,6 +32,17 @@ export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.myconote/augustus_co
 # (the tool never derives it from --db-dir). Point it at the copy provisioned
 # by setup.sh under $MYCONOTE_DB_DIR/eggnog.
 EGGNOG_DB_DIR="${EGGNOG_DB_DIR:-$MYCONOTE_DB_DIR/eggnog}"
+
+# annotate --cazyme (v0.7.15+) prefers a native hmmsearch of the proteins against
+# the dbCAN HMM database — the same method funannotate uses, so the two arms are
+# directly comparable. We reuse funannotate's already-provisioned, pressed
+# dbCAN.hmm (HMMdb 14.0) rather than a second copy. (--cazyme-hmm wins over
+# run_dbcan and the DIAMOND fallback when it is set and present.)
+CAZYME_HMM="${CAZYME_HMM:-$MYCONOTE_DB_DIR/funannotate/dbCAN.hmm}"
+# DIAMOND fallback DB (CAZyDB.dmnd, dbCAN CAZyDB 2025-07-24, built by
+# jobs/build_cazyme_db.sh). Retained only as a fallback; NOT used when
+# --cazyme-hmm resolves, because DIAMOND-blastp over-calls CAZymes ~6-7x.
+CAZYME_DB="${CAZYME_DB:-$MYCONOTE_DB_DIR/dbcan/CAZyDB.dmnd}"
 
 # ── Runtime tool environment ───────────────────────────────────────────────
 # predict/annotate shell out to external binaries that MycoNote locates by a
@@ -211,6 +224,8 @@ echo "[$(date +%T)] Step 4: annotate"
     --eggnog \
     --eggnog-db "$EGGNOG_DB_DIR" \
     --cazyme \
+    --cazyme-hmm "$CAZYME_HMM" \
+    --cazyme-db "$CAZYME_DB" \
     --merops \
     --threads 8 \
     >> "$LOG" 2>&1

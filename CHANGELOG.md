@@ -4,6 +4,27 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.15] — 2026-10-14
+
+### Added
+
+- **`annotate --cazyme` gains a native HMMER path (`--cazyme-hmm <dbCAN.hmm>`).**
+  CAZyme annotation now prefers an `hmmsearch` of the predicted proteins against
+  the dbCAN HMM database, applying the canonical dbCAN cutoffs (profile coverage
+  > 0.35; domain i-E-value < 1e-15, tightened to < 1e-18 for aligned HMM spans
+  ≤ 80 aa) and keeping the best hit per (gene, family). This is the same method
+  funannotate uses, making the two pipelines directly comparable. Backend order
+  is now: `--cazyme-hmm` (hmmsearch) → `run_dbcan` → `--cazyme-db` (DIAMOND).
+
+### Fixed
+
+- **CAZyme DIAMOND fallback over-called massively.** DIAMOND-blastp against the
+  full-length CAZyDB sequence set assigned a CAZyme family to ~38 % of genes in
+  *S. cerevisiae* (real content ~5–6 %), because sequence similarity to a
+  multidomain CAZy protein is not family-domain membership. The HMM-profile path
+  above is now the default comparator; the DIAMOND fallback is retained only for
+  users without an HMM database and is documented as approximate.
+
 ## [0.7.14] — 2026-10-13
 
 ### Added

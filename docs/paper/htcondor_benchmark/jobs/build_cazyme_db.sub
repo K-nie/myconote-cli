@@ -1,0 +1,26 @@
+# HTCondor submit file: one-time build of the dbCAN CAZyme DIAMOND database.
+# Runs build_cazyme_db.sh on a single execute node (NEVER the submit node).
+#
+# Usage (from the benchmark dir, after `source configs/htcondor.conf`):
+#   condor_submit jobs/build_cazyme_db.sub
+#
+# Writes ~/.myconote/dbs/dbcan/CAZyDB.dmnd (+ raw FASTA + dbcan.version).
+# Everything lives on shared cephfs, so no file transfer is needed.
+
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/build_cazyme_db.sh
+getenv         = true
+
+request_cpus   = 8
+request_memory = 16 GB
+request_disk   = 12 GB
+
+should_transfer_files = NO
+
+log    = $(VERIFY_DIR)/build_cazyme_db.log
+output = $(VERIFY_DIR)/build_cazyme_db.out
+error  = $(VERIFY_DIR)/build_cazyme_db.err
+
+notification = Never
+
+queue

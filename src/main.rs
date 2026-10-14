@@ -336,8 +336,9 @@ fn main() -> Result<()> {
                 println!("  --eggnog-db <dir>           EggNog-mapper database directory");
                 println!("  --eggnog-results <file>     Pre-computed emapper.annotations file");
                 println!("  --eggnog-iterate            Restore emapper's slow --dmnd_iterate (off by default: ~4.4x slower, same recall)");
-                println!("  --cazyme                    Run CAZyme annotation (dbCAN / DIAMOND)");
-                println!("  --cazyme-db <file>          dbCAN DIAMOND database (.dmnd)");
+                println!("  --cazyme                    Run CAZyme annotation (dbCAN HMMER / DIAMOND)");
+                println!("  --cazyme-hmm <file>         dbCAN HMM database (dbCAN.hmm) — preferred, hmmsearch");
+                println!("  --cazyme-db <file>          dbCAN DIAMOND database (.dmnd) — fallback");
                 println!("  --secretome                 Run secretome prediction (DeepSig + DeepTMHMM)");
                 println!("  --signalp-organism <str>    Signal-peptide organism: euk|gram+|gram- (default: euk)");
                 println!("  --antismash                 Run antiSMASH BGC cluster prediction");
@@ -2287,6 +2288,10 @@ fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
             }
             "--cazyme-db" if i + 1 < args.len() => {
                 config.cazyme_db = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            "--cazyme-hmm" if i + 1 < args.len() => {
+                config.cazyme_hmm = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
             // ── Secretome ─────────────────────────────────────────────────

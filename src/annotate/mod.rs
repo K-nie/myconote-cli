@@ -90,6 +90,10 @@ pub struct AnnotateConfig {
     pub run_cazyme: bool,
     /// Path to dbCAN diamond database (.dmnd) for fallback DIAMOND search
     pub cazyme_db: Option<PathBuf>,
+    /// Path to the dbCAN HMM database (dbCAN.hmm) for the preferred, funannotate-
+    /// comparable hmmsearch path. When set and present, this wins over run_dbcan
+    /// and the DIAMOND fallback.
+    pub cazyme_hmm: Option<PathBuf>,
 
     /// Run secretome prediction (SignalP + TMHMM)
     pub run_secretome: bool,
@@ -146,6 +150,7 @@ impl Default for AnnotateConfig {
 
             run_cazyme: false,
             cazyme_db: None,
+            cazyme_hmm: None,
 
             run_secretome: false,
             signalp_organism: "euk".to_string(),
@@ -584,11 +589,31 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     // ── CAZyme annotation (dbCAN preferred, DIAMOND fallback) ─────────────────
     if config.run_cazyme {
         step += 1;
-        progress::step(step, total_steps, "CAZyme families (dbCAN / DIAMOND)…");
+        progress::step(
+            step,
+            total_steps,
+            "CAZyme families (dbCAN HMMER / DIAMOND)…",
+        );
         let t_cazyme = Instant::now();
         let cazyme_dir = config.out_dir.join("cazyme");
         let pb2 = progress::spinner("Running CAZyme annotation…");
-        let overview: Option<PathBuf> = if cazyme::dbcan_available() {
+        let overview: Option<PathBuf> = if let Some(hmm) = &config.cazyme_hmm {
+            // Preferred: native hmmsearch vs dbCAN HMM profiles. This is the
+            // same method funannotate uses and the correct benchmark comparator
+            // (DIAMOND-blastp vs the full CAZyDB over-calls ~6-7x).
+            if hmm.exists() {
+                match cazyme::run_hmmer_cazyme(&proteins_fa, hmm, &cazyme_dir, config.threads) {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        progress::warn_spinner(&pb2, format!("dbCAN hmmsearch failed: {}", e));
+                        None
+                    }
+                }
+            } else {
+                progress::warn_spinner(&pb2, format!("dbCAN HMM db not found: {}", hmm.display()));
+                None
+            }
+        } else if cazyme::dbcan_available() {
             match cazyme::run_dbcan(
                 &proteins_fa,
                 &cazyme_dir,
@@ -629,10 +654,13 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
         };
 
         if let Some(path) = overview {
-            // parse_dbcan_overview works for dbCAN overview.txt; for the DIAMOND
-            // fallback we parse_diamond_cazyme into the same structure.
-            let hits_result = if path.file_name().and_then(|s| s.to_str()) == Some("overview.txt") {
+            // Dispatch by output type: run_dbcan overview.txt, the native
+            // hmmsearch domtblout, or the DIAMOND fallback TSV.
+            let fname = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let hits_result = if fname == "overview.txt" {
                 cazyme::parse_dbcan_overview(&path)
+            } else if fname.ends_with(".domtblout") {
+                cazyme::parse_dbcan_domtblout(&path)
             } else {
                 cazyme::parse_diamond_cazyme(&path, 0.3)
             };

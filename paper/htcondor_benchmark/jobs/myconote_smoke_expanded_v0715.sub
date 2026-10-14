@@ -1,0 +1,37 @@
+# Expanded-panel smoke: MycoNote-CLI v0.7.15 end-to-end across all 14 genomes,
+# 1 replicate each = 14 jobs. Confirms every genome (incl. the 8 new ones and
+# the 125 Mb tmel) runs through sort→mask→predict→annotate→submit with the new
+# Augustus species mappings and the HMMER CAZyme path, before the full
+# Stage-1 + production matrix. AVX2-pinned (same node class as production).
+# Writes to a SEPARATE results dir (RESULTS_DIR via condor_submit -append) so
+# earlier result dirs are not clobbered by run_myconote.sh's `rm -rf OUT_DIR`.
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_myconote.sh
+getenv         = true
+request_cpus   = 8
+request_memory = 32 GB
+request_disk   = 30 GB
+log    = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).log
+output = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).out
+error  = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).err
+arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+notification = Never
+requirements = (TARGET.has_avx2 =?= true)
+queue genome_id, rep from (
+    sce 1
+    cal 1
+    ylp 1
+    ani 1
+    ncr 1
+    cne 1
+    klac 1
+    kpha 1
+    fgra 1
+    afum 1
+    umay 1
+    ccin 1
+    spom 1
+    tmel 1
+)

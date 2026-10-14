@@ -16,3 +16,19 @@ ylp	Yarrowia_lipolytica_CLIB122	fungi	21	1	saccharomycetes_odb10	GCF_000002525.2
 ani	Aspergillus_nidulans_FGSC_A4	fungi	30	1	eurotiomycetes_odb10	GCF_000011425.1
 ncr	Neurospora_crassa_OR74A	fungi	40	1	sordariomycetes_odb10	GCF_000182925.2
 cne	Cryptococcus_neoformans_JEC21	fungi	19	1	tremellomycetes_odb10	GCF_000091045.1
+#
+# Expanded panel (added 2026-10-13): 8 genomes broadening clade coverage —
+# Saccharomycotina (klac, kpha), Pezizomycotina/Sordariomycetes+Eurotiomycetes
+# (fgra, afum), Basidiomycota (umay, ccin), Taphrinomycotina (spom), and a
+# repeat-rich scaling genome (tmel, ~125 Mb). All RefSeq (Gnomon/curated).
+# genetic_code=1 (nuclear) for all; any transl_table=4 seen is mitochondrial.
+# NOTE: kpha uses GCF_000027005.1 (GS115) — requested GCF_001708105.1 is not a
+# RefSeq accession (GCA_001708105.1 is GenBank-only K. pastoris, never in RefSeq).
+klac	Kluyveromyces_lactis_NRRL_Y-1140	fungi	11	1	saccharomycetes_odb10	GCF_000002515.2
+kpha	Komagataella_phaffii_GS115	fungi	9	1	saccharomycetes_odb10	GCF_000027005.1
+fgra	Fusarium_graminearum_PH-1	fungi	36	1	sordariomycetes_odb10	GCF_000240135.3
+afum	Aspergillus_fumigatus_Af293	fungi	29	1	eurotiomycetes_odb10	GCF_000002655.1
+umay	Ustilago_maydis_521	fungi	20	1	basidiomycota_odb10	GCF_000328475.2
+ccin	Coprinopsis_cinerea_okayama7_130	fungi	36	1	agaricomycetes_odb10	GCF_000182895.1
+spom	Schizosaccharomyces_pombe_972h-	fungi	13	1	ascomycota_odb10	GCF_000002945.2
+tmel	Tuber_melanosporum_Mel28	fungi	125	1	ascomycota_odb10	GCF_000151645.1

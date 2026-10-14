@@ -151,6 +151,17 @@ case "$GENOME_ID" in
     ani) AUGUSTUS_SPECIES="aspergillus_nidulans" ;;
     ncr) AUGUSTUS_SPECIES="neurospora_crassa" ;;
     cne) AUGUSTUS_SPECIES="cryptococcus_neoformans_neoformans_JEC21" ;;
+    # Expanded panel (2026-10-14). Species-exact where an installed Augustus
+    # model matches the genome; the two noted proxies have no species model in
+    # the Augustus distribution and use the nearest installed clade model.
+    klac) AUGUSTUS_SPECIES="kluyveromyces_lactis" ;;        # exact
+    kpha) AUGUSTUS_SPECIES="pichia_stipitis" ;;             # PROXY: no Komagataella/P. pastoris model — nearest Saccharomycotina
+    fgra) AUGUSTUS_SPECIES="fusarium_graminearum" ;;        # exact
+    afum) AUGUSTUS_SPECIES="aspergillus_fumigatus" ;;       # exact
+    umay) AUGUSTUS_SPECIES="ustilago_maydis" ;;             # exact
+    ccin) AUGUSTUS_SPECIES="coprinus_cinereus" ;;           # exact (Coprinopsis cinerea = Coprinus cinereus)
+    spom) AUGUSTUS_SPECIES="schizosaccharomyces_pombe" ;;   # exact
+    tmel) AUGUSTUS_SPECIES="aspergillus_nidulans" ;;        # PROXY: no Tuber/Pezizomycetes model — nearest Pezizomycotina
     *)   echo "ERROR: no Augustus species mapping for genome '$GENOME_ID'"; exit 1 ;;
 esac
 

@@ -2,7 +2,7 @@ database	version_or_release	used_by	notes
 eggNOG	5.0.2 (emapper 2.1.15)	annotate --eggnog	emapperdb-5.0.2; DIAMOND backend
 Swiss-Prot	UniProtKB/Swiss-Prot current_release	annotate (MMseqs2 homology)	ftp.uniprot.org current_release; download epoch 1783613024 (~2026-07)
 Pfam-A	Pfam current_release	annotate --pfam (hmmsearch)	ftp.ebi.ac.uk Pfam/current_release; download epoch 1783613157 (~2026-07); ~30,134 profiles
-dbCAN (CAZyme)	dbCAN HMMdb V12	annotate --cazyme	dbCAN-HMMdb-V12 + CAZyDB.fa (DIAMOND)
+dbCAN (CAZyme)	dbCAN HMMdb 14.0 (CAZyDB 2025-07-10)	annotate --cazyme --cazyme-hmm (hmmsearch)	PRIMARY path (v0.7.15+): hmmsearch vs dbCAN.hmm with canonical dbCAN cutoffs (coverage>0.35; domain i-E<1e-15, <1e-18 for aligned span<=80aa), reusing funannotate's pressed dbCAN.hmm at ~/.myconote/dbs/funannotate — same method as the funannotate arm, so CAZyme is directly comparable. FALLBACK (not used when --cazyme-hmm resolves): DIAMOND vs CAZyDB.dmnd (CAZyDB 2025-07-24, dbCAN v5-2; built from CAZyDB.07242025.fa, src md5 47f4a68c3b8a7f9d4d1be897bed43d14, dmnd md5 7efb6928ffc20ac3f7c4875624ff0966); DIAMOND-blastp over-calls ~6-7x so it is retained only for users without an HMM db. See CAZYME_FIX_README.md
 MEROPS	merops_scan.lib (merops.dmnd)	annotate --merops	release tag not recorded in the DB files
 BUSCO lineages	fungi_odb10 (+ clade lineages as used)	annotate BUSCO	~/busco_downloads/lineages/fungi_odb10
 OrthoDB	v11 (Fungi partition)	BRAKER protein evidence	odb11v0 fungi
@@ -10,6 +10,13 @@ Augustus (MycoNote)	3.3.3	predict	NOT AVX2-compiled; runs full node pool
 Augustus (funannotate/BRAKER)	3.5.0	predict	AVX2-compiled; requires AVX2 nodes
 GeneMark-ES	gmes_linux_64 (v4)	predict / funannotate / BRAKER	licensed; gmes_linux_64_4
 
+# dbCAN (myconote arm) re-provisioned 2026-10-13: the previous dbcan/ files
+# (CAZyDB.fa, dbCAN-HMMdb-V12.txt) were corrupt 18,618-byte HTML error pages
+# (0 seqs / 0 HMMs) from a failed 2025-07-09 download, so `annotate --cazyme`
+# silently no-oped. Replaced with the real dbCAN v5-2 CAZyDB (2025-07-24) built
+# into CAZyDB.dmnd; provenance stamped in ~/.myconote/dbs/dbcan/dbcan.version.
+# funannotate's CAZyme uses dbCAN HMMdb 14.0 (CAZyDB 2025-07-10) via HMMER.
+#
 # Tags read from ~/.myconote/dbs/*.version on the cluster (2026-10-13). MEROPS
 # carries no release tag in its DB files; record the merops_scan.lib release at
 # the production run if the vendor provides one. BRAKER's own performance.json

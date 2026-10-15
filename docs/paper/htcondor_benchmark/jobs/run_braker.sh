@@ -113,9 +113,19 @@ if [[ ! -s "$PROTEIN_DB" ]]; then
     exit 1
 fi
 
+# BRAKER/GeneMark keep the FULL FASTA header (spaces→underscores) as the seqid.
+# When a header carries a '#' (e.g. ccin's RefSeq desc "...okayama7#130...") the
+# '#' is read as a GTF comment and gff2gbSmallDNA.pl fails with "Not GFF format",
+# leaving train.gb with 0 genes → AUGUSTUS training aborts → BRAKER dies. Feed
+# BRAKER a copy whose headers are reduced to the bare accession (first token),
+# which also makes the output seqids match reference.gff3 directly (identity
+# rename). Scoring-identical on headerless genomes; required for ccin.
+BRAKER_GENOME="$OUT_DIR/genome.acc.fa"
+awk '/^>/{print $1; next} {print}' "$GENOME_FA" > "$BRAKER_GENOME"
+
 /usr/bin/time -v -o "$OUT_DIR/time_braker.log" \
     braker.pl \
-    --genome="$GENOME_FA" \
+    --genome="$BRAKER_GENOME" \
     --prot_seq="$PROTEIN_DB" \
     --species=braker_${GENOME_ID}_rep${REP} \
     --workingdir="$OUT_DIR" \
@@ -140,7 +150,9 @@ fi
 # identity map, so it is harmless on genomes whose headers carry no description.
 RENAME_TSV="$OUT_DIR/braker_seqid_rename.tsv"
 printf 'original_id\tnew_id\tlength\n' > "$RENAME_TSV"
-awk '/^>/{acc=substr($1,2); h=substr($0,2); gsub(/[ \t]+/,"_",h); print acc"\t"h"\t0"}' "$GENOME_FA" >> "$RENAME_TSV"
+# Built from the accession-only FASTA fed to BRAKER, so this is an identity map
+# (acc→acc) and predicted seqids already match the reference accessions.
+awk '/^>/{acc=substr($1,2); h=substr($0,2); gsub(/[ \t]+/,"_",h); print acc"\t"h"\t0"}' "$BRAKER_GENOME" >> "$RENAME_TSV"
 
 python3 "$BENCHMARK_DIR/scripts/compare_annotations.py" \
     "$PREDICTED_GFF" \

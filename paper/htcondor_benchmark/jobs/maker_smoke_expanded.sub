@@ -1,0 +1,31 @@
+# Expanded-panel competitor smoke: maker 1 replicate across the 8 NEW genomes
+# (klac kpha fgra afum umay ccin spom tmel) = 8 jobs. Validates the new
+# genome->Augustus-species mappings (maker wrapper case block) and that each
+# new genome runs end-to-end before the full 14-genome x 3-rep matrix. The 6
+# original genomes already passed in the prior full run, so they are omitted to
+# save cluster wallclock. AVX2-pinned (augustus 3.5.0 SIGILLs on non-AVX2 nodes).
+# Submit with: condor_submit -append RESULTS_DIR=<results_smoke_expanded_competitors> ...
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_maker.sh
+getenv         = true
+request_cpus   = 8
+request_memory = 32 GB
+request_disk   = 30 GB
+requirements   = (TARGET.has_avx2 =?= true)
+log    = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).smoke.log
+output = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).smoke.out
+error  = $(RESULTS_DIR)/maker/$(genome_id)_rep$(rep).smoke.err
+arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+notification = Never
+queue genome_id, rep from (
+    klac 1
+    kpha 1
+    fgra 1
+    afum 1
+    umay 1
+    ccin 1
+    spom 1
+    tmel 1
+)

@@ -553,6 +553,21 @@ hints) provably do not lift MycoNote's consensus.
   explicitly if quoting MycoNote's total runtime.
 - BRAKER `performance.json` timing was unusable (all-zero); its runtime is a
   `braker.log` log-span estimate, not the `/usr/bin/time` figure.
+- Expanded panel (14 genomes) — two per-genome caveats to state in Methods
+  (decided 2026-10-15):
+  - **Nearest-clade Augustus proxies for kpha and tmel.** No species-exact
+    Augustus model exists for *Komagataella phaffii* or *Tuber melanosporum*, so
+    all Augustus-based arms (MycoNote `--species`, funannotate
+    `--busco_seed_species`, MAKER `augustus_species`) use the same proxies —
+    kpha → `pichia_stipitis`, tmel → `aspergillus_nidulans`. Shared across tools,
+    so fair between arms, but interpret kpha/tmel accuracy cautiously (not a
+    tool-specific deficiency). tmel is additionally the 125 Mb repeat-rich outlier.
+  - **MAKER runs with RepeatMasker disabled.** The cluster MAKER 3.01.04 cannot
+    use the installed RepeatMasker 4.2.3 / FamDB (no fungi partition), so the
+    MAKER arm runs without repeat masking, whereas funannotate and BRAKER mask
+    internally. Decision: keep MAKER unmasked and footnote it — MAKER's
+    repeat-rich-genome numbers (tmel especially) reflect no masking, an
+    environment limitation, not a fair-comparison artifact.
 
 **For the field**: A reproducible benchmark protocol that other developers can use to evaluate new annotation tools.
 

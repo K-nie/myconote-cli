@@ -92,6 +92,16 @@ case "$GENOME_ID" in
     ani) AUGUSTUS_SPECIES="aspergillus_nidulans" ;;
     ncr) AUGUSTUS_SPECIES="neurospora_crassa" ;;
     cne) AUGUSTUS_SPECIES="cryptococcus_neoformans_neoformans_JEC21" ;;
+    # Expanded panel (2026-10-14); same mappings as the MycoNote and MAKER arms
+    # for cross-tool consistency. funannotate passes this as --busco_seed_species.
+    klac) AUGUSTUS_SPECIES="kluyveromyces_lactis" ;;        # exact
+    kpha) AUGUSTUS_SPECIES="pichia_stipitis" ;;             # PROXY: no Komagataella model — nearest installed yeast
+    fgra) AUGUSTUS_SPECIES="fusarium_graminearum" ;;        # exact
+    afum) AUGUSTUS_SPECIES="aspergillus_fumigatus" ;;       # exact
+    umay) AUGUSTUS_SPECIES="ustilago_maydis" ;;             # exact
+    ccin) AUGUSTUS_SPECIES="coprinus_cinereus" ;;           # exact
+    spom) AUGUSTUS_SPECIES="schizosaccharomyces_pombe" ;;   # exact
+    tmel) AUGUSTUS_SPECIES="aspergillus_nidulans" ;;        # PROXY: no Tuber/Pezizomycetes model — nearest ascomycete
     *)   echo "ERROR: no Augustus seed species mapped for '$GENOME_ID'" >&2; exit 1 ;;
 esac
 

@@ -77,12 +77,23 @@ def load_rename_map(path: str) -> Dict[str, str]:
     return mapping
 
 
-def parse_gff3(path: str, seqid_map: Dict[str, str] = None) -> Dict[str, List[Feature]]:
+def parse_gff3(path: str, seqid_map: Dict[str, str] = None,
+               coding_only: bool = True) -> Dict[str, List[Feature]]:
     """Parse a GFF3 file. Returns a dict of seqid -> list of gene features.
 
     If seqid_map is given, each column-1 seqid is translated through it (a seqid
     absent from the map is left unchanged), so a renamed prediction can be
     compared against a reference in the original namespace.
+
+    If coding_only (default), only protein-coding genes — those with at least one
+    CDS descendant — are kept. This excludes reference non-coding genes (lncRNA,
+    tRNA, rRNA, snoRNA, etc.) that ab-initio predictors do not call, so the
+    gene/exon comparison is coding-vs-coding. It is a no-op on predicted GFF3s
+    (every predicted gene is protein-coding). Critically, RefSeq references vary
+    wildly in non-coding content — e.g. S. pombe lists 12,613 "gene" features of
+    which only 5,124 are protein_coding (7,133 are lncRNA) — so without this
+    filter the reference gene count, and hence gene-level F1, is not comparable
+    across genomes. Pass coding_only=False to count all gene features.
     """
     features = []
     with open(path) as f:
@@ -127,10 +138,13 @@ def parse_gff3(path: str, seqid_map: Dict[str, str] = None) -> Dict[str, List[Fe
         if parent_id and parent_id in by_id:
             by_id[parent_id].children.append(feat)
 
-    # Group genes by seqid
+    # Group genes by seqid (optionally protein-coding genes only: those with a
+    # CDS descendant — children are already attached above, so this is safe).
     genes_by_seqid: Dict[str, List[Feature]] = defaultdict(list)
     for feat in features:
         if feat.ftype == 'gene':
+            if coding_only and not get_cds_features(feat):
+                continue
             genes_by_seqid[feat.seqid].append(feat)
 
     # Sort each seqid's genes by start position
@@ -492,7 +506,14 @@ def main():
     parser.add_argument('--rename-table',
                         help='sort --rename-table TSV (original_id, new_id, length); '
                              'lifts predicted seqids back to the reference namespace')
+    parser.add_argument('--include-noncoding', action='store_true',
+                        help='count ALL gene features, including reference non-coding '
+                             'genes (lncRNA/tRNA/rRNA/etc.). Default: protein-coding '
+                             'genes only (those with a CDS), for a coding-vs-coding '
+                             'comparison that is consistent across RefSeq references.')
     args = parser.parse_args()
+
+    coding_only = not args.include_noncoding
 
     seqid_map = None
     if args.rename_table:
@@ -501,11 +522,11 @@ def main():
               f'(predicted seqids lifted to reference namespace)', file=sys.stderr)
 
     print(f'Parsing predicted annotation: {args.predicted}', file=sys.stderr)
-    pred = parse_gff3(args.predicted, seqid_map=seqid_map)
+    pred = parse_gff3(args.predicted, seqid_map=seqid_map, coding_only=coding_only)
     pred_summary = count_features(pred)
 
     print(f'Parsing reference annotation: {args.reference}', file=sys.stderr)
-    ref = parse_gff3(args.reference)
+    ref = parse_gff3(args.reference, coding_only=coding_only)
     ref_summary = count_features(ref)
 
     print(f'Predicted: {pred_summary["n_genes"]:,} genes', file=sys.stderr)

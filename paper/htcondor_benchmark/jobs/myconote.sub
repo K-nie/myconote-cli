@@ -1,5 +1,5 @@
 # HTCondor submit file for MycoNote-CLI benchmark runs
-# Submits 18 jobs: 6 genomes x 3 replicates
+# Submits 42 jobs: 14 genomes x 3 replicates
 #
 # Usage:
 #   condor_submit myconote.sub
@@ -47,7 +47,7 @@ requirements = (TARGET.has_avx2 =?= true)
 #   requirements = (TARGET.has_avx2 =?= true) && (Machine == "scarcityNN.glbrc.org")
 
 # Submit one job per (genome, replicate) combination.
-# 6 genomes x 3 replicates = 18 jobs total.
+# 14 genomes x 3 replicates = 42 jobs total.
 queue genome_id, rep from (
     sce 1
     sce 2
@@ -67,4 +67,28 @@ queue genome_id, rep from (
     cne 1
     cne 2
     cne 3
+    klac 1
+    klac 2
+    klac 3
+    kpha 1
+    kpha 2
+    kpha 3
+    fgra 1
+    fgra 2
+    fgra 3
+    afum 1
+    afum 2
+    afum 3
+    umay 1
+    umay 2
+    umay 3
+    ccin 1
+    ccin 2
+    ccin 3
+    spom 1
+    spom 2
+    spom 3
+    tmel 1
+    tmel 2
+    tmel 3
 )

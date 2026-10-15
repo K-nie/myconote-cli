@@ -1571,6 +1571,16 @@
 
 
 <h1 id="preliminary-myconote-vs-funannotate-comparison-1-rep-smoke">Preliminary MycoNote vs funannotate comparison (1-rep smoke)<a class="headerlink" href="#preliminary-myconote-vs-funannotate-comparison-1-rep-smoke" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>⚠ Numbers below predate the scorer fix (2026-10-15).</strong> The gene/exon F1
+values in the table and figure were produced before <code>compare_annotations.py</code>
+was fixed to count protein-coding reference genes only (commit <code>99cbefc</code>).
+That fix changes every genome's gene/exon F1 (nucleotide F1 is unchanged), and
+corrects the spom artifact noted below: spom gene-loose F1 goes <strong>0.58 → 0.93</strong>
+(ref genes 12,613 → 5,124) for MycoNote, and funannotate's spom corrects the
+same way. The production run uses the fixed scorer; treat the figure/table here
+as the pre-fix snapshot.</p>
+</blockquote>
 <p><strong>Status: PRELIMINARY.</strong> This is a 1-replicate comparison built from the
 expanded-panel smoke runs while the MAKER/BRAKER smokes finish. The production
 matrix (n=10 timing reps, 3 accuracy reps, all four tools, proper statistics)

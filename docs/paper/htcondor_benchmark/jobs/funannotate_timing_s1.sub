@@ -1,0 +1,110 @@
+# TIMING sub (auto-generated) — funannotate, x86_64-v3 pinned.
+# Fair wall-time: all arms pinned to one microarch generation
+# (strict same-node pinning infeasible on this shared pool).
+# CPU-seconds (performance.json total_cpu_seconds) is the
+# contention-robust check. Submit with RESULTS_DIR pointed at a
+# dedicated timing dir via condor_submit -append.
+
+# HTCondor submit file for funannotate benchmark runs.
+# 18 jobs: 6 genomes x 3 replicates.
+
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_funannotate.sh
+getenv         = true
+
+request_cpus   = 8
+request_memory = 16 GB
+request_disk   = 30 GB
+
+# funannotate's augustus (env funannotate, 3.5.0) is AVX2-compiled, like the
+# BRAKER arm's. On a non-AVX2 node (x86_64-v2, e.g. scarcity-10) its config-time
+# "augustus --proteinprofile" BUSCO self-test fails ("likely a compilation
+# error") and funannotate aborts before prediction. The first full run's
+# funannotate completion was partly luck-of-the-node; gate to AVX2-capable nodes
+# so every job's augustus runs. (MycoNote's augustus 3.3.3 is NOT AVX2-compiled
+# and needs no such gate.)
+requirements = (TARGET.has_avx2 =?= true) && (TARGET.Microarch =?= "x86_64-v3")
+
+log    = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).log
+output = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).out
+error  = $(RESULTS_DIR)/funannotate/$(genome_id)_rep$(rep).err
+
+arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
+
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+
+notification = Never
+
+queue genome_id, rep from (
+    sce 1
+    sce 2
+    sce 3
+    sce 4
+    sce 5
+    cal 1
+    cal 2
+    cal 3
+    cal 4
+    cal 5
+    ylp 1
+    ylp 2
+    ylp 3
+    ylp 4
+    ylp 5
+    ani 1
+    ani 2
+    ani 3
+    ani 4
+    ani 5
+    ncr 1
+    ncr 2
+    ncr 3
+    ncr 4
+    ncr 5
+    cne 1
+    cne 2
+    cne 3
+    cne 4
+    cne 5
+    klac 1
+    klac 2
+    klac 3
+    klac 4
+    klac 5
+    kpha 1
+    kpha 2
+    kpha 3
+    kpha 4
+    kpha 5
+    fgra 1
+    fgra 2
+    fgra 3
+    fgra 4
+    fgra 5
+    afum 1
+    afum 2
+    afum 3
+    afum 4
+    afum 5
+    umay 1
+    umay 2
+    umay 3
+    umay 4
+    umay 5
+    ccin 1
+    ccin 2
+    ccin 3
+    ccin 4
+    ccin 5
+    spom 1
+    spom 2
+    spom 3
+    spom 4
+    spom 5
+    tmel 1
+    tmel 2
+    tmel 3
+    tmel 4
+    tmel 5
+)

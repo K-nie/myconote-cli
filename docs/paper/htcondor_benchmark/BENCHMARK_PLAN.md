@@ -79,3 +79,8 @@ portability. Every null/loss stays in the text.
 
 READMEs (this file, README.md, figures/README.md, db_versions, hardware) are
 updated as each stage runs — they are the manuscript Methods raw material.
+
+## §7 execution status (live)
+- Phase 4 Stage-1 (n=5 timing, x86_64-v3 pinned): SUBMITTED 2026-10-15 — myconote 146848, funannotate 146849, maker 146850 (70 jobs each) → results_timing_stage1/. BRAKER HELD pending gate 146843.
+- Phase 5 production + accuracy: pending Stage-1 verification.
+- Full run record + pinning-fairness decision: see PHASE4_5_RUN_STATUS.md

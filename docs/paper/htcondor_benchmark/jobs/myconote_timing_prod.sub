@@ -1,0 +1,200 @@
+# TIMING sub (auto-generated) — myconote, x86_64-v3 pinned.
+# Fair wall-time: all arms pinned to one microarch generation
+# (strict same-node pinning infeasible on this shared pool).
+# CPU-seconds (performance.json total_cpu_seconds) is the
+# contention-robust check. Submit with RESULTS_DIR pointed at a
+# dedicated timing dir via condor_submit -append.
+
+# HTCondor submit file for MycoNote-CLI benchmark runs
+# Submits 42 jobs: 14 genomes x 3 replicates
+#
+# Usage:
+#   condor_submit myconote.sub
+#
+# Required environment (getenv=true propagates the submitting shell's env,
+# so `source configs/htcondor.conf` before condor_submit):
+#   BENCHMARK_DIR        - root directory of the benchmark
+#   DATA_DIR             - directory containing genome data (one subdir per genome)
+#   RESULTS_DIR          - directory for outputs
+#   MYCONOTE_DB_DIR      - annotate database directory (default ~/.myconote/dbs)
+#   AUGUSTUS_CONFIG_PATH - Augustus species configs (default ~/.myconote/augustus_config)
+
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_myconote.sh
+getenv         = true
+
+# Resources per job
+request_cpus   = 8
+request_memory = 16 GB
+request_disk   = 10 GB
+
+# Logging
+log    = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).log
+output = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).out
+error  = $(RESULTS_DIR)/myconote/$(genome_id)_rep$(rep).err
+
+# Arguments: genome_id, replicate_number
+arguments = $(genome_id) $(rep) $(BENCHMARK_DIR) $(DATA_DIR) $(RESULTS_DIR)
+
+# Transfer required files
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+
+# Notification
+notification = Never
+
+# Fair-timing: pin ALL tools to the SAME AVX2-capable node class. AVX2 nodes are
+# a superset (they also run MycoNote/MAKER's non-AVX2 binaries), and it is the
+# only class where funannotate/BRAKER's AVX2-compiled Augustus 3.5.0 can run, so
+# it is the common hardware for a fair wall-time comparison. Portability
+# (MycoNote/MAKER also run the non-AVX2 pool) is measured on a separate axis.
+requirements = (TARGET.has_avx2 =?= true) && (TARGET.Microarch =?= "x86_64-v3")
+# For the headline timing production run, additionally pin each genome's full
+# tool x rep block to ONE machine for a true repeated-measures comparison, e.g.:
+#   requirements = (TARGET.has_avx2 =?= true) && (Machine == "scarcityNN.glbrc.org")
+
+# Submit one job per (genome, replicate) combination.
+# 14 genomes x 3 replicates = 42 jobs total.
+
+queue genome_id, rep from (
+    sce 1
+    sce 2
+    sce 3
+    sce 4
+    sce 5
+    sce 6
+    sce 7
+    sce 8
+    sce 9
+    sce 10
+    cal 1
+    cal 2
+    cal 3
+    cal 4
+    cal 5
+    cal 6
+    cal 7
+    cal 8
+    cal 9
+    cal 10
+    ylp 1
+    ylp 2
+    ylp 3
+    ylp 4
+    ylp 5
+    ylp 6
+    ylp 7
+    ylp 8
+    ylp 9
+    ylp 10
+    ani 1
+    ani 2
+    ani 3
+    ani 4
+    ani 5
+    ani 6
+    ani 7
+    ani 8
+    ani 9
+    ani 10
+    ncr 1
+    ncr 2
+    ncr 3
+    ncr 4
+    ncr 5
+    ncr 6
+    ncr 7
+    ncr 8
+    ncr 9
+    ncr 10
+    cne 1
+    cne 2
+    cne 3
+    cne 4
+    cne 5
+    cne 6
+    cne 7
+    cne 8
+    cne 9
+    cne 10
+    klac 1
+    klac 2
+    klac 3
+    klac 4
+    klac 5
+    klac 6
+    klac 7
+    klac 8
+    klac 9
+    klac 10
+    kpha 1
+    kpha 2
+    kpha 3
+    kpha 4
+    kpha 5
+    kpha 6
+    kpha 7
+    kpha 8
+    kpha 9
+    kpha 10
+    fgra 1
+    fgra 2
+    fgra 3
+    fgra 4
+    fgra 5
+    fgra 6
+    fgra 7
+    fgra 8
+    fgra 9
+    fgra 10
+    afum 1
+    afum 2
+    afum 3
+    afum 4
+    afum 5
+    afum 6
+    afum 7
+    afum 8
+    afum 9
+    afum 10
+    umay 1
+    umay 2
+    umay 3
+    umay 4
+    umay 5
+    umay 6
+    umay 7
+    umay 8
+    umay 9
+    umay 10
+    ccin 1
+    ccin 2
+    ccin 3
+    ccin 4
+    ccin 5
+    ccin 6
+    ccin 7
+    ccin 8
+    ccin 9
+    ccin 10
+    spom 1
+    spom 2
+    spom 3
+    spom 4
+    spom 5
+    spom 6
+    spom 7
+    spom 8
+    spom 9
+    spom 10
+    tmel 1
+    tmel 2
+    tmel 3
+    tmel 4
+    tmel 5
+    tmel 6
+    tmel 7
+    tmel 8
+    tmel 9
+    tmel 10
+)

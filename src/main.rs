@@ -260,10 +260,16 @@ fn main() -> Result<()> {
                 println!("                              (default: 50000; 0 = unbounded).");
                 println!("  --locus-prefix <prefix>     Gene ID prefix (default: GENE)");
                 println!("  --train, --self-train       Auto-train Augustus from first-pass prediction");
-                println!("  --augustus-training <mode>  stock|self (default: stock). `self` trains a");
-                println!("                              genome-specific model, falling back to stock on");
-                println!("                              failure — recommended for divergent fungi where");
-                println!("                              the stock S288C species collapses.");
+                println!("  --augustus-training <mode>  stock|self|busco (default: stock).");
+                println!("                              `self`  trains a genome-specific model on");
+                println!("                                      MycoNote's own first-pass calls (circular).");
+                println!("                              `busco` trains on the genome's COMPLETE single-copy");
+                println!("                                      BUSCO genes (non-circular; funannotate's");
+                println!("                                      accuracy mechanism). Runs BUSCO genome mode");
+                println!("                                      with --augustus, then new_species.pl +");
+                println!("                                      etraining on those genes. Needs busco=5 +");
+                println!("                                      the kingdom lineage dataset. Both modes fall");
+                println!("                                      back LOUDLY to the stock species on failure.");
                 println!("  --train-species <name>      Species name for trained model (default: <prefix>_trained)");
                 println!("  --min-predictor-support <N> Drop consensus loci backed by < N distinct");
                 println!("                              predictors (default: 1 = keep all; try 2 for");
@@ -277,10 +283,27 @@ fn main() -> Result<()> {
                 println!("                              other non-coding loci are exempt. Effective bar");
                 println!("                              = max(--min-predictor-support, N). Default 1 =");
                 println!("                              off. Try 2 for fungi.");
-                println!("  --require-complete-orf      Drop coding models whose concatenated CDS length");
-                println!("                              is not a multiple of 3 (genome-free frame check;");
-                println!("                              start/stop and internal-stop checks run at");
-                println!("                              annotate). Default: off.");
+                println!("  --require-complete-orf      Drop coding models with an incomplete ORF. Checks");
+                println!("                              the reading frame (CDS length ÷3) AND, using the");
+                println!("                              genome FASTA, the ATG start, the terminal stop, and");
+                println!("                              the absence of internal stops (translation table");
+                println!("                              from --genetic-code). Loads the genome into memory;");
+                println!("                              opt-in. Default: off.");
+                println!("  --jaccard-clip              Split fused gene models (funannotate --jaccard_clip");
+                println!("                              analog). A model is split wherever an inter-CDS gap");
+                println!("                              exceeds the max plausible intron (--max-intron),");
+                println!("                              which cannot be a real intron and so marks a fused");
+                println!("                              two-gene model. Conservative: never fragments below");
+                println!("                              150 bp coding per piece. Default: off.");
+                println!("  --repeat-filter             Drop gene models whose CDS lies mostly in soft-");
+                println!("                              masked repeat. The per-gene threshold is ADAPTIVE:");
+                println!("                              lenient (≥90% CDS-in-repeat) for compact genomes,");
+                println!("                              aggressive (down to ≥50%) for repeat-rich genomes,");
+                println!("                              ramped over 10–40% genome soft-mask fraction.");
+                println!("                              Needs the masked FASTA. Default: off.");
+                println!("  --repeat-filter-threshold <F>  Pin the per-gene CDS-in-repeat drop fraction");
+                println!("                              (0.0–1.0), overriding the adaptive value. Implies");
+                println!("                              --repeat-filter.");
                 println!("  --glimmerhmm                Also run GlimmerHMM (adds third ab initio predictor)");
                 println!("  --glimmer-dir <dir>         GlimmerHMM training directory (default: auto-detect)");
                 println!("  --genemark-mode <mode>      es|et|ep|etp (default: skip GeneMark)");
@@ -1990,12 +2013,23 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
             // Augustus model (with stock fallback on failure); `stock` keeps the
             // pre-trained species (default). Alias for --self-train / --species.
             "--augustus-training" if i + 1 < args.len() => {
+                // Mutually exclusive modes — set one, clear the others.
                 match args[i + 1].to_lowercase().as_str() {
-                    "self" | "self-train" | "selftrain" => config.self_train = true,
-                    "stock" | "pretrained" | "pre-trained" => config.self_train = false,
+                    "self" | "self-train" | "selftrain" => {
+                        config.self_train = true;
+                        config.augustus_train_busco = false;
+                    }
+                    "busco" | "busco-seeded" | "buscoseeded" => {
+                        config.augustus_train_busco = true;
+                        config.self_train = false;
+                    }
+                    "stock" | "pretrained" | "pre-trained" => {
+                        config.self_train = false;
+                        config.augustus_train_busco = false;
+                    }
                     other => {
                         return Err(anyhow::anyhow!(
-                            "Invalid --augustus-training {:?}. Expected: stock | self",
+                            "Invalid --augustus-training {:?}. Expected: stock | self | busco",
                             other
                         ));
                     }
@@ -2125,6 +2159,32 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
             "--require-complete-orf" => {
                 config.require_complete_orf = true;
                 i += 1;
+            }
+            // v0.9.0 Feature #2: split fused gene models (funannotate jaccard_clip analog).
+            "--jaccard-clip" | "--jaccard_clip" => {
+                config.jaccard_clip = true;
+                i += 1;
+            }
+            // v0.9.0 Feature #3: adaptive repeat filtering.
+            "--repeat-filter" | "--repeat_filter" => {
+                config.repeat_filter = true;
+                i += 1;
+            }
+            "--repeat-filter-threshold" if i + 1 < args.len() => {
+                match args[i + 1].parse::<f64>() {
+                    Ok(f) if (0.0..=1.0).contains(&f) => {
+                        config.repeat_filter_threshold = Some(f);
+                        config.repeat_filter = true; // pinning a threshold implies the filter is on
+                    }
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --repeat-filter-threshold {:?}: expected a fraction in 0.0-1.0 \
+                             (CDS-in-repeat fraction above which a model is dropped)",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
             }
             "--max-intron" if i + 1 < args.len() => {
                 if let Ok(n) = args[i + 1].parse::<usize>() {

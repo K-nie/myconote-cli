@@ -1,5 +1,6 @@
 pub mod augustus;
 pub mod braker;
+pub mod busco_train;
 pub mod evidence;
 pub mod genemark;
 pub mod glimmer;
@@ -124,6 +125,24 @@ pub struct PredictConfig {
     /// everything.  Predict-stage structural gate only; start/stop and
     /// internal-stop verification is done at the annotate stage.
     pub require_complete_orf: bool,
+    // ── Fused-gene splitting (v0.9.0, Feature #2) ────────────────────────────
+    /// Split fused gene models at implausibly long inter-CDS gaps
+    /// (funannotate's `--jaccard_clip` analog). `false` (default) = off; the
+    /// gap ceiling is `max_intron`. See `evidence::split_fused_model`.
+    pub jaccard_clip: bool,
+    // ── Adaptive repeat filtering (v0.9.0, Feature #3) ───────────────────────
+    /// Drop gene models whose CDS lies mostly in soft-masked repeat. `false`
+    /// (default) = off. Needs the masked FASTA (the predict input).
+    pub repeat_filter: bool,
+    /// Per-gene CDS-in-repeat drop fraction. `None` (default) picks it
+    /// adaptively from the genome-wide soft-mask fraction; `Some(f)` pins it.
+    pub repeat_filter_threshold: Option<f64>,
+    // ── BUSCO-seeded per-genome Augustus training (v0.9.0, Feature #1) ───────
+    /// Train Augustus on this genome's COMPLETE single-copy BUSCO genes before
+    /// predicting (funannotate's accuracy mechanism; non-circular, unlike
+    /// `self_train`). `false` (default) = off. Falls back loudly to the stock
+    /// species on any failure. Set by `--augustus-training busco`.
+    pub augustus_train_busco: bool,
     // ── Augustus training mode (v0.7.7) ──────────────────────────────────────
     // (self-training itself is driven by `self_train`; `--augustus-training
     // self` is an alias that sets it.  No extra field needed.)
@@ -185,6 +204,10 @@ impl Default for PredictConfig {
             consensus_min_score: None,
             consensus_min_single_exon_support: 1,
             require_complete_orf: false,
+            jaccard_clip: false,
+            repeat_filter: false,
+            repeat_filter_threshold: None,
+            augustus_train_busco: false,
             protein_hints: None,
             protein_hints_evalue: 1e-5,
             protein_hints_max: 50_000,
@@ -381,8 +404,38 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     let weights_out = config.out_dir.join("evidence_weights.toml");
     let _ = weights.write_toml(&weights_out);
 
-    // ── 0. Optional self-training ─────────────────────────────────────────────
-    let trained_species: Option<String> = if config.self_train {
+    // ── 0. Optional per-genome Augustus training ──────────────────────────────
+    // Two independent, mutually-exclusive training modes, both opt-in:
+    //   * BUSCO-seeded (`--augustus-training busco`) — trains on the genome's
+    //     COMPLETE single-copy BUSCO genes (non-circular, funannotate's edge).
+    //   * self-train   (`--augustus-training self`)  — trains on MycoNote's own
+    //     first-pass calls (circular, but cheap). BUSCO training wins if both
+    //     are somehow set.
+    // Either way, a failure falls back LOUDLY to the stock species — a quiet
+    // one-liner once let an A/B read "no change" without noticing nothing
+    // trained.
+    let (stock_species, _stock_warn) = kingdom::resolve_augustus_species(
+        &config.kingdom,
+        config.augustus_species.as_deref(),
+        config.clade,
+    );
+    let training_requested = config.augustus_train_busco || config.self_train;
+    let trained_species: Option<String> = if config.augustus_train_busco {
+        progress::step(1, 4, "Augustus BUSCO-seeded training…");
+        match run_busco_training(config) {
+            Ok(name) => {
+                println!("  ✓ Trained species (BUSCO-seeded): {}", name);
+                Some(name)
+            }
+            Err(e) => {
+                eprintln!(
+                    "{}",
+                    training_fallback_banner("BUSCO-seeded", &e.to_string(), &stock_species)
+                );
+                None
+            }
+        }
+    } else if config.self_train {
         progress::step(1, 4, "Augustus self-training (first-pass prediction)…");
         match run_self_training(config) {
             Ok(name) => {
@@ -390,15 +443,10 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
                 Some(name)
             }
             Err(e) => {
-                // LOUD, impossible-to-miss fallback: the user asked for a
-                // self-trained model and did NOT get one. A quiet one-liner here
-                // let an A/B read "no change" without noticing nothing trained.
-                let (stock, _warn) = kingdom::resolve_augustus_species(
-                    &config.kingdom,
-                    config.augustus_species.as_deref(),
-                    config.clade,
+                eprintln!(
+                    "{}",
+                    training_fallback_banner("self", &e.to_string(), &stock_species)
                 );
-                eprintln!("{}", self_training_fallback_banner(&e.to_string(), &stock));
                 None
             }
         }
@@ -406,7 +454,7 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         None
     };
 
-    let step_offset = if config.self_train { 1 } else { 0 };
+    let step_offset = if training_requested { 1 } else { 0 };
 
     // ── 1. Augustus ───────────────────────────────────────────────────────────
     let aug_gff = config.out_dir.join("augustus.gff3");
@@ -795,11 +843,75 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
         min_support_single_exon: config.consensus_min_single_exon_support,
         require_complete_orf: config.require_complete_orf,
     };
+
+    // Build the consensus context (all opt-in). Both the genome index and the
+    // soft-mask map are loaded ONLY when their feature is requested, so the
+    // default path neither reads the FASTA twice nor changes its output.
+    //
+    //   * genome index  — needed by the verified-ORF nucleotide check
+    //     (`--require-complete-orf`). Eukaryotic genomes are multi-GB, hence
+    //     the load is gated on the flag; the existing training path reads the
+    //     genome the same way, so this matches established memory behaviour.
+    //   * repeat mask   — needed by `--repeat-filter`; read with case preserved
+    //     from the masked FASTA (lowercase runs = repeats).
+    let genome_index = if config.require_complete_orf {
+        match crate::parser::fasta::read_fasta_index(&config.masked_fasta) {
+            Ok(idx) => Some(idx),
+            Err(e) => {
+                eprintln!(
+                    "  ⚠  --require-complete-orf: could not load genome for the \
+                     nucleotide ORF check ({}); falling back to the length-only \
+                     frame gate.",
+                    e
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let repeat_mask = if config.repeat_filter {
+        match evidence::RepeatMask::from_fasta(&config.masked_fasta) {
+            Ok(m) => {
+                println!(
+                    "  Repeat filter: genome is {:.1}% soft-masked",
+                    m.masked_fraction * 100.0
+                );
+                Some(m)
+            }
+            Err(e) => {
+                eprintln!(
+                    "  ⚠  --repeat-filter: could not read the masked FASTA ({}); \
+                     repeat filtering will be skipped.",
+                    e
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let ctx = evidence::ConsensusContext {
+        genome: genome_index.as_ref(),
+        repeat_mask: repeat_mask.as_ref(),
+        extras: evidence::ConsensusExtras {
+            jaccard_clip: config.jaccard_clip,
+            jaccard_clip_max_intron: config.max_intron,
+            jaccard_clip_min_cds: 150,
+            repeat_filter: config.repeat_filter,
+            repeat_filter_threshold: config.repeat_filter_threshold,
+            genetic_code: config.genetic_code,
+        },
+    };
+
     let gene_count = evidence::merge_predictions_filtered(
         &inputs_ref,
         &consensus_gff,
         &config.locus_prefix,
         &consensus_filter,
+        &ctx,
     )?;
 
     println!("  ✓  Consensus GFF3 → {}", consensus_gff.display());
@@ -873,25 +985,40 @@ fn write_summary(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Self-training helper
+// Training helpers (self-training + BUSCO-seeded training)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Build the prominent, impossible-to-miss self-training fallback warning.
+/// Build the prominent, impossible-to-miss training-fallback warning for any
+/// opt-in Augustus training mode (`self` or `BUSCO-seeded`).
 ///
 /// Returned as a `String` (rather than printed inline) so it is unit-testable
 /// and so the caller controls the stream. The caller prints it to stderr. The
-/// message states plainly that self-training did NOT happen, why, and which
-/// stock species is being used instead — the A/B that motivated FIX A saw the
+/// message states plainly that training did NOT happen, why, and which stock
+/// species is being used instead — the A/B that motivated this banner saw the
 /// old one-liner and read "no change", never realising nothing had trained.
-fn self_training_fallback_banner(reason: &str, stock_species: &str) -> String {
+/// Mode-specific wording preserves the self-training text ("SELF-TRAINING DID
+/// NOT RUN", "NOT self-trained") so existing cluster logs and tests still read.
+fn training_fallback_banner(mode: &str, reason: &str, stock_species: &str) -> String {
+    let (headline, flag, adjective) = match mode {
+        "BUSCO-seeded" | "busco" => (
+            "BUSCO-SEEDED TRAINING DID NOT RUN",
+            "--augustus-training busco",
+            "BUSCO-trained",
+        ),
+        _ => (
+            "SELF-TRAINING DID NOT RUN",
+            "--augustus-training self / --self-train",
+            "self-trained",
+        ),
+    };
     format!(
         "\n\
          ======================================================================\n\
-         !!  WARNING: Augustus SELF-TRAINING DID NOT RUN                     !!\n\
+         !!  WARNING: Augustus {headline}  !!\n\
          ======================================================================\n\
-         You requested self-training (--augustus-training self / --self-train),\n\
+         You requested training ({flag}),\n\
          but NO genome-specific model was trained. Prediction is FALLING BACK\n\
-         to the stock pre-trained species. These results are NOT self-trained.\n\
+         to the stock pre-trained species. These results are NOT {adjective}.\n\
          \n\
            reason         : {reason}\n\
            using species  : {stock_species}  (stock / pre-trained fallback)\n\
@@ -902,8 +1029,88 @@ fn self_training_fallback_banner(reason: &str, stock_species: &str) -> String {
                              • generic template missing → run\n\
                                `myconote setup --dbs augustus-fungi` to provision\n\
                                species/generic/ under $AUGUSTUS_CONFIG_PATH.\n\
+                             • (BUSCO mode) BUSCO absent / wrong lineage → install\n\
+                               busco=5 and provision the kingdom lineage dataset.\n\
          ======================================================================"
     )
+}
+
+/// Run a BUSCO-seeded Augustus training (Feature #1). Runs BUSCO genome mode on
+/// the assembly, converts the Complete single-copy BUSCO gene models into a
+/// GFF3 training set, and hands that to the existing Augustus-training plumbing.
+/// Returns the trained species name, or an Err that the caller turns into the
+/// loud stock-species fallback banner.
+fn run_busco_training(config: &PredictConfig) -> Result<String> {
+    // Same companion-script gate as self-training: bail before the (expensive)
+    // BUSCO run if new_species.pl / etraining cannot be resolved on this install.
+    if let Some(reason) = train::self_training_unavailable_reason() {
+        return Err(MycoNoteError::UnsupportedFormat(format!(
+            "{reason} — BUSCO-seeded training cannot run on this install"
+        )));
+    }
+
+    let busco_dir = config.out_dir.join("busco_train");
+    std::fs::create_dir_all(&busco_dir).map_err(MycoNoteError::Io)?;
+
+    // Seed BUSCO's internal Augustus first pass with the clade-aware default so
+    // a divergent fungus does not bootstrap from S288C.
+    let (seed_species, _warn) = kingdom::resolve_augustus_species(
+        &config.kingdom,
+        config.augustus_species.as_deref(),
+        config.clade,
+    );
+    let lineage = config.kingdom.busco_lineage();
+
+    let run_dir = busco_train::run_busco_genome(
+        &config.masked_fasta,
+        lineage,
+        &busco_dir,
+        config.threads,
+        &seed_species,
+    )?;
+
+    let training_gff = busco_dir.join("busco_training.gff3");
+    let n_genes = busco_train::collect_busco_training_gff(&run_dir, &training_gff)?;
+    println!(
+        "  Built BUSCO training set: {} complete single-copy gene models → {}",
+        n_genes,
+        training_gff.display()
+    );
+    // The trainer itself requires ≥ 50; surface a clearer message here first.
+    if n_genes < 50 {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "only {} complete single-copy BUSCO gene models recovered (need ≥ 50). \
+             The assembly may be too fragmented or the lineage may be wrong.",
+            n_genes
+        )));
+    }
+
+    let species_name = config
+        .train_species
+        .clone()
+        .unwrap_or_else(|| format!("{}_busco", config.locus_prefix.to_lowercase()));
+
+    let train_config = train::TrainConfig {
+        gff: training_gff,
+        fasta: config.masked_fasta.clone(),
+        species_name: species_name.clone(),
+        out_dir: busco_dir,
+        optimize: false, // skip the 1–4 h optimize pass for the predict path
+        threads: config.threads,
+        ..train::TrainConfig::default()
+    };
+
+    let report = train::run_training(&train_config)?;
+
+    if !trained_model_usable(&report) {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "BUSCO-trained species '{}' is unusable (species_path={:?}, \
+             gene_sensitivity={:?}); falling back to stock/default species",
+            report.species_name, report.species_path, report.gene_sensitivity
+        )));
+    }
+
+    Ok(species_name)
 }
 
 /// Run a first-pass prediction with the default model, then use those gene
@@ -1169,7 +1376,7 @@ mod predict_feature_tests {
     #[test]
     fn self_training_fallback_banner_is_loud_and_names_stock_species() {
         let reason = "new_species.pl not found";
-        let banner = self_training_fallback_banner(reason, "saccharomyces_cerevisiae_S288C");
+        let banner = training_fallback_banner("self", reason, "saccharomyces_cerevisiae_S288C");
 
         // Impossible to miss: states training did NOT run.
         assert!(banner.contains("SELF-TRAINING DID NOT RUN"));
@@ -1181,6 +1388,18 @@ mod predict_feature_tests {
         // Tells the user how to fix it.
         assert!(banner.contains("AUGUSTUS_SCRIPTS_PATH"));
         // Multi-line banner, not a single easy-to-miss line.
+        assert!(banner.lines().count() >= 8);
+    }
+
+    #[test]
+    fn busco_training_fallback_banner_is_loud_and_mode_specific() {
+        let reason = "busco not found in PATH";
+        let banner = training_fallback_banner("BUSCO-seeded", reason, "aspergillus_nidulans");
+        assert!(banner.contains("BUSCO-SEEDED TRAINING DID NOT RUN"));
+        assert!(banner.contains("NOT BUSCO-trained"));
+        assert!(banner.contains("--augustus-training busco"));
+        assert!(banner.contains(reason));
+        assert!(banner.contains("aspergillus_nidulans"));
         assert!(banner.lines().count() >= 8);
     }
 

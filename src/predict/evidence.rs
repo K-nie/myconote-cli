@@ -19,6 +19,7 @@
 ///   SNAP:            3  (fast but noisier)
 ///   Protein align:  20  (homology evidence is strongest)
 ///   EST/transcript:  8  (good exon support)
+use crate::parser::fasta::FastaRecord;
 use crate::parser::gff::{GFFReader, GFFRecord};
 use crate::utils::error::Result;
 use std::collections::HashMap;
@@ -262,6 +263,469 @@ fn orf_length_complete(m: &GeneModel) -> bool {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Verified ORF-completeness check (v0.9.0, Feature #4)
+//
+// Extends the genome-free frame gate (`orf_length_complete`) with the three
+// nucleotide checks it could not make without the FASTA: the start codon, the
+// terminal stop codon, and the absence of an internal stop. When a genome index
+// is supplied the consensus filter runs the full check; without one it degrades
+// to the length-only gate (so the flag still does something in a genome-less
+// unit test). The check is opt-in via `--require-complete-orf` and never alters
+// the default output.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Why a coding model failed (or passed) the ORF-completeness check. Used to
+/// give the dropped-locus log a precise, actionable reason.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OrfStatus {
+    Complete,
+    /// Concatenated CDS length is not a multiple of 3 — broken frame.
+    BadLength,
+    /// First codon is not a start codon (ATG).
+    NoStart,
+    /// Final codon is not a stop codon for the active translation table.
+    NoStop,
+    /// A stop codon appears before the terminal codon (truncating protein).
+    InternalStop,
+    /// The genome lacks this model's sequence, so the nucleotide checks could
+    /// not run. Treated as "keep" — we never drop a model over a tool-side gap.
+    Unverifiable,
+}
+
+impl OrfStatus {
+    fn reason(self) -> &'static str {
+        match self {
+            OrfStatus::Complete => "complete ORF",
+            OrfStatus::BadLength => "incomplete ORF (CDS length not a multiple of 3)",
+            OrfStatus::NoStart => "incomplete ORF (no ATG start codon)",
+            OrfStatus::NoStop => "incomplete ORF (no terminal stop codon)",
+            OrfStatus::InternalStop => "incomplete ORF (internal stop codon)",
+            OrfStatus::Unverifiable => "ORF unverifiable (sequence not found in genome)",
+        }
+    }
+}
+
+/// Stop codons for an NCBI translation table. Tables 1 (standard) and 12
+/// (the *Candida* CTG clade, the common fungal exceptions) share the standard
+/// stop set; only internal-codon reassignment differs there, not the stops.
+/// Table 6 (some ciliates — rare in fungi) reassigns TAA/TAG to Gln, leaving
+/// TGA as the sole stop. Any other table falls back to the standard set.
+fn stop_codons_for(code: u8) -> &'static [&'static str] {
+    match code {
+        6 => &["TGA"],
+        _ => &["TAA", "TAG", "TGA"],
+    }
+}
+
+/// Reconstruct a model's spliced coding sequence (5'→3') from the genome.
+/// CDS intervals are concatenated in ascending genomic order; a minus-strand
+/// model is then reverse-complemented, which yields the exons in coding order
+/// each complemented — exactly the mRNA coding sequence. Returns `None` when
+/// the model has no CDS, or the genome has no record for its sequence.
+fn spliced_cds(m: &GeneModel, genome: &HashMap<String, FastaRecord>) -> Option<String> {
+    let rec = genome.get(&m.seqid)?;
+    let mut intervals: Vec<(u64, u64)> = m
+        .records
+        .iter()
+        .filter(|r| r.feature_type == "CDS")
+        .map(|r| (r.start, r.end))
+        .collect();
+    if intervals.is_empty() {
+        return None;
+    }
+    intervals.sort_by_key(|&(s, _)| s);
+    let mut seq = String::new();
+    for (s, e) in &intervals {
+        seq.push_str(rec.subsequence(*s, *e));
+    }
+    if m.strand == '-' {
+        Some(crate::parser::fasta::reverse_complement(&seq))
+    } else {
+        Some(seq)
+    }
+}
+
+/// Classify a model's ORF completeness. A non-coding model (0 CDS) is exempt
+/// (`Complete`). With no genome this reduces to the length-only frame gate;
+/// with a genome it adds the start / stop / internal-stop nucleotide checks.
+fn orf_status(
+    m: &GeneModel,
+    genome: Option<&HashMap<String, FastaRecord>>,
+    genetic_code: u8,
+) -> OrfStatus {
+    if cds_record_count(m) == 0 {
+        return OrfStatus::Complete; // non-coding (e.g. tRNA) — not an ORF
+    }
+    if !orf_length_complete(m) {
+        return OrfStatus::BadLength;
+    }
+    let genome = match genome {
+        Some(g) => g,
+        None => return OrfStatus::Complete, // length-only mode (frame already OK)
+    };
+    let cds = match spliced_cds(m, genome) {
+        Some(s) => s,
+        None => return OrfStatus::Unverifiable,
+    };
+    if cds.len() < 3 || cds.len() % 3 != 0 {
+        return OrfStatus::BadLength;
+    }
+    if &cds[0..3] != "ATG" {
+        return OrfStatus::NoStart;
+    }
+    let stops = stop_codons_for(genetic_code);
+    let last = &cds[cds.len() - 3..];
+    if !stops.contains(&last) {
+        return OrfStatus::NoStop;
+    }
+    let n_codons = cds.len() / 3;
+    for i in 0..(n_codons - 1) {
+        let codon = &cds[i * 3..i * 3 + 3];
+        if stops.contains(&codon) {
+            return OrfStatus::InternalStop;
+        }
+    }
+    OrfStatus::Complete
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Post-consensus passes: fused-gene splitting (Feature #2) and repeat filtering
+// (Feature #3). Both run AFTER overlap resolution, on the winning models, and
+// both are opt-in — a default run never constructs them.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Extra, opt-in knobs applied to the consensus gene set after overlap
+/// resolution. All fields default to "off / unchanged", so the default merge
+/// path is byte-identical to earlier releases.
+#[derive(Debug, Clone)]
+pub struct ConsensusExtras {
+    /// Split fused gene models at implausibly long inter-CDS gaps
+    /// (funannotate's `--jaccard_clip` analog; see `split_fused_model`).
+    pub jaccard_clip: bool,
+    /// Maximum plausible intron (bp). An inter-CDS gap larger than this cannot
+    /// be a real intron, so under `--jaccard-clip` the model is split there.
+    pub jaccard_clip_max_intron: usize,
+    /// Minimum coding length (bp) each half must keep for a split to proceed.
+    /// A model that would fragment into a sub-`min` piece is left intact.
+    pub jaccard_clip_min_cds: u64,
+    /// Drop gene models whose CDS lies mostly in soft-masked repeat.
+    pub repeat_filter: bool,
+    /// Per-gene CDS-in-repeat fraction above which a model is dropped. `None`
+    /// means pick it adaptively from the genome-wide soft-mask fraction.
+    pub repeat_filter_threshold: Option<f64>,
+    /// NCBI translation table for the verified-ORF nucleotide check.
+    pub genetic_code: u8,
+}
+
+impl Default for ConsensusExtras {
+    fn default() -> Self {
+        Self {
+            jaccard_clip: false,
+            jaccard_clip_max_intron: 10_000,
+            jaccard_clip_min_cds: 150,
+            repeat_filter: false,
+            repeat_filter_threshold: None,
+            genetic_code: 1,
+        }
+    }
+}
+
+/// Everything the consensus merge needs beyond the GFF inputs and the support
+/// `ConsensusFilter`: an optional genome index (for the verified-ORF check),
+/// an optional soft-mask map (for repeat filtering), and the extra knobs.
+/// `Default` is all-off, which keeps the merge byte-identical to prior output.
+pub struct ConsensusContext<'a> {
+    pub genome: Option<&'a HashMap<String, FastaRecord>>,
+    pub repeat_mask: Option<&'a RepeatMask>,
+    pub extras: ConsensusExtras,
+}
+
+impl Default for ConsensusContext<'_> {
+    fn default() -> Self {
+        Self {
+            genome: None,
+            repeat_mask: None,
+            extras: ConsensusExtras::default(),
+        }
+    }
+}
+
+/// Split a fused gene model wherever two consecutive CDS exons are separated by
+/// a gap longer than the maximum plausible intron. A gap that large cannot be a
+/// real intron, so the model almost certainly fuses two adjacent genes — the
+/// dominant over-merge error funannotate's `--jaccard_clip` targets in
+/// gene-dense fungal genomes.
+///
+/// MycoNote differs from funannotate here, deliberately and loudly: funannotate
+/// clips with PASA *transcript-alignment* Jaccard, which needs assembled RNA
+/// evidence. The consensus stage has no transcripts, so MycoNote uses the
+/// structural signal it does have — an inter-CDS gap beyond the biological
+/// intron ceiling — and confirms the two halves are disjoint (coding-base
+/// Jaccard 0 by construction) and each still carries `min_cds` coding bases.
+/// The split is conservative: if *any* resulting piece would fall below
+/// `min_cds`, the model is left intact rather than fragmented.
+fn split_fused_model(m: &GeneModel, max_intron: usize, min_cds: u64) -> Vec<GeneModel> {
+    let mut cds: Vec<&GFFRecord> = m
+        .records
+        .iter()
+        .filter(|r| r.feature_type == "CDS")
+        .collect();
+    if cds.len() < 2 {
+        return vec![m.clone()]; // single-exon: no inter-CDS gap to split on
+    }
+    cds.sort_by_key(|r| r.start);
+
+    // Partition CDS indices into contiguous runs, breaking at over-long gaps.
+    let mut groups: Vec<Vec<usize>> = Vec::new();
+    let mut cur: Vec<usize> = vec![0];
+    for i in 1..cds.len() {
+        let gap = cds[i]
+            .start
+            .saturating_sub(cds[i - 1].end)
+            .saturating_sub(1);
+        if gap > max_intron as u64 {
+            groups.push(std::mem::take(&mut cur));
+        }
+        cur.push(i);
+    }
+    groups.push(cur);
+
+    if groups.len() < 2 {
+        return vec![m.clone()]; // no over-long gap → nothing to split
+    }
+
+    let group_cds_len =
+        |g: &[usize]| -> u64 { g.iter().map(|&i| cds[i].end - cds[i].start + 1).sum() };
+
+    // Conservative guard: never fragment a model into a sub-`min_cds` piece.
+    if groups.iter().any(|g| group_cds_len(g) < min_cds) {
+        return vec![m.clone()];
+    }
+
+    let gene_rec = m.records.iter().find(|r| r.feature_type == "gene").cloned();
+    let tx_rec = m
+        .records
+        .iter()
+        .find(|r| matches!(r.feature_type.as_str(), "mRNA" | "transcript"))
+        .cloned();
+
+    let mut out: Vec<GeneModel> = Vec::with_capacity(groups.len());
+    for g in &groups {
+        let gstart = g.iter().map(|&i| cds[i].start).min().unwrap();
+        let gend = g.iter().map(|&i| cds[i].end).max().unwrap();
+
+        let mut recs: Vec<GFFRecord> = Vec::new();
+        if let Some(mut gr) = gene_rec.clone() {
+            gr.start = gstart;
+            gr.end = gend;
+            recs.push(gr);
+        }
+        if let Some(mut tr) = tx_rec.clone() {
+            tr.start = gstart;
+            tr.end = gend;
+            recs.push(tr);
+        }
+        for &i in g {
+            recs.push(cds[i].clone());
+        }
+
+        out.push(GeneModel {
+            seqid: m.seqid.clone(),
+            start: gstart,
+            end: gend,
+            strand: m.strand,
+            score: m.score,
+            source: m.source.clone(),
+            records: recs,
+        });
+    }
+    out
+}
+
+/// Apply `split_fused_model` across a set of winners. Returns the (possibly
+/// larger) model list and the number of *extra* loci created by splitting.
+fn apply_jaccard_clip(
+    models: Vec<GeneModel>,
+    max_intron: usize,
+    min_cds: u64,
+) -> (Vec<GeneModel>, usize) {
+    let mut out: Vec<GeneModel> = Vec::with_capacity(models.len());
+    let mut extra = 0usize;
+    for m in models {
+        let parts = split_fused_model(&m, max_intron, min_cds);
+        if parts.len() > 1 {
+            extra += parts.len() - 1;
+            eprintln!(
+                "  ⚠  jaccard-clip split fused model {}:{}-{} ({}) into {} genes \
+                 (inter-CDS gap > {} bp)",
+                m.seqid,
+                m.start,
+                m.end,
+                m.source,
+                parts.len(),
+                max_intron
+            );
+        }
+        out.extend(parts);
+    }
+    (out, extra)
+}
+
+/// Soft-mask (lowercase) intervals read from a masked FASTA with case
+/// **preserved**. The predict input is soft-masked (repeats lowercased), so
+/// lowercase runs are the repeat annotation. Built only when `--repeat-filter`
+/// is on. The streaming reader keeps memory to the per-sequence run list, not
+/// the whole genome.
+pub struct RepeatMask {
+    /// seqid → sorted, 1-based inclusive lowercase runs.
+    intervals: HashMap<String, Vec<(u64, u64)>>,
+    /// Genome-wide fraction of bases that are soft-masked (lowercase).
+    pub masked_fraction: f64,
+}
+
+impl RepeatMask {
+    /// Scan a masked FASTA, preserving case, and record every lowercase run.
+    pub fn from_fasta(path: &Path) -> Result<Self> {
+        use std::io::{BufRead, BufReader};
+        let f = std::fs::File::open(path).map_err(crate::utils::error::MycoNoteError::Io)?;
+        let reader = BufReader::new(f);
+
+        let mut intervals: HashMap<String, Vec<(u64, u64)>> = HashMap::new();
+        let mut cur_id: Option<String> = None;
+        let mut pos: u64 = 0;
+        let mut run_start: Option<u64> = None;
+        let mut total: u64 = 0;
+        let mut masked: u64 = 0;
+
+        for line in reader.lines() {
+            let line = line.map_err(crate::utils::error::MycoNoteError::Io)?;
+            let t = line.trim_end();
+            if t.is_empty() {
+                continue;
+            }
+            if let Some(stripped) = t.strip_prefix('>') {
+                // Close any run open at the end of the previous sequence.
+                if let (Some(id), Some(rs)) = (&cur_id, run_start.take()) {
+                    intervals.entry(id.clone()).or_default().push((rs, pos));
+                }
+                let id = stripped.split_whitespace().next().unwrap_or("").to_string();
+                cur_id = Some(id);
+                pos = 0;
+                run_start = None;
+                continue;
+            }
+            for ch in t.chars() {
+                if ch.is_whitespace() {
+                    continue;
+                }
+                pos += 1;
+                total += 1;
+                if ch.is_ascii_lowercase() {
+                    masked += 1;
+                    if run_start.is_none() {
+                        run_start = Some(pos);
+                    }
+                } else if let Some(rs) = run_start.take() {
+                    if let Some(id) = &cur_id {
+                        intervals.entry(id.clone()).or_default().push((rs, pos - 1));
+                    }
+                }
+            }
+        }
+        // Close a run that reaches the end of the final sequence.
+        if let (Some(id), Some(rs)) = (&cur_id, run_start.take()) {
+            intervals.entry(id.clone()).or_default().push((rs, pos));
+        }
+
+        let masked_fraction = if total == 0 {
+            0.0
+        } else {
+            masked as f64 / total as f64
+        };
+        Ok(RepeatMask {
+            intervals,
+            masked_fraction,
+        })
+    }
+
+    /// Fraction of a model's CDS bases that fall within soft-masked repeat.
+    fn cds_repeat_fraction(&self, m: &GeneModel) -> f64 {
+        let runs = match self.intervals.get(&m.seqid) {
+            Some(r) => r,
+            None => return 0.0,
+        };
+        let mut cds: Vec<(u64, u64)> = m
+            .records
+            .iter()
+            .filter(|r| r.feature_type == "CDS")
+            .map(|r| (r.start, r.end))
+            .collect();
+        if cds.is_empty() {
+            return 0.0;
+        }
+        cds.sort_by_key(|&(s, _)| s);
+        let total: u64 = cds.iter().map(|&(s, e)| e - s + 1).sum();
+        if total == 0 {
+            return 0.0;
+        }
+        let overlap = interval_overlap_bp(&cds, runs);
+        overlap as f64 / total as f64
+    }
+
+    /// Adaptive per-gene drop threshold, chosen from the genome-wide masked
+    /// fraction when the user did not pin one with `--repeat-filter-threshold`.
+    ///
+    /// Compact, repeat-poor genomes are treated leniently — only a model whose
+    /// CDS is almost entirely repeat (≥ 90 %) is dropped. Repeat-rich genomes
+    /// trigger aggressive filtering down to a 50 % CDS-in-repeat threshold. The
+    /// threshold ramps linearly between 10 % and 40 % genome-wide soft-mask
+    /// fraction (funannotate flips `--repeat_filter` on by hand; MycoNote scales
+    /// it so a compact genome is not over-filtered while a transposon-rich one
+    /// is).
+    pub fn adaptive_threshold(&self) -> f64 {
+        let (lo, hi) = (0.10_f64, 0.40_f64);
+        let f = self.masked_fraction.clamp(lo, hi);
+        let t = (f - lo) / (hi - lo); // 0 at lo, 1 at hi
+        0.90 - t * (0.90 - 0.50) // 0.90 (lenient) → 0.50 (aggressive)
+    }
+}
+
+/// Drop gene models whose CDS-in-repeat fraction exceeds `threshold`. Returns
+/// the kept models and the number dropped. Non-coding models (0 CDS) are never
+/// dropped. Every drop is logged by name and reason (no silent data loss).
+fn apply_repeat_filter(
+    models: Vec<GeneModel>,
+    mask: &RepeatMask,
+    threshold: f64,
+) -> (Vec<GeneModel>, usize) {
+    let mut kept: Vec<GeneModel> = Vec::with_capacity(models.len());
+    let mut dropped = 0usize;
+    for m in models {
+        if cds_record_count(&m) == 0 {
+            kept.push(m);
+            continue;
+        }
+        let frac = mask.cds_repeat_fraction(&m);
+        if frac > threshold {
+            dropped += 1;
+            eprintln!(
+                "  ⚠  repeat filter dropped {}:{}-{} ({}) — {:.0}% of CDS in soft-masked \
+                 repeat (> {:.0}% threshold)",
+                m.seqid,
+                m.start,
+                m.end,
+                m.source,
+                frac * 100.0,
+                threshold * 100.0,
+            );
+        } else {
+            kept.push(m);
+        }
+    }
+    (kept, dropped)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Gene model
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -408,7 +872,7 @@ fn cds_jaccard(a: &[(u64, u64)], b: &[(u64, u64)]) -> f64 {
 /// → `resolve_overlaps_filtered` directly, so this is only compiled for tests.
 #[cfg(test)]
 fn resolve_overlaps(models: Vec<GeneModel>) -> Vec<GeneModel> {
-    resolve_overlaps_filtered(models, &ConsensusFilter::default()).0
+    resolve_overlaps_filtered(models, &ConsensusFilter::default(), None, 1).0
 }
 
 /// Like `resolve_overlaps` but applies a `ConsensusFilter` to each group's
@@ -418,6 +882,8 @@ fn resolve_overlaps(models: Vec<GeneModel>) -> Vec<GeneModel> {
 fn resolve_overlaps_filtered(
     mut models: Vec<GeneModel>,
     filter: &ConsensusFilter,
+    genome: Option<&HashMap<String, FastaRecord>>,
+    genetic_code: u8,
 ) -> (Vec<GeneModel>, usize) {
     // Sort by start coordinate
     models.sort_by(|a, b| a.start.cmp(&b.start).then(a.seqid.cmp(&b.seqid)));
@@ -528,7 +994,12 @@ fn resolve_overlaps_filtered(
             // independent of the score rescue (an incomplete ORF is structural,
             // not a confidence question).
             let keeps_support = filter.keeps(support, winner_score, single_exon_ab_initio);
-            let orf_ok = !filter.require_complete_orf || orf_length_complete(&models[group[best]]);
+            let orf = if filter.require_complete_orf {
+                orf_status(&models[group[best]], genome, genetic_code)
+            } else {
+                OrfStatus::Complete
+            };
+            let orf_ok = orf == OrfStatus::Complete;
 
             if keeps_support && orf_ok {
                 kept.push(models[group[best]].clone());
@@ -537,7 +1008,7 @@ fn resolve_overlaps_filtered(
                 // No silent data loss: name every locus the filter removes and
                 // why, so non-TTY cluster logs record what the gene set lost.
                 let reason = if !orf_ok {
-                    "incomplete ORF (CDS length not a multiple of 3)".to_string()
+                    orf.reason().to_string()
                 } else {
                     let need = if single_exon_ab_initio {
                         filter
@@ -599,6 +1070,7 @@ pub fn merge_predictions(
         output_gff,
         locus_prefix,
         &ConsensusFilter::default(),
+        &ConsensusContext::default(),
     )
 }
 
@@ -610,6 +1082,7 @@ pub fn merge_predictions_filtered(
     output_gff: &Path,
     locus_prefix: &str,
     filter: &ConsensusFilter,
+    ctx: &ConsensusContext,
 ) -> Result<usize> {
     let mut all_models: Vec<GeneModel> = Vec::new();
 
@@ -643,10 +1116,69 @@ pub fn merge_predictions_filtered(
     chr_keys.sort();
     for chr in chr_keys {
         let models = by_chr.remove(&chr).unwrap();
-        let (kept, dropped) = resolve_overlaps_filtered(models, filter);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(models, filter, ctx.genome, ctx.extras.genetic_code);
         total_dropped += dropped;
         final_models.extend(kept);
     }
+
+    // ── Post-consensus pass A: fused-gene splitting (--jaccard-clip) ──────────
+    // Runs after overlap resolution so it operates on the final winners. Off by
+    // default; when on it only ever ADDS loci (splitting one into several).
+    if ctx.extras.jaccard_clip {
+        let (split_models, extra) = apply_jaccard_clip(
+            final_models,
+            ctx.extras.jaccard_clip_max_intron,
+            ctx.extras.jaccard_clip_min_cds,
+        );
+        final_models = split_models;
+        if extra > 0 {
+            println!(
+                "  Jaccard-clip: split fused models into {} extra locus/loci \
+                 (inter-CDS gap > {} bp)",
+                extra, ctx.extras.jaccard_clip_max_intron
+            );
+        }
+    }
+
+    // ── Post-consensus pass B: adaptive repeat filtering (--repeat-filter) ────
+    // Needs the soft-mask map. The per-gene threshold is the user's pin, or the
+    // adaptive value derived from the genome-wide soft-mask fraction.
+    let mut repeat_dropped = 0usize;
+    if ctx.extras.repeat_filter {
+        if let Some(mask) = ctx.repeat_mask {
+            let threshold = ctx
+                .extras
+                .repeat_filter_threshold
+                .unwrap_or_else(|| mask.adaptive_threshold());
+            println!(
+                "  Repeat filter: genome soft-mask fraction {:.1}% → per-gene drop \
+                 threshold {:.0}% CDS-in-repeat{}",
+                mask.masked_fraction * 100.0,
+                threshold * 100.0,
+                if ctx.extras.repeat_filter_threshold.is_some() {
+                    " (user-pinned)"
+                } else {
+                    " (adaptive)"
+                },
+            );
+            let (kept, dropped) = apply_repeat_filter(final_models, mask, threshold);
+            final_models = kept;
+            repeat_dropped = dropped;
+            if dropped > 0 {
+                println!(
+                    "  Repeat filter: dropped {} repeat-overlapping locus/loci",
+                    dropped
+                );
+            }
+        } else {
+            eprintln!(
+                "  ⚠  --repeat-filter requested but no soft-mask map was built \
+                 (needs the masked FASTA) — skipping repeat filtering."
+            );
+        }
+    }
+    let _ = repeat_dropped;
 
     // Sort by chromosome then position
     final_models.sort_by(|a, b| a.seqid.cmp(&b.seqid).then(a.start.cmp(&b.start)));
@@ -1177,7 +1709,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let lone = gene_model_src(100, 200, 3.0, &[(100, 200)], "snap");
 
         let (kept1, dropped1) =
-            resolve_overlaps_filtered(vec![lone.clone()], &ConsensusFilter::default());
+            resolve_overlaps_filtered(vec![lone.clone()], &ConsensusFilter::default(), None, 1);
         assert_eq!(kept1.len(), 1, "default keeps the lone locus");
         assert_eq!(dropped1, 0);
 
@@ -1186,7 +1718,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let (kept2, dropped2) = resolve_overlaps_filtered(vec![lone], &f2);
+        let (kept2, dropped2) = resolve_overlaps_filtered(vec![lone], &f2, None, 1);
         assert_eq!(
             kept2.len(),
             0,
@@ -1202,8 +1734,12 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let a = gene_model_src(100, 200, 10.0, &[(100, 200)], "augustus");
         let b = gene_model_src(100, 200, 5.0, &[(100, 200)], "genemark");
 
-        let (k1, d1) =
-            resolve_overlaps_filtered(vec![a.clone(), b.clone()], &ConsensusFilter::default());
+        let (k1, d1) = resolve_overlaps_filtered(
+            vec![a.clone(), b.clone()],
+            &ConsensusFilter::default(),
+            None,
+            1,
+        );
         assert_eq!(k1.len(), 1);
         assert_eq!(d1, 0);
 
@@ -1212,7 +1748,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let (k2, d2) = resolve_overlaps_filtered(vec![a, b], &f2);
+        let (k2, d2) = resolve_overlaps_filtered(vec![a, b], &f2, None, 1);
         assert_eq!(
             k2.len(),
             1,
@@ -1232,7 +1768,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let (k, d) = resolve_overlaps_filtered(vec![a, b], &f2);
+        let (k, d) = resolve_overlaps_filtered(vec![a, b], &f2, None, 1);
         assert_eq!(
             k.len(),
             0,
@@ -1252,7 +1788,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: Some(15.0),
             ..ConsensusFilter::default()
         };
-        let (k, d) = resolve_overlaps_filtered(vec![lone.clone()], &rescue);
+        let (k, d) = resolve_overlaps_filtered(vec![lone.clone()], &rescue, None, 1);
         assert_eq!(
             k.len(),
             1,
@@ -1265,7 +1801,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: Some(25.0),
             ..ConsensusFilter::default()
         };
-        let (k2, d2) = resolve_overlaps_filtered(vec![lone], &strict);
+        let (k2, d2) = resolve_overlaps_filtered(vec![lone], &strict, None, 1);
         assert_eq!(k2.len(), 0, "score 20 < 25 → not rescued, dropped");
         assert_eq!(d2, 1);
     }
@@ -1310,8 +1846,14 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
 
         // Default: a1/s1 merge, a2 and s2 pass through → 3 genes.
         let out_def = dir.path().join("def.gff3");
-        let n_def = merge_predictions_filtered(&inputs, &out_def, "D", &ConsensusFilter::default())
-            .unwrap();
+        let n_def = merge_predictions_filtered(
+            &inputs,
+            &out_def,
+            "D",
+            &ConsensusFilter::default(),
+            &ConsensusContext::default(),
+        )
+        .unwrap();
         assert_eq!(n_def, 3, "default keeps all three loci");
         assert_eq!(
             count_feature(&std::fs::read_to_string(&out_def).unwrap(), "gene"),
@@ -1325,7 +1867,9 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let n_f = merge_predictions_filtered(&inputs, &out_f, "F", &filter).unwrap();
+        let n_f =
+            merge_predictions_filtered(&inputs, &out_f, "F", &filter, &ConsensusContext::default())
+                .unwrap();
         assert_eq!(n_f, 1, "single-predictor loci dropped at support ≥ 2");
 
         let gff = std::fs::read_to_string(&out_f).unwrap();
@@ -1358,7 +1902,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_support_single_exon: 2, // single-exon: require corroboration
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![single, multi], &f);
+        let (kept, dropped) = resolve_overlaps_filtered(vec![single, multi], &f, None, 1);
         assert_eq!(dropped, 1, "the single-exon lone locus is dropped");
         assert_eq!(kept.len(), 1, "the multi-exon lone locus is kept");
         assert_eq!(
@@ -1378,7 +1922,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_support_single_exon: 2,
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![lone_protein], &f);
+        let (kept, dropped) = resolve_overlaps_filtered(vec![lone_protein], &f, None, 1);
         assert_eq!(dropped, 0, "evidence-backed single-exon locus is exempt");
         assert_eq!(kept.len(), 1);
     }
@@ -1394,7 +1938,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_support_single_exon: 5,
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![trna], &f);
+        let (kept, dropped) = resolve_overlaps_filtered(vec![trna], &f, None, 1);
         assert_eq!(
             dropped, 0,
             "non-coding locus is exempt from the single-exon drop"
@@ -1414,7 +1958,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             ..ConsensusFilter::default()
         };
         // effective bar for the single-exon locus = max(2, 1) = 2 > support 1.
-        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f);
+        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f, None, 1);
         assert_eq!(dropped, 1, "general bar still applies to single-exon loci");
         assert_eq!(kept.len(), 0);
     }
@@ -1443,8 +1987,12 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
         let good = gene_model_src(1000, 1101, 10.0, &[(1000, 1101)], "augustus"); // len 102
 
         // Off (default): both kept.
-        let (kept_off, dropped_off) =
-            resolve_overlaps_filtered(vec![bad.clone(), good.clone()], &ConsensusFilter::default());
+        let (kept_off, dropped_off) = resolve_overlaps_filtered(
+            vec![bad.clone(), good.clone()],
+            &ConsensusFilter::default(),
+            None,
+            1,
+        );
         assert_eq!(dropped_off, 0);
         assert_eq!(kept_off.len(), 2);
 
@@ -1453,7 +2001,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             require_complete_orf: true,
             ..ConsensusFilter::default()
         };
-        let (kept_on, dropped_on) = resolve_overlaps_filtered(vec![bad, good], &f);
+        let (kept_on, dropped_on) = resolve_overlaps_filtered(vec![bad, good], &f, None, 1);
         assert_eq!(dropped_on, 1, "frame-broken ORF dropped");
         assert_eq!(kept_on.len(), 1);
         assert_eq!((kept_on[0].start, kept_on[0].end), (1000, 1101));
@@ -1470,7 +2018,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             require_complete_orf: true,
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![bad], &f);
+        let (kept, dropped) = resolve_overlaps_filtered(vec![bad], &f, None, 1);
         assert_eq!(dropped, 1, "incomplete ORF dropped despite score rescue");
         assert_eq!(kept.len(), 0);
     }
@@ -1482,8 +2030,233 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
         let f = ConsensusFilter::default();
         assert!(f.is_noop());
         let single = gene_model_src(100, 200, 3.0, &[(100, 200)], "snap"); // len 101, lone
-        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f);
+        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f, None, 1);
         assert_eq!(dropped, 0, "default drops nothing");
         assert_eq!(kept.len(), 1);
+    }
+
+    // ── Feature #4: verified-ORF nucleotide check ─────────────────────────────
+
+    fn genome1(seq: &str) -> HashMap<String, FastaRecord> {
+        let mut m = HashMap::new();
+        m.insert(
+            "chr1".to_string(),
+            FastaRecord {
+                header: "chr1".into(),
+                id: "chr1".into(),
+                sequence: seq.to_string(),
+            },
+        );
+        m
+    }
+
+    fn model_cds(cds: &[(u64, u64)], strand: char) -> GeneModel {
+        let records: Vec<GFFRecord> = cds
+            .iter()
+            .map(|&(s, e)| GFFRecord {
+                seqid: "chr1".into(),
+                source: "augustus".into(),
+                feature_type: "CDS".into(),
+                start: s,
+                end: e,
+                score: None,
+                strand,
+                phase: Some(0),
+                attributes: HashMap::new(),
+            })
+            .collect();
+        let start = cds.iter().map(|c| c.0).min().unwrap();
+        let end = cds.iter().map(|c| c.1).max().unwrap();
+        GeneModel {
+            seqid: "chr1".into(),
+            start,
+            end,
+            strand,
+            score: 10.0,
+            source: "augustus".into(),
+            records,
+        }
+    }
+
+    #[test]
+    fn orf_status_complete_plus_strand() {
+        // ATG AAA TAA — start, body, stop; frame OK, no internal stop.
+        let g = genome1("ATGAAATAA");
+        let m = model_cds(&[(1, 9)], '+');
+        assert_eq!(orf_status(&m, Some(&g), 1), OrfStatus::Complete);
+    }
+
+    #[test]
+    fn orf_status_flags_missing_start_stop_and_internal_stop() {
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 9)], '+'), Some(&genome1("CCCAAATAA")), 1),
+            OrfStatus::NoStart
+        );
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 9)], '+'), Some(&genome1("ATGAAACCC")), 1),
+            OrfStatus::NoStop
+        );
+        // ATG TAA TAA — internal TAA at codon 1, terminal TAA is a valid stop.
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 9)], '+'), Some(&genome1("ATGTAATAA")), 1),
+            OrfStatus::InternalStop
+        );
+    }
+
+    #[test]
+    fn orf_status_bad_length_before_genome_lookup() {
+        // 8 bp CDS — frame broken; flagged even with a genome present.
+        let g = genome1("ATGAAATA");
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 8)], '+'), Some(&g), 1),
+            OrfStatus::BadLength
+        );
+    }
+
+    #[test]
+    fn orf_status_length_only_without_genome() {
+        // No genome → degrade to the frame-only gate (3-divisible = Complete).
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 9)], '+'), None, 1),
+            OrfStatus::Complete
+        );
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 8)], '+'), None, 1),
+            OrfStatus::BadLength
+        );
+    }
+
+    #[test]
+    fn orf_status_noncoding_is_exempt() {
+        // A model with no CDS (e.g. tRNA) is never an ORF.
+        let trna = GeneModel {
+            seqid: "chr1".into(),
+            start: 1,
+            end: 70,
+            strand: '+',
+            score: 1.0,
+            source: "trnascan".into(),
+            records: vec![GFFRecord {
+                seqid: "chr1".into(),
+                source: "trnascan".into(),
+                feature_type: "tRNA".into(),
+                start: 1,
+                end: 70,
+                score: None,
+                strand: '+',
+                phase: None,
+                attributes: HashMap::new(),
+            }],
+        };
+        assert_eq!(
+            orf_status(&trna, Some(&genome1("ACGT")), 1),
+            OrfStatus::Complete
+        );
+    }
+
+    #[test]
+    fn orf_status_minus_strand_complete() {
+        // Place the reverse-complement of a complete ORF on the plus strand, so a
+        // minus-strand model recovers ATG…TAA after reverse-complementing.
+        let plus = crate::parser::fasta::reverse_complement("ATGAAATAA");
+        let g = genome1(&plus);
+        let m = model_cds(&[(1, plus.len() as u64)], '-');
+        assert_eq!(orf_status(&m, Some(&g), 1), OrfStatus::Complete);
+    }
+
+    #[test]
+    fn orf_status_table6_only_tga_is_stop() {
+        // Table 6 reassigns TAA/TAG to Gln; a terminal TAA is then NOT a stop.
+        let g = genome1("ATGAAATAA");
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 9)], '+'), Some(&g), 6),
+            OrfStatus::NoStop
+        );
+        // …but a terminal TGA still is.
+        let g2 = genome1("ATGAAATGA");
+        assert_eq!(
+            orf_status(&model_cds(&[(1, 9)], '+'), Some(&g2), 6),
+            OrfStatus::Complete
+        );
+    }
+
+    // ── Feature #2: fused-gene splitting (jaccard-clip) ───────────────────────
+
+    #[test]
+    fn jaccard_clip_splits_on_overlong_gap() {
+        // Two CDS clusters 19 600 bp apart — far beyond any real intron.
+        let m = model_cds(&[(100, 400), (20_000, 20_300)], '+');
+        let parts = split_fused_model(&m, 10_000, 150);
+        assert_eq!(parts.len(), 2, "fused model split into two genes");
+        assert_eq!(parts[0].start, 100);
+        assert_eq!(parts[1].start, 20_000);
+    }
+
+    #[test]
+    fn jaccard_clip_keeps_normal_introns_intact() {
+        // 59 bp gap — an ordinary intron; the model stays one gene.
+        let m = model_cds(&[(100, 400), (460, 760)], '+');
+        let parts = split_fused_model(&m, 10_000, 150);
+        assert_eq!(parts.len(), 1);
+    }
+
+    #[test]
+    fn jaccard_clip_is_conservative_about_tiny_fragments() {
+        // Over-long gap, but the second piece is only 101 bp (< 150): don't split.
+        let m = model_cds(&[(100, 400), (20_000, 20_100)], '+');
+        let parts = split_fused_model(&m, 10_000, 150);
+        assert_eq!(parts.len(), 1, "never fragment below the min coding length");
+    }
+
+    #[test]
+    fn jaccard_clip_single_exon_never_splits() {
+        let m = model_cds(&[(100, 5_000)], '+');
+        assert_eq!(split_fused_model(&m, 10_000, 150).len(), 1);
+    }
+
+    // ── Feature #3: adaptive repeat filtering ─────────────────────────────────
+
+    #[test]
+    fn repeat_mask_reads_lowercase_runs_and_fraction() {
+        let dir = tempfile::tempdir().unwrap();
+        let fa = dir.path().join("masked.fa");
+        // 12 bases, positions 5-8 lowercase (soft-masked repeat).
+        std::fs::write(&fa, ">chr1\nACGTacgtACGT\n").unwrap();
+        let mask = RepeatMask::from_fasta(&fa).unwrap();
+        assert!((mask.masked_fraction - 4.0 / 12.0).abs() < 1e-9);
+
+        // CDS fully inside the repeat run → 100%.
+        assert!((mask.cds_repeat_fraction(&model_cds(&[(5, 8)], '+')) - 1.0).abs() < 1e-9);
+        // CDS outside any repeat → 0%.
+        assert!(mask.cds_repeat_fraction(&model_cds(&[(1, 4)], '+')).abs() < 1e-9);
+        // CDS half in repeat → 50%.
+        assert!((mask.cds_repeat_fraction(&model_cds(&[(1, 8)], '+')) - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn repeat_mask_adaptive_threshold_scales_with_repeat_content() {
+        // Compact genome (≤10% masked) → lenient 0.90.
+        let dir = tempfile::tempdir().unwrap();
+        let fa_lo = dir.path().join("lo.fa");
+        std::fs::write(&fa_lo, ">c\nACGTACGTAC\n").unwrap(); // 0% masked
+        assert!((RepeatMask::from_fasta(&fa_lo).unwrap().adaptive_threshold() - 0.90).abs() < 1e-9);
+
+        // Repeat-rich genome (≥40% masked) → aggressive 0.50.
+        let fa_hi = dir.path().join("hi.fa");
+        std::fs::write(&fa_hi, ">c\nacgtacgtac\n").unwrap(); // 100% masked, clamps to 0.40
+        assert!((RepeatMask::from_fasta(&fa_hi).unwrap().adaptive_threshold() - 0.50).abs() < 1e-9);
+    }
+
+    #[test]
+    fn repeat_filter_drops_repeat_heavy_models_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let fa = dir.path().join("m.fa");
+        // chr1: 10 bp, all lowercase (full repeat).
+        std::fs::write(&fa, ">chr1\nacgtacgtac\n").unwrap();
+        let mask = RepeatMask::from_fasta(&fa).unwrap();
+        let in_repeat = model_cds(&[(1, 10)], '+');
+        let (kept, dropped) = apply_repeat_filter(vec![in_repeat], &mask, 0.5);
+        assert_eq!(dropped, 1);
+        assert_eq!(kept.len(), 0);
     }
 }

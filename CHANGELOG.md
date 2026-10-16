@@ -4,6 +4,98 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — 2026-10-16
+
+Four competitor-parity "copies" for `predict`, each **off by default** so a
+default run stays byte-for-byte identical to 0.8.0. Pure Rust in-tool; the
+BUSCO-seeded trainer shells out to the already-required BUSCO + Augustus
+training scripts. No new hard dependency; no change to the run-anywhere
+(Augustus 3.3.3, any CPU — no AVX2/GPU) portability profile.
+
+### Added
+
+- **`predict --augustus-training busco` — BUSCO-seeded per-genome Augustus
+  training (funannotate's accuracy mechanism; Feature #1).** A NEW, *non-circular*
+  training mode, distinct from the existing `--augustus-training self` (which
+  trains on MycoNote's own first-pass calls). It runs BUSCO in genome mode with
+  the Augustus gene finder (`busco -m genome --augustus --augustus_species
+  <clade-default>`), takes the **Complete single-copy** BUSCO genes from
+  `full_table.tsv`, converts their Augustus gene models into a GFF3 training set,
+  and feeds that to the existing Augustus-training plumbing
+  (`gff → mini-GenBank → new_species.pl → etraining`). The per-genome-trained
+  model is then used for the Augustus prediction. BUSCO is already a MycoNote
+  dependency (annotate uses it), so no new hard dep. On any failure (BUSCO
+  absent, wrong lineage, companion scripts unresolvable, too few BUSCO genes, or
+  an unusable trained model) the run falls back **loudly** to the stock species
+  via a multi-line banner — results are never silently non-trained.
+  Invoke: `predict genome_masked.fa --kingdom fungi --augustus-training busco`.
+  Mutually exclusive with `self`/`stock`; BUSCO wins if both are set.
+  **CAVEAT / needs cluster A/B:** the parsing + GFF3 conversion is unit-tested on
+  synthetic BUSCO fixtures, but the live BUSCO directory layout and the exact
+  Augustus GFF dialect vary by BUSCO version and gene-finder backend — the
+  end-to-end path must be validated on the cluster before the trained model is
+  trusted.
+- **`predict --jaccard-clip` — fused-gene splitting (funannotate `--jaccard_clip`
+  analog; Feature #2).** Splits a gene model wherever an inter-CDS gap exceeds
+  the maximum plausible intron (`--max-intron`, default 10 kb). A gap that large
+  cannot be a real intron, so it marks a fused two-gene model — the dominant
+  over-merge error in gene-dense fungal genomes. Conservative: the two halves are
+  disjoint by construction (coding-base Jaccard 0), and a model is left intact if
+  any resulting piece would carry < 150 bp of coding sequence (no fragmenting).
+  Runs as a post-consensus pass; every split is logged on stderr. **Differs from
+  funannotate on purpose and says so:** funannotate clips with PASA
+  transcript-alignment Jaccard, which needs assembled RNA evidence; the consensus
+  stage has none, so MycoNote uses the structural over-long-gap signal instead.
+- **`predict --repeat-filter` [+ `--repeat-filter-threshold <F>`] — adaptive
+  repeat filtering of gene models (funannotate `--repeat_filter`, made adaptive;
+  Feature #3).** Drops gene models whose CDS lies mostly in soft-masked repeat.
+  The per-gene drop threshold is **adaptive**, computed from the genome-wide
+  soft-mask fraction of the masked FASTA (read with case preserved): lenient
+  (drop only ≥ 90 % CDS-in-repeat) for compact, repeat-poor genomes; aggressive
+  (down to ≥ 50 %) for repeat-rich genomes; ramped linearly over 10–40 %
+  genome-wide soft-mask fraction. `--repeat-filter-threshold <0.0–1.0>` pins the
+  fraction and implies `--repeat-filter`. Runs as a post-consensus pass; every
+  drop is logged on stderr. **CAVEAT / needs cluster A/B:** the drop thresholds
+  and the 10–40 % ramp are documented defaults, not yet tuned on the benchmark.
+- **`predict --require-complete-orf` extended to a full-ORF nucleotide check
+  (Feature #4; completes the v0.8.0 frame-only gate).** The flag now verifies,
+  using the genome FASTA, the **ATG start codon**, the **terminal stop codon**,
+  and the **absence of internal stops** (translation table from `--genetic-code`;
+  tables 1 and 12 share the standard stop set, table 6 uses TGA only), in
+  addition to the existing CDS-length-÷3 frame check. The genome is loaded into
+  memory only when the flag is set (matching the training path's genome load);
+  with no genome available it degrades to the frame-only check. A model whose
+  sequence is missing from the genome is kept (never dropped over a tool-side
+  gap). The spliced CDS is reconstructed strand-aware (minus-strand models are
+  reverse-complemented). Dropped models are logged with a precise reason
+  (bad frame / no start / no stop / internal stop).
+
+### Notes
+
+- All four features are **off by default**; a default `predict` run is
+  byte-for-byte identical to 0.8.0 (the consensus merge takes the existing no-op
+  fast path, and the new post-passes / genome load are gated on their flags).
+- Dropped or split loci are always logged by name + reason on stderr, so
+  non-TTY cluster logs record what the gene set gained or lost (no silent data
+  loss).
+- New unit tests cover the ORF nucleotide check (start/stop/internal-stop/
+  frame/strand/table-6), the fused-gene splitter (split / normal-intron /
+  tiny-fragment guard / single-exon), the soft-mask reader + adaptive threshold,
+  and the BUSCO `full_table.tsv` + Augustus-GFF parsing/conversion.
+
+### Suggested cluster A/B (14-genome benchmark)
+
+Validate the two accuracy levers against the current `--genemark
+--min-predictor-support 2 --min-single-exon-support 2` baseline:
+
+- Feature #1: `… --augustus-training busco` (vs. stock species, vs.
+  `--augustus-training self`).
+- Feature #3: `… --repeat-filter` (adaptive) and `… --repeat-filter-threshold 0.5`.
+- Feature #2: `… --jaccard-clip` (expect small gene-count rise on gene-dense
+  genomes; check precision/recall not harmed).
+- Feature #4: `… --require-complete-orf` (expect precision up, recall down a
+  little; confirm the net F1).
+
 ## [0.8.0] — 2026-10-16
 
 ### Added

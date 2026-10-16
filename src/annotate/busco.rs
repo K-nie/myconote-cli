@@ -19,7 +19,7 @@ use std::process::Command;
 //   3. Env named in BUSCO_CONDA_ENV environment variable
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum BuscoCmd {
+pub(crate) enum BuscoCmd {
     /// Plain binary path — call directly.
     Direct(PathBuf),
     /// Must be launched via `conda run -n <env> busco` with a specific conda binary.
@@ -31,7 +31,7 @@ enum BuscoCmd {
 
 impl BuscoCmd {
     /// Build a Command that runs busco with the given args.
-    fn command(&self, args: &[&str]) -> Command {
+    pub(crate) fn command(&self, args: &[&str]) -> Command {
         match self {
             BuscoCmd::Direct(p) => {
                 let mut cmd = Command::new(p);
@@ -51,7 +51,7 @@ impl BuscoCmd {
     }
 }
 
-fn find_busco() -> std::result::Result<BuscoCmd, String> {
+pub(crate) fn find_busco() -> std::result::Result<BuscoCmd, String> {
     // 1. Try PATH first
     if let Ok(p) = which::which("busco") {
         return Ok(BuscoCmd::Direct(p));

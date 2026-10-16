@@ -4,6 +4,43 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-10-16
+
+### Added
+
+- **`predict --min-single-exon-support <N>` — single-exon-aware consensus
+  filter (BRAKER3's "remove single-exon genes predicted purely ab initio"
+  rule).** Single-exon coding loci called by a single ab-initio predictor are
+  the dominant false-positive source; multi-exon loci are trustworthy. This
+  flag requires ≥ N distinct predictors specifically for a single-exon,
+  purely-ab-initio *coding* locus, while multi-exon and evidence-backed
+  (protein / EST / miniprot) loci stay governed by `--min-predictor-support`.
+  The effective bar for such a locus is
+  `max(--min-predictor-support, --min-single-exon-support)`, so it is never
+  weaker than the general bar. Non-coding loci (0 CDS, e.g. tRNAscan genes) are
+  exempt and can never be caught by the single-exon drop. Default `1` = off;
+  output is byte-identical to 0.7.x unless set. Rationale: BRAKER3 removes
+  purely-ab-initio single-exon genes to raise precision
+  (Gabriel et al., *Genome Research* 2024).
+- **`predict --require-complete-orf` — genome-free ORF frame gate.** Drops
+  coding models whose concatenated CDS length is not a multiple of 3 (a broken
+  reading frame / truncated model). This is a predict-stage *structural* check
+  only; it does not read the genome, and start/stop-codon and internal-stop
+  verification remain the annotate stage's job (not duplicated here). Default
+  off; independent of the `--min-consensus-score` rescue (an incomplete ORF is
+  dropped regardless of score when set).
+- **Recommended higher-precision fungal profile** documented in `predict
+  --help`: `--genemark --min-predictor-support 2 --min-single-exon-support 2`.
+
+### Notes
+
+- Both new filters are **off by default** — a default `predict` run is
+  byte-for-byte identical to 0.7.16. Pure Rust, no new dependencies, no change
+  to the run-anywhere (Augustus 3.3.3, any CPU) portability profile.
+- Dropped loci are logged by name and reason on stderr (support shortfall vs
+  incomplete ORF), so non-TTY cluster logs record exactly what the gene set
+  lost and why.
+
 ## [0.7.16] — 2026-10-15
 
 ### Added

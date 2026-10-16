@@ -112,6 +112,18 @@ pub struct PredictConfig {
     /// locus failing the support test is still kept when its score reaches this
     /// value.  `None` (default) disables the rescue.
     pub consensus_min_score: Option<f64>,
+    /// Minimum distinct-predictor support required for a single-exon,
+    /// purely-ab-initio coding locus (BRAKER3's "remove single-exon genes
+    /// predicted purely ab initio" rule).  `1` (default) applies no extra
+    /// requirement.  `2` drops single-exon loci called by one ab-initio
+    /// predictor alone while leaving multi-exon and evidence-backed loci on the
+    /// general `consensus_min_support` bar.  See `evidence::ConsensusFilter`.
+    pub consensus_min_single_exon_support: usize,
+    /// Drop coding models that fail a genome-free ORF-completeness check
+    /// (concatenated CDS length not a multiple of 3).  `false` (default) keeps
+    /// everything.  Predict-stage structural gate only; start/stop and
+    /// internal-stop verification is done at the annotate stage.
+    pub require_complete_orf: bool,
     // ── Augustus training mode (v0.7.7) ──────────────────────────────────────
     // (self-training itself is driven by `self_train`; `--augustus-training
     // self` is an alias that sets it.  No extra field needed.)
@@ -171,6 +183,8 @@ impl Default for PredictConfig {
             genetic_code: 1,
             consensus_min_support: 1,
             consensus_min_score: None,
+            consensus_min_single_exon_support: 1,
+            require_complete_orf: false,
             protein_hints: None,
             protein_hints_evalue: 1e-5,
             protein_hints_max: 50_000,
@@ -778,6 +792,8 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
     let consensus_filter = evidence::ConsensusFilter {
         min_predictor_support: config.consensus_min_support,
         min_consensus_score: config.consensus_min_score,
+        min_support_single_exon: config.consensus_min_single_exon_support,
+        require_complete_orf: config.require_complete_orf,
     };
     let gene_count = evidence::merge_predictions_filtered(
         &inputs_ref,

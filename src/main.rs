@@ -270,6 +270,17 @@ fn main() -> Result<()> {
                 println!("                              fungi to cut false positives).");
                 println!("  --min-consensus-score <F>   Rescue a below-support locus whose agreement-");
                 println!("                              weighted consensus score ≥ F (default: off).");
+                println!("  --min-single-exon-support <N>  Require ≥ N distinct predictors for a");
+                println!("                              single-exon, purely-ab-initio coding locus");
+                println!("                              (BRAKER3 rule). Multi-exon and evidence-backed");
+                println!("                              loci stay on --min-predictor-support; tRNAs and");
+                println!("                              other non-coding loci are exempt. Effective bar");
+                println!("                              = max(--min-predictor-support, N). Default 1 =");
+                println!("                              off. Try 2 for fungi.");
+                println!("  --require-complete-orf      Drop coding models whose concatenated CDS length");
+                println!("                              is not a multiple of 3 (genome-free frame check;");
+                println!("                              start/stop and internal-stop checks run at");
+                println!("                              annotate). Default: off.");
                 println!("  --glimmerhmm                Also run GlimmerHMM (adds third ab initio predictor)");
                 println!("  --glimmer-dir <dir>         GlimmerHMM training directory (default: auto-detect)");
                 println!("  --genemark-mode <mode>      es|et|ep|etp (default: skip GeneMark)");
@@ -309,6 +320,9 @@ fn main() -> Result<()> {
                 println!("  myconote-cli predict genome_masked.fa --kingdom fungi --locus-prefix AFUB");
                 println!("  myconote-cli predict genome_masked.fa --kingdom plant --species arabidopsis");
                 println!("  myconote-cli predict genome_masked.fa --protein-evidence blastx.tsv");
+                println!("\n  Recommended higher-precision fungal profile (cuts single-exon false positives):");
+                println!("  myconote-cli predict genome_masked.fa --kingdom fungi --genemark \\");
+                println!("      --min-predictor-support 2 --min-single-exon-support 2");
                 return Ok(());
             }
             let path = &args[2];
@@ -2093,6 +2107,24 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                     }
                 }
                 i += 2;
+            }
+            // Feature 1b: single-exon-aware filter (BRAKER3 rule).
+            "--min-single-exon-support" if i + 1 < args.len() => {
+                match args[i + 1].parse::<usize>() {
+                    Ok(n) => config.consensus_min_single_exon_support = n,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --min-single-exon-support {:?}: expected a non-negative integer",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            // Feature 2: ORF-completeness gate (boolean, no argument).
+            "--require-complete-orf" => {
+                config.require_complete_orf = true;
+                i += 1;
             }
             "--max-intron" if i + 1 < args.len() => {
                 if let Ok(n) = args[i + 1].parse::<usize>() {

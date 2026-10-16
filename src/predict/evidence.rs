@@ -161,6 +161,24 @@ pub struct ConsensusFilter {
     /// winner that fails the support test is still kept when its score reaches
     /// this value. `None` disables the rescue.
     pub min_consensus_score: Option<f64>,
+    /// Minimum distinct-predictor support required specifically for a
+    /// **single-exon, purely-ab-initio** coding locus (BRAKER3's "remove
+    /// single-exon genes predicted purely ab initio" rule). Single-exon models
+    /// called by one ab-initio predictor alone are the dominant false-positive
+    /// source; multi-exon models are trustworthy and stay governed by
+    /// `min_predictor_support`. `1` (default) applies no extra requirement, so
+    /// behaviour is unchanged. The effective bar for such a locus is
+    /// `max(min_predictor_support, min_support_single_exon)`, so this is never
+    /// weaker than the general threshold. A locus with any extrinsic
+    /// (protein / EST / miniprot) support, or any non-coding locus (no CDS,
+    /// e.g. a tRNA), is exempt and uses `min_predictor_support`.
+    pub min_support_single_exon: usize,
+    /// When true, drop coding models that fail a genome-free ORF-completeness
+    /// check (concatenated CDS length not a multiple of 3). `false` (default)
+    /// keeps everything. This is a predict-stage structural gate only; it does
+    /// NOT verify start/stop nucleotides or internal stop codons, which need
+    /// the genome sequence and are handled at the annotate stage.
+    pub require_complete_orf: bool,
 }
 
 impl Default for ConsensusFilter {
@@ -168,15 +186,29 @@ impl Default for ConsensusFilter {
         Self {
             min_predictor_support: 1,
             min_consensus_score: None,
+            min_support_single_exon: 1,
+            require_complete_orf: false,
         }
     }
 }
 
 impl ConsensusFilter {
     /// Decide whether a winning model is kept given its support count (distinct
-    /// corroborating sources, incl. itself) and its consensus score.
-    fn keeps(&self, support: usize, consensus_score: f64) -> bool {
-        if support >= self.min_predictor_support {
+    /// corroborating sources, incl. itself), its consensus score, and whether
+    /// it is a single-exon purely-ab-initio coding locus (the only case to
+    /// which `min_support_single_exon` applies).
+    ///
+    /// The ORF-completeness gate is applied separately by the caller (it needs
+    /// the model's CDS records, not just these scalars) and is independent of
+    /// the score rescue: an incomplete ORF is dropped regardless of score when
+    /// `require_complete_orf` is set.
+    fn keeps(&self, support: usize, consensus_score: f64, single_exon_ab_initio: bool) -> bool {
+        let needed = if single_exon_ab_initio {
+            self.min_predictor_support.max(self.min_support_single_exon)
+        } else {
+            self.min_predictor_support
+        };
+        if support >= needed {
             return true;
         }
         match self.min_consensus_score {
@@ -189,7 +221,44 @@ impl ConsensusFilter {
     /// per-locus bookkeeping and logging on the default (opt-out) path.
     fn is_noop(&self) -> bool {
         self.min_predictor_support <= 1
+            && self.min_support_single_exon <= 1
+            && !self.require_complete_orf
     }
+}
+
+/// Ab-initio protein-coding predictors, for the single-exon rule. A locus whose
+/// support comes only from these (no protein / EST / miniprot evidence) is
+/// "purely ab initio". tRNAscan is deliberately excluded: its genes are
+/// single-exon by nature and must never be caught by the single-exon drop.
+fn is_ab_initio_source(source: &str) -> bool {
+    matches!(
+        source.to_lowercase().as_str(),
+        "augustus" | "snap" | "genemark" | "genemark-es" | "genemark-et" | "glimmerhmm" | "glimmer"
+    )
+}
+
+/// Count a model's CDS records. 0 means a non-coding model (e.g. tRNA), which
+/// the single-exon and ORF checks treat as exempt.
+fn cds_record_count(m: &GeneModel) -> usize {
+    m.records.iter().filter(|r| r.feature_type == "CDS").count()
+}
+
+/// Genome-free ORF-completeness heuristic: a complete coding sequence spans
+/// whole codons, so its concatenated CDS length (1-based inclusive) is a
+/// multiple of 3. A model with no CDS is non-coding and exempt (returns true).
+/// This does not check the ATG / stop nucleotides or internal stops — those
+/// need the FASTA and are verified at the annotate stage.
+fn orf_length_complete(m: &GeneModel) -> bool {
+    let coding: Vec<u64> = m
+        .records
+        .iter()
+        .filter(|r| r.feature_type == "CDS")
+        .map(|r| r.end.saturating_sub(r.start) + 1)
+        .collect();
+    if coding.is_empty() {
+        return true;
+    }
+    coding.iter().sum::<u64>() % 3 == 0
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -445,26 +514,61 @@ fn resolve_overlaps_filtered(
             }
             let support = sources.len();
 
-            if filter.keeps(support, winner_score) {
+            // Single-exon purely-ab-initio determination (BRAKER3 rule). A
+            // locus is subject to the stricter single-exon threshold only when
+            // (a) it is protein-coding with exactly one CDS, and (b) every
+            // corroborating source is an ab-initio predictor — any extrinsic
+            // (protein / EST / miniprot) support exempts it, as does a
+            // non-coding model (0 CDS, e.g. tRNA → not single-exon here).
+            let cds_count = cds_record_count(&models[group[best]]);
+            let purely_ab_initio = sources.iter().all(|s| is_ab_initio_source(s));
+            let single_exon_ab_initio = cds_count == 1 && purely_ab_initio;
+
+            // Two independent gates, both must pass to keep. The ORF gate is
+            // independent of the score rescue (an incomplete ORF is structural,
+            // not a confidence question).
+            let keeps_support = filter.keeps(support, winner_score, single_exon_ab_initio);
+            let orf_ok = !filter.require_complete_orf || orf_length_complete(&models[group[best]]);
+
+            if keeps_support && orf_ok {
                 kept.push(models[group[best]].clone());
             } else {
                 dropped += 1;
-                // No silent data loss: name every locus the filter removes so
-                // non-TTY cluster logs record what the gene set lost and why.
+                // No silent data loss: name every locus the filter removes and
+                // why, so non-TTY cluster logs record what the gene set lost.
+                let reason = if !orf_ok {
+                    "incomplete ORF (CDS length not a multiple of 3)".to_string()
+                } else {
+                    let need = if single_exon_ab_initio {
+                        filter
+                            .min_predictor_support
+                            .max(filter.min_support_single_exon)
+                    } else {
+                        filter.min_predictor_support
+                    };
+                    format!(
+                        "support={} source(s){}, need ≥ {}{}",
+                        support,
+                        if single_exon_ab_initio {
+                            " [single-exon ab-initio]"
+                        } else {
+                            ""
+                        },
+                        need,
+                        match filter.min_consensus_score {
+                            Some(m) => format!(" or score ≥ {:.2}", m),
+                            None => String::new(),
+                        }
+                    )
+                };
                 eprintln!(
-                    "  ⚠  consensus filter dropped {}:{}-{} ({}) — support={} source(s), \
-                     score={:.2} (need support ≥ {}{})",
+                    "  ⚠  consensus filter dropped {}:{}-{} ({}) — score={:.2}; {}",
                     models[group[best]].seqid,
                     models[group[best]].start,
                     models[group[best]].end,
                     models[group[best]].source,
-                    support,
                     winner_score,
-                    filter.min_predictor_support,
-                    match filter.min_consensus_score {
-                        Some(m) => format!(" or score ≥ {:.2}", m),
-                        None => String::new(),
-                    }
+                    reason,
                 );
             }
         }
@@ -550,13 +654,19 @@ pub fn merge_predictions_filtered(
     if total_dropped > 0 {
         println!(
             "  Consensus filter: dropped {} false-positive locus/loci \
-             (min-predictor-support={}{})",
+             (min-predictor-support={}, min-single-exon-support={}{}{})",
             total_dropped,
             filter.min_predictor_support,
+            filter.min_support_single_exon,
             match filter.min_consensus_score {
                 Some(m) => format!(", min-consensus-score={:.2}", m),
                 None => String::new(),
-            }
+            },
+            if filter.require_complete_orf {
+                ", require-complete-orf"
+            } else {
+                ""
+            },
         );
     }
 
@@ -1074,6 +1184,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let f2 = ConsensusFilter {
             min_predictor_support: 2,
             min_consensus_score: None,
+            ..ConsensusFilter::default()
         };
         let (kept2, dropped2) = resolve_overlaps_filtered(vec![lone], &f2);
         assert_eq!(
@@ -1099,6 +1210,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let f2 = ConsensusFilter {
             min_predictor_support: 2,
             min_consensus_score: None,
+            ..ConsensusFilter::default()
         };
         let (k2, d2) = resolve_overlaps_filtered(vec![a, b], &f2);
         assert_eq!(
@@ -1118,6 +1230,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let f2 = ConsensusFilter {
             min_predictor_support: 2,
             min_consensus_score: None,
+            ..ConsensusFilter::default()
         };
         let (k, d) = resolve_overlaps_filtered(vec![a, b], &f2);
         assert_eq!(
@@ -1137,6 +1250,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let rescue = ConsensusFilter {
             min_predictor_support: 2,
             min_consensus_score: Some(15.0),
+            ..ConsensusFilter::default()
         };
         let (k, d) = resolve_overlaps_filtered(vec![lone.clone()], &rescue);
         assert_eq!(
@@ -1149,6 +1263,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
         let strict = ConsensusFilter {
             min_predictor_support: 2,
             min_consensus_score: Some(25.0),
+            ..ConsensusFilter::default()
         };
         let (k2, d2) = resolve_overlaps_filtered(vec![lone], &strict);
         assert_eq!(k2.len(), 0, "score 20 < 25 → not rescued, dropped");
@@ -1208,6 +1323,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
         let filter = ConsensusFilter {
             min_predictor_support: 2,
             min_consensus_score: None,
+            ..ConsensusFilter::default()
         };
         let n_f = merge_predictions_filtered(&inputs, &out_f, "F", &filter).unwrap();
         assert_eq!(n_f, 1, "single-predictor loci dropped at support ≥ 2");
@@ -1222,5 +1338,152 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             "surviving gene must be the corroborated 100-200 locus\n{}",
             gff
         );
+    }
+
+    // ── Feature 1b: single-exon-aware filter (BRAKER3 rule) ───────────────────
+
+    // A single-exon, purely-ab-initio locus is dropped by
+    // `min_support_single_exon` even when the general `min_predictor_support`
+    // would keep it (default 1). This is the targeted BRAKER3 behaviour: cull
+    // lone single-exon ab-initio calls, keep everything else.
+    #[test]
+    fn single_exon_ab_initio_dropped_while_multiexon_kept() {
+        // Single-exon lone Augustus locus (one CDS).
+        let single = gene_model_src(100, 200, 10.0, &[(100, 200)], "augustus");
+        // Multi-exon lone Augustus locus (two CDS) — same support of 1.
+        let multi = gene_model_src(1000, 1400, 10.0, &[(1000, 1100), (1300, 1400)], "augustus");
+
+        let f = ConsensusFilter {
+            min_predictor_support: 1,   // general: keep everything
+            min_support_single_exon: 2, // single-exon: require corroboration
+            ..ConsensusFilter::default()
+        };
+        let (kept, dropped) = resolve_overlaps_filtered(vec![single, multi], &f);
+        assert_eq!(dropped, 1, "the single-exon lone locus is dropped");
+        assert_eq!(kept.len(), 1, "the multi-exon lone locus is kept");
+        assert_eq!(
+            (kept[0].start, kept[0].end),
+            (1000, 1400),
+            "survivor is the multi-exon locus"
+        );
+    }
+
+    // A single-exon locus with EXTRINSIC (protein) support is exempt from the
+    // single-exon rule — it falls back to the general threshold.
+    #[test]
+    fn single_exon_with_protein_support_is_exempt() {
+        let lone_protein = gene_model_src(100, 200, 20.0, &[(100, 200)], "protein");
+        let f = ConsensusFilter {
+            min_predictor_support: 1,
+            min_support_single_exon: 2,
+            ..ConsensusFilter::default()
+        };
+        let (kept, dropped) = resolve_overlaps_filtered(vec![lone_protein], &f);
+        assert_eq!(dropped, 0, "evidence-backed single-exon locus is exempt");
+        assert_eq!(kept.len(), 1);
+    }
+
+    // A non-coding model (no CDS, e.g. a tRNA) is never treated as single-exon
+    // for this rule, so a lone tRNA survives even with a high single-exon bar.
+    #[test]
+    fn noncoding_locus_exempt_from_single_exon_rule() {
+        // No CDS records → cds_record_count == 0.
+        let trna = gene_model_src(100, 200, 15.0, &[], "trnascan");
+        let f = ConsensusFilter {
+            min_predictor_support: 1,
+            min_support_single_exon: 5,
+            ..ConsensusFilter::default()
+        };
+        let (kept, dropped) = resolve_overlaps_filtered(vec![trna], &f);
+        assert_eq!(
+            dropped, 0,
+            "non-coding locus is exempt from the single-exon drop"
+        );
+        assert_eq!(kept.len(), 1);
+    }
+
+    // The single-exon bar is never weaker than the general bar: a multi-exon
+    // locus still obeys `min_predictor_support` even when the single-exon bar
+    // is lower.
+    #[test]
+    fn single_exon_bar_never_below_general_bar() {
+        let single = gene_model_src(100, 200, 10.0, &[(100, 200)], "augustus");
+        let f = ConsensusFilter {
+            min_predictor_support: 2,   // general bar is the stricter one
+            min_support_single_exon: 1, // explicitly "off" for single-exon
+            ..ConsensusFilter::default()
+        };
+        // effective bar for the single-exon locus = max(2, 1) = 2 > support 1.
+        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f);
+        assert_eq!(dropped, 1, "general bar still applies to single-exon loci");
+        assert_eq!(kept.len(), 0);
+    }
+
+    // ── Feature 2: ORF-completeness gate ──────────────────────────────────────
+
+    #[test]
+    fn orf_length_complete_detects_frame() {
+        // One CDS of length 101 (200-100+1) → 101 % 3 == 2 → incomplete.
+        let bad = gene_model_src(100, 200, 10.0, &[(100, 200)], "augustus");
+        assert!(!orf_length_complete(&bad));
+        // One CDS of length 102 (201-100+1) → 102 % 3 == 0 → complete.
+        let good = gene_model_src(100, 201, 10.0, &[(100, 201)], "augustus");
+        assert!(orf_length_complete(&good));
+        // Multi-CDS summing to a multiple of 3: 51 + 51 = 102.
+        let good_multi = gene_model_src(100, 400, 10.0, &[(100, 150), (300, 350)], "augustus");
+        assert!(orf_length_complete(&good_multi));
+        // No CDS → non-coding → exempt (true).
+        let noncoding = gene_model_src(100, 200, 10.0, &[], "trnascan");
+        assert!(orf_length_complete(&noncoding));
+    }
+
+    #[test]
+    fn require_complete_orf_drops_frame_broken_model() {
+        let bad = gene_model_src(100, 200, 10.0, &[(100, 200)], "augustus"); // len 101
+        let good = gene_model_src(1000, 1101, 10.0, &[(1000, 1101)], "augustus"); // len 102
+
+        // Off (default): both kept.
+        let (kept_off, dropped_off) =
+            resolve_overlaps_filtered(vec![bad.clone(), good.clone()], &ConsensusFilter::default());
+        assert_eq!(dropped_off, 0);
+        assert_eq!(kept_off.len(), 2);
+
+        // On: the frame-broken model is dropped, the clean one kept.
+        let f = ConsensusFilter {
+            require_complete_orf: true,
+            ..ConsensusFilter::default()
+        };
+        let (kept_on, dropped_on) = resolve_overlaps_filtered(vec![bad, good], &f);
+        assert_eq!(dropped_on, 1, "frame-broken ORF dropped");
+        assert_eq!(kept_on.len(), 1);
+        assert_eq!((kept_on[0].start, kept_on[0].end), (1000, 1101));
+    }
+
+    // The ORF gate is independent of the score rescue: an incomplete ORF is
+    // dropped even when its score would otherwise rescue it.
+    #[test]
+    fn require_complete_orf_overrides_score_rescue() {
+        let bad = gene_model_src(100, 200, 100.0, &[(100, 200)], "augustus"); // len 101
+        let f = ConsensusFilter {
+            min_predictor_support: 2,
+            min_consensus_score: Some(1.0), // would rescue on score alone
+            require_complete_orf: true,
+            ..ConsensusFilter::default()
+        };
+        let (kept, dropped) = resolve_overlaps_filtered(vec![bad], &f);
+        assert_eq!(dropped, 1, "incomplete ORF dropped despite score rescue");
+        assert_eq!(kept.len(), 0);
+    }
+
+    // Default filter remains a strict no-op even now that it carries the two new
+    // fields: nothing is dropped and the fast path is taken.
+    #[test]
+    fn default_filter_is_still_noop() {
+        let f = ConsensusFilter::default();
+        assert!(f.is_noop());
+        let single = gene_model_src(100, 200, 3.0, &[(100, 200)], "snap"); // len 101, lone
+        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f);
+        assert_eq!(dropped, 0, "default drops nothing");
+        assert_eq!(kept.len(), 1);
     }
 }

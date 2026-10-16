@@ -332,7 +332,8 @@ fn main() -> Result<()> {
                 println!("  --no-busco                  Skip BUSCO completeness check");
                 println!("  --interproscan              Run InterProScan via EBI REST API");
                 println!("  --email <address>           Email for InterProScan (required by EBI)");
-                println!("  --eggnog                    Run EggNog-mapper (COG/NOG categories)");
+                println!("  --eggnog                    Run EggNog-mapper (COG/NOG categories) — off by default");
+                println!("  --no-eggnog                 Skip EggNog-mapper (explicit off; the default)");
                 println!("  --eggnog-db <dir>           EggNog-mapper database directory");
                 println!("  --eggnog-results <file>     Pre-computed emapper.annotations file");
                 println!("  --eggnog-iterate            Restore emapper's slow --dmnd_iterate (off by default: ~4.4x slower, same recall)");
@@ -2264,6 +2265,13 @@ fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
             // ── EggNog ────────────────────────────────────────────────────
             "--eggnog" | "--eggnog-mapper" => {
                 config.run_eggnog = true;
+                i += 1;
+            }
+            // Explicit off-switch. EggNog is off by default; --no-eggnog makes
+            // "without" explicit and, parsed left-to-right, overrides an earlier
+            // --eggnog (last flag wins).
+            "--no-eggnog" | "--without-eggnog" => {
+                config.run_eggnog = false;
                 i += 1;
             }
             "--eggnog-iterate" => {

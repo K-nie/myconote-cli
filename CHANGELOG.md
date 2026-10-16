@@ -4,6 +4,16 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.16] — 2026-10-15
+
+### Added
+
+- **`annotate --no-eggnog` explicit off-switch** (alias `--without-eggnog`) to
+  pair with `--eggnog`, so running with or without EggNog-mapper is an explicit
+  user choice in both directions. EggNog remains off by default; parsed
+  left-to-right, `--no-eggnog` overrides an earlier `--eggnog` (last flag wins).
+  No change to default behaviour.
+
 ## [0.7.15] — 2026-10-14
 
 ### Added

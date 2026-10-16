@@ -80,7 +80,22 @@ portability. Every null/loss stays in the text.
 READMEs (this file, README.md, figures/README.md, db_versions, hardware) are
 updated as each stage runs — they are the manuscript Methods raw material.
 
-## §7 execution status (live)
-- Phase 4 Stage-1 (n=5 timing, x86_64-v3 pinned): SUBMITTED 2026-10-15 — myconote 146848, funannotate 146849, maker 146850 (70 jobs each) → results_timing_stage1/. BRAKER HELD pending gate 146843.
-- Phase 5 production + accuracy: pending Stage-1 verification.
-- Full run record + pinning-fairness decision: see PHASE4_5_RUN_STATUS.md
+## §7 execution status (FINAL — Phases 4+5 collapsed, 2026-10-16)
+Decision (Benjamin, 2026-10-16): **n=5 for all 4 tools; Stage-1 IS the complete
+production dataset. No separate Phase-5 (n=10) matrix.** All four arms finished
+70/70 ExitCode 0 with both accuracy (metrics.json) and timing for 14 genomes × 5 reps.
+
+- Timing pinned to microarch **x86_64-v3** (strict same-node infeasible on the shared
+  loaded pool); wall-clock = headline, **CPU-seconds = contention-robust check** (fig5).
+- MycoNote HEADLINE = matched/no-eggNOG (results_timing_stage1_matched, 146854, v0.7.16);
+  MycoNote REFERENCE = full/with-eggNOG (results_timing_stage1, 146848, v0.7.15) used
+  ONLY for the eggNOG-cost figure (fig12), flagged contention-confounded.
+- funannotate 146849, maker 146850, braker 146852. BRAKER performance.json is all-zero
+  → wall/CPU/RSS recovered from condor_history 146852 (all 70 NumJobStarts=1).
+- Aggregation: scripts/aggregate_bench.py (cluster) → figures/*.tsv (10 named tables +
+  per_run_raw.tsv for Phase-6 stats). Figures: scripts/plot_bench.py (local matplotlib)
+  → figures/fig1..fig12 .pdf + .png. Captions + caveats: figures/README.md.
+- Stock scripts also updated (flagged edits): aggregate_metrics.py rep-glob,
+  make_figures.py GENOMES→14, collect_results.sh REPS→(1..5)+tty-guard.
+- Phase 6 (Friedman/Nemenyi/Wilcoxon/LMM, critical-difference) is the statistical-genetics
+  step — consumes figures/per_run_raw.tsv. NOT run here.

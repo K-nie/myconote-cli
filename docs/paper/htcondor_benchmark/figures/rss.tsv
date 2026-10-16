@@ -1,0 +1,57 @@
+genome	tool	peak_rss_mb_median	predict_rss_mb_median	annotate_rss_mb_median
+sce	myconote	2468.0	228.2	2468.0
+sce	funannotate	2202.8	2202.8	808.9
+sce	maker	227.4		
+sce	braker	9766.0		
+cal	myconote	2471.3	335.1	2471.3
+cal	funannotate	2220.4	2220.4	815.8
+cal	maker	235.5		
+cal	braker	7325.0		
+ylp	myconote	2473.3	281.7	2473.3
+ylp	funannotate	3597.5	3597.5	817.3
+ylp	maker	278.6		
+ylp	braker	7325.0		
+ani	myconote	2498.3	507.6	2498.3
+ani	funannotate	4050.8	4050.8	829.0
+ani	maker	296.9		
+ani	braker	9766.0		
+ncr	myconote	2487.6	362.8	2487.6
+ncr	funannotate	7314.6	7314.6	820.9
+ncr	maker	356.3		
+ncr	braker	9766.0		
+cne	myconote	2476.3	293.1	2476.3
+cne	funannotate	2319.8	2319.8	818.1
+cne	maker	294.0		
+cne	braker	7325.0		
+klac	myconote	2458.8	271.0	2458.8
+klac	funannotate	2204.1	2204.1	813.7
+klac	maker	264.3		
+klac	braker	3418.0		
+kpha	myconote	2461.9	312.4	2461.9
+kpha	funannotate	2167.2	2167.2	811.4
+kpha	maker	281.0		
+kpha	braker	7325.0		
+fgra	myconote	2503.9	604.8	2503.9
+fgra	funannotate	8825.4	8825.4	835.5
+fgra	maker	362.5		
+fgra	braker	9766.0		
+afum	myconote	2491.1	512.1	2491.1
+afum	funannotate	4294.3	4294.3	823.1
+afum	maker	338.5		
+afum	braker	9766.0		
+umay	myconote	2473.7	261.8	2473.7
+umay	funannotate	2339.7	2339.7	819.5
+umay	maker	239.0		
+umay	braker	9766.0		
+ccin	myconote	2502.2	404.8	2502.2
+ccin	funannotate	3730.5	3730.5	834.8
+ccin	maker	405.3		
+ccin	braker	9766.0		
+spom	myconote	2467.3	581.5	2467.3
+spom	funannotate	2669.7	2669.7	808.4
+spom	maker	286.4		
+spom	braker	3907.0		
+tmel	myconote	2521.2	247.9	2521.2
+tmel	funannotate	3873.2	3873.2	834.0
+tmel	maker	258.7		
+tmel	braker	7325.0		

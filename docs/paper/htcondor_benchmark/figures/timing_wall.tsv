@@ -1,0 +1,57 @@
+genome	clade	size_mb	tool	wall_s_median	predict_wall_s_median	annotate_wall_s_median
+sce	Saccharomycotina	12	myconote	1685.4	465.0	1179.17
+sce	Saccharomycotina	12	funannotate	4968.2	4489.0	463.66
+sce	Saccharomycotina	12	maker	922.3		
+sce	Saccharomycotina	12	braker	7081.0		
+cal	Saccharomycotina	14	myconote	1755.1	569.36	1195.31
+cal	Saccharomycotina	14	funannotate	4827.2	4305.0	508.38
+cal	Saccharomycotina	14	maker	1107.8		
+cal	Saccharomycotina	14	braker	9902.0		
+ylp	Saccharomycotina	21	myconote	2032.2	783.12	1235.99
+ylp	Saccharomycotina	21	funannotate	5845.3	5204.0	573.71
+ylp	Saccharomycotina	21	maker	2025.5		
+ylp	Saccharomycotina	21	braker	8935.0		
+ani	other-Ascomycota	30	myconote	4612.3	2822.15	1796.08
+ani	other-Ascomycota	30	funannotate	7773.5	6893.0	855.44
+ani	other-Ascomycota	30	maker	2508.6		
+ani	other-Ascomycota	30	braker	11411.0		
+ncr	other-Ascomycota	40	myconote	4741.5	2813.89	1821.33
+ncr	other-Ascomycota	40	funannotate	9234.0	8388.0	839.09
+ncr	other-Ascomycota	40	maker	4755.0		
+ncr	other-Ascomycota	40	braker	16007.0		
+cne	Basidiomycota	19	myconote	4144.9	2608.1	1406.25
+cne	Basidiomycota	19	funannotate	5666.5	5007.0	597.56
+cne	Basidiomycota	19	maker	1555.1		
+cne	Basidiomycota	19	braker	9099.0		
+klac	Saccharomycotina	11	myconote	1428.7	570.82	857.31
+klac	Saccharomycotina	11	funannotate	5089.8	4597.0	483.54
+klac	Saccharomycotina	11	maker	683.2		
+klac	Saccharomycotina	11	braker	8169.0		
+kpha	Saccharomycotina	9	myconote	1346.9	579.63	777.03
+kpha	Saccharomycotina	9	funannotate	6125.2	5648.0	451.85
+kpha	Saccharomycotina	9	maker	788.8		
+kpha	Saccharomycotina	9	braker	9572.0		
+fgra	other-Ascomycota	36	myconote	5802.3	3879.0	1844.72
+fgra	other-Ascomycota	36	funannotate	9264.9	8133.0	1097.42
+fgra	other-Ascomycota	36	maker	2883.3		
+fgra	other-Ascomycota	36	braker	13717.0		
+afum	other-Ascomycota	29	myconote	4410.3	2682.83	1638.31
+afum	other-Ascomycota	29	funannotate	7685.7	6964.0	702.13
+afum	other-Ascomycota	29	maker	2855.5		
+afum	other-Ascomycota	29	braker	10689.0		
+umay	Basidiomycota	20	myconote	2100.9	797.27	1281.64
+umay	Basidiomycota	20	funannotate	6248.8	5619.0	643.71
+umay	Basidiomycota	20	maker	1492.3		
+umay	Basidiomycota	20	braker	11274.0		
+ccin	Basidiomycota	36	myconote	9023.7	6747.0	2265.19
+ccin	Basidiomycota	36	funannotate	7374.1	6555.0	781.64
+ccin	Basidiomycota	36	maker	3599.4		
+ccin	Basidiomycota	36	braker	16097.0		
+spom	other-Ascomycota	13	myconote	1793.9	924.1	854.98
+spom	other-Ascomycota	13	funannotate	4910.6	4464.0	413.16
+spom	other-Ascomycota	13	maker	1136.5		
+spom	other-Ascomycota	13	braker	12011.0		
+tmel	other-Ascomycota	125	myconote	8129.8	5674.0	2410.33
+tmel	other-Ascomycota	125	funannotate	13148.7	11638.0	820.74
+tmel	other-Ascomycota	125	maker	13026.0		
+tmel	other-Ascomycota	125	braker	17161.0		

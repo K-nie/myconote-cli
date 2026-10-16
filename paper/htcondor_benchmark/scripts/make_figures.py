@@ -41,7 +41,7 @@ import numpy as np
 TOOLS = ["myconote", "funannotate", "maker", "braker"]
 TOOL_LABELS = {"myconote": "MycoNote", "funannotate": "funannotate", "maker": "MAKER", "braker": "BRAKER"}
 TOOL_COLORS = {"myconote": "#0072B2", "funannotate": "#E69F00", "maker": "#009E73", "braker": "#CC79A7"}
-GENOMES = ["sce", "cal", "ylp", "ani", "ncr", "cne"]
+GENOMES = ["sce", "cal", "ylp", "ani", "ncr", "cne", "klac", "kpha", "fgra", "afum", "umay", "ccin", "spom", "tmel"]
 MM = 1.0 / 25.4
 SINGLE_W, DOUBLE_W = 89 * MM, 183 * MM
 

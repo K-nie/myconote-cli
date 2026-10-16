@@ -301,14 +301,19 @@ def main():
     TOOLS = tools
 
     all_rows = []
+    n_possible = 0
     for tool in tools:
         for genome in genomes:
-            for rep in [1, 2, 3]:
+            gdir = results_dir / tool / genome
+            reps = sorted(int(d.name[3:]) for d in gdir.glob('rep*')
+                          if d.name[3:].isdigit()) if gdir.is_dir() else []
+            n_possible += len(reps)
+            for rep in reps:
                 row = load_run(tool, genome, rep, results_dir)
                 if row:
                     all_rows.append(row)
 
-    print(f'Loaded {len(all_rows)} runs (out of {len(tools) * len(genomes) * 3} possible)')
+    print(f'Loaded {len(all_rows)} runs (out of {n_possible} rep dirs found)')
 
     # Create aggregated output directory
     agg_dir = results_dir / 'aggregated'

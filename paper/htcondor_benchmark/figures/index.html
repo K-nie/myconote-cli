@@ -25,7 +25,7 @@
     
     
       
-        <title>Benchmark figures — per-test, work-matched (v0.7.13, matched AVX2) - Myconote_CLI</title>
+        <title>Benchmark figures + backing tables — n=5 Stage-1 (production) dataset - Myconote_CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#benchmark-figures-per-test-work-matched-v0713-matched-avx2" class="md-skip">
+        <a href="#benchmark-figures-backing-tables-n5-stage-1-production-dataset" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Benchmark figures — per-test, work-matched (v0.7.13, matched AVX2)
+              Benchmark figures + backing tables — n=5 Stage-1 (production) dataset
             
           </span>
         </div>
@@ -1480,10 +1480,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-five-tests" class="md-nav__link">
+  <a href="#dataset-what-this-is" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The five tests
+        Dataset (what this is)
       
     </span>
   </a>
@@ -1491,10 +1491,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#results-means-of-18-runs" class="md-nav__link">
+  <a href="#data-sources-verified-before-use" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Results (means of 18 runs)
+        Data sources (verified before use)
       
     </span>
   </a>
@@ -1502,10 +1502,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#caveats" class="md-nav__link">
+  <a href="#timing-fairness-how-to-read-the-speed-figures" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caveats
+        Timing fairness (how to read the speed figures)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#figures-each-ships-pdf-300-dpi-png-nature-style-lowercase-bold-panel-letters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Figures (each ships .pdf + 300 dpi .png; Nature style: lowercase bold panel letters,
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sans-serif-no-on-figure-title-okabe-ito-tool-colours-myconote-0072b2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sans-serif, NO on-figure title, Okabe-Ito tool colours — MycoNote #0072B2,
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funannotate-e69f00-maker-009e73-braker-cc79a7-consistent-across-all-figures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        funannotate #E69F00, MAKER #009E73, BRAKER #CC79A7 — consistent across all figures)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing-tables-tsv-one-header-row-each" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backing tables (TSV, one header row each)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproduce" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproduce
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dimensions-not-built-missing-data-not-fabricated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimensions NOT built (missing data, not fabricated)
       
     </span>
   </a>
@@ -1537,126 +1603,110 @@
   
 
 
-<h1 id="benchmark-figures-per-test-work-matched-v0713-matched-avx2">Benchmark figures — per-test, work-matched (v0.7.13, matched AVX2)<a class="headerlink" href="#benchmark-figures-per-test-work-matched-v0713-matched-avx2" title="Permanent link">&para;</a></h1>
-<p>Five independent comparisons from the definitive four-tool HTCondor benchmark
-(MycoNote / funannotate / MAKER / BRAKER; 6 fungal genomes × 3 reps; all arms on
-the same AVX2-capable node class). Each test is its own figure + data file so
-<strong>gene predictors and complete annotation pipelines are never conflated on a
-speed axis</strong> — the methodological fix that motivated this redesign.</p>
-<p>Regenerate everything: <code>python3 ../scripts/make_figures.py --results-dir ../results --out-dir .</code>
-(Python 3 + matplotlib + numpy.) Per-run source data is in <code>../data/</code>.</p>
-<h2 id="the-five-tests">The five tests<a class="headerlink" href="#the-five-tests" title="Permanent link">&para;</a></h2>
+<h1 id="benchmark-figures-backing-tables-n5-stage-1-production-dataset">Benchmark figures + backing tables — n=5 Stage-1 (production) dataset<a class="headerlink" href="#benchmark-figures-backing-tables-n5-stage-1-production-dataset" title="Permanent link">&para;</a></h1>
+<p>Manuscript figure set and figure-backing tables for the four-tool fungal-annotation
+benchmark (MycoNote vs funannotate / MAKER / BRAKER). This is manuscript Methods /
+Results raw material. Generated 2026-10-16.</p>
+<h2 id="dataset-what-this-is">Dataset (what this is)<a class="headerlink" href="#dataset-what-this-is" title="Permanent link">&para;</a></h2>
+<p>Stage-1 n=5 IS the production dataset (decision 2026-10-16: no separate Phase-5
+matrix). 14 genomes × 4 tools × 5 replicates = 280 headline runs (+70 MycoNote-full
+runs for the eggNOG figure = 350 total). All five condor clusters finished 70/70
+with ExitCode 0 (verified via condor_history).</p>
+<p>Collapse rules (per BENCHMARK_PLAN §1): <strong>accuracy → per-genome MEAN</strong> (near-deterministic),
+<strong>timing → per-genome MEDIAN</strong> (HPC-noise variance). All figures plot the collapsed values.</p>
+<h2 id="data-sources-verified-before-use">Data sources (verified before use)<a class="headerlink" href="#data-sources-verified-before-use" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>#</th>
-<th>figure</th>
-<th>data</th>
-<th>what it shows</th>
+<th>tool</th>
+<th>accuracy + timing source</th>
+<th>cluster</th>
+<th>notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td><code>figure_accuracy.{pdf,png}</code></td>
-<td><code>../data/accuracy.tsv</code></td>
-<td>gene-level loose / strict / nucleotide F1, all 4 tools</td>
+<td>MycoNote (HEADLINE)</td>
+<td>results_timing_stage1_matched/myconote/</td>
+<td>146854</td>
+<td>v0.7.16, <strong>no eggNOG</strong> (matched source set)</td>
 </tr>
 <tr>
-<td>2</td>
-<td><code>figure_prediction_speed.{pdf,png}</code></td>
-<td><code>../data/prediction_speed.tsv</code></td>
-<td>gene-prediction wall-time, all 4 tools (BRAKER timing unusable)</td>
+<td>MycoNote (full, REF)</td>
+<td>results_timing_stage1/myconote/</td>
+<td>146848</td>
+<td>v0.7.15, <strong>with eggNOG</strong>; fig12 ONLY; ran at peak load → raw totals contention-confounded</td>
 </tr>
 <tr>
-<td>3</td>
-<td><code>figure_annotation_matched.{pdf,png}</code></td>
-<td><code>../data/annotation_matched.tsv</code></td>
-<td>functional-annotation wall-time at <strong>matched sources</strong> — MycoNote (no EggNog) vs funannotate, with MycoNote-full (+EggNog) for reference</td>
+<td>funannotate</td>
+<td>results_timing_stage1/funannotate/</td>
+<td>146849</td>
+<td>1.8.17</td>
 </tr>
 <tr>
-<td>4</td>
-<td>— (table)</td>
-<td><code>../data/completeness.tsv</code></td>
-<td>which functional outputs each tool produces</td>
+<td>MAKER</td>
+<td>results_timing_stage1/maker/</td>
+<td>146850</td>
+<td>3.01.04; totals only, <strong>no stage split</strong>, RSS ~230 MB</td>
 </tr>
 <tr>
-<td>5</td>
-<td>— (table)</td>
-<td><code>../data/portability.tsv</code></td>
-<td>AVX2 node-class availability</td>
+<td>BRAKER</td>
+<td>results_timing_stage1/braker/ (accuracy) + condor_history 146852 (timing)</td>
+<td>146852</td>
+<td>3.0.8; its performance.json is all-zero → wall = RemoteWallClockTime, CPU = RemoteUserCpu+RemoteSysCpu, peak RSS = MemoryUsage. All 70 NumJobStarts=1 (clean single-run wall, no restart overcount).</td>
 </tr>
 </tbody>
 </table>
-<h2 id="results-means-of-18-runs">Results (means of 18 runs)<a class="headerlink" href="#results-means-of-18-runs" title="Permanent link">&para;</a></h2>
-<p><strong>Accuracy</strong> — competitive, not the leader. Loose: funannotate/BRAKER lead;
-strict: MAKER (yeasts) / BRAKER (intron-rich); nucleotide: BRAKER leads, MycoNote
-beats funannotate pairwise. BRAKER3 is the strongest accuracy tool overall.</p>
-<p><strong>Speed — work-matched.</strong> MAKER and BRAKER do <strong>no functional annotation</strong>
-(prediction only), so they appear only in the prediction and accuracy tests, never
-in an end-to-end claim.</p>
-<table>
-<thead>
-<tr>
-<th>stage</th>
-<th>MycoNote</th>
-<th>funannotate</th>
-<th>MAKER</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>gene prediction</td>
-<td><strong>26.0 min</strong></td>
-<td>77.0 min</td>
-<td>30.2 min</td>
-</tr>
-<tr>
-<td>functional annotation, matched sources (no EggNog)</td>
-<td>17.2 min</td>
-<td><strong>9.0 min</strong></td>
-<td>— none —</td>
-</tr>
-<tr>
-<td>functional annotation, MycoNote full (+EggNog)</td>
-<td>73.2 min</td>
-<td>—</td>
-<td>—</td>
-</tr>
-<tr>
-<td><strong>end-to-end at matched sources</strong></td>
-<td><strong>~43 min</strong></td>
-<td>~86 min</td>
-<td>n/a</td>
-</tr>
-</tbody>
-</table>
+<h2 id="timing-fairness-how-to-read-the-speed-figures">Timing fairness (how to read the speed figures)<a class="headerlink" href="#timing-fairness-how-to-read-the-speed-figures" title="Permanent link">&para;</a></h2>
+<p>All timing arms were pinned to one microarch generation, <strong>x86_64-v3</strong>, because strict
+same-node pinning is infeasible on this shared, heavily-loaded pool (see
+PHASE4_5_RUN_STATUS.md). Wall-clock is the headline; <strong>CPU-seconds (fig5) is the
+co-tenant-contention-robust check</strong>. True single-tenant isolation is impossible on a
+partitionable-slot shared pool regardless of pinning.</p>
+<h2 id="figures-each-ships-pdf-300-dpi-png-nature-style-lowercase-bold-panel-letters">Figures (each ships .pdf + 300 dpi .png; Nature style: lowercase bold panel letters,<a class="headerlink" href="#figures-each-ships-pdf-300-dpi-png-nature-style-lowercase-bold-panel-letters" title="Permanent link">&para;</a></h2>
+<h2 id="sans-serif-no-on-figure-title-okabe-ito-tool-colours-myconote-0072b2">sans-serif, NO on-figure title, Okabe-Ito tool colours — MycoNote #0072B2,<a class="headerlink" href="#sans-serif-no-on-figure-title-okabe-ito-tool-colours-myconote-0072b2" title="Permanent link">&para;</a></h2>
+<h2 id="funannotate-e69f00-maker-009e73-braker-cc79a7-consistent-across-all-figures">funannotate #E69F00, MAKER #009E73, BRAKER #CC79A7 — consistent across all figures)<a class="headerlink" href="#funannotate-e69f00-maker-009e73-braker-cc79a7-consistent-across-all-figures" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Prediction: MycoNote fastest</strong> (~3× funannotate).</li>
-<li><strong>End-to-end at matched functional output: MycoNote ~2× faster</strong> (~43 vs ~86 min).
-  The earlier "funannotate faster end-to-end" reading was an artifact of MycoNote
-  also running EggNog, which funannotate did not.</li>
-<li><strong>Functional annotation at matched sources: funannotate is faster</strong> (9 vs 17 min).
-  Profiled per-source (cne): the gap is <strong>entirely Pfam/hmmsearch</strong> (~11.7 min,
-  ~78% of the matched annotate; MMseqs2 ~2.8, BUSCO ~0.6, CAZyme/MEROPS ~0).
-  funannotate wins this sub-stage because it uses pyhmmer (same HMMER engine,
-  faster bindings). MycoNote deliberately keeps the standard, portable,
-  dependency-light <code>hmmsearch</code> binary — documented here as an honest cost, not a
-  positioning problem (MycoNote still wins prediction and matched end-to-end).</li>
-<li><strong>EggNog</strong> adds ~56 min for orthology/GO/KEGG that funannotate (as-run) and
-  MAKER/BRAKER do not produce — a completeness advantage (Test 4), not a speed
-  penalty.</li>
+<li><strong>fig1_accuracy_by_genome</strong> — <strong>Per-genome annotation accuracy across four tools.</strong> Grouped bars, 14 genomes × 4 tools, four panels: (a) gene F1 loose, (b) gene F1 strict, (c) exon F1 exact, (d) nucleotide F1. Backing: <code>accuracy.tsv</code>.</li>
+<li><strong>fig2_accuracy_distribution</strong> — <strong>Distribution of each accuracy metric across the 14-genome panel, per tool.</strong> Boxplots (spread across genomes), four panels a–d (one metric each). Backing: <code>accuracy.tsv</code>.</li>
+<li><strong>fig3_runtime_by_genome</strong> — <strong>Total wall-clock time per genome and tool.</strong> Grouped bars, log y. Backing: <code>timing_wall.tsv</code>.</li>
+<li><strong>fig4_runtime_decomposition</strong> — <strong>Where annotation time is spent: predict vs annotate stage wall-clock.</strong> Stacked (predict solid + annotate pale) for MycoNote and funannotate; MAKER and BRAKER shown as hatched totals (no stage instrumentation). Log y; note stacking on a log axis is visually approximate. Backing: <code>timing_wall.tsv</code>.</li>
+<li><strong>fig5_cpu_seconds</strong> — <strong>Total CPU-seconds per genome and tool (contention-robust speed axis).</strong> Grouped bars, log y. Distinct from fig3 (CPU-time is insensitive to co-tenant wall-clock contention). Backing: <code>timing_cpu.tsv</code>.</li>
+<li><strong>fig6_peak_memory</strong> — <strong>Peak memory footprint and its stage origin.</strong> (a) peak RSS per genome × tool, log y, all four tools; (b) predict vs annotate peak RSS (grouped) for the two tools with stage instrumentation — MycoNote is annotate-memory-bound (~2.5 GB flat), funannotate is predict-memory-bound (up to ~8.7 GB). Backing: <code>rss.tsv</code>.</li>
+<li><strong>fig7_myconote_annotate_sources</strong> — <strong>MycoNote annotation cost broken out by evidence source.</strong> Stacked bars per genome (mmseqs, pfam, busco, cazyme, merops); Pfam/hmmsearch dominates. Backing: <code>annotate_per_source.tsv</code> (variant=matched).</li>
+<li><strong>fig8_scaling</strong> — <strong>Runtime vs genome size, with per-tool power-law fit.</strong> Log–log scatter (one point per genome), fit line per tool; tmel (125 Mb) is the large point. Backing: <code>scaling.tsv</code>.</li>
+<li><strong>fig9_accuracy_speed_tradeoff</strong> — <strong>Accuracy–speed trade-off, one marker per tool (Pareto view).</strong> Mean gene F1 (loose) vs median wall-min across genomes. Backing: <code>accuracy.tsv</code> + <code>timing_wall.tsv</code>.</li>
+<li><strong>fig10_accuracy_by_clade</strong> — <strong>Accuracy stratified by clade (descriptive stratum, not a tested factor).</strong> Grouped bars over Saccharomycotina / other-Ascomycota / Basidiomycota; (a) gene F1 loose, (b) gene F1 strict. Backing: <code>clade_strata.tsv</code>.</li>
+<li><strong>fig11_gene_count_calibration</strong> — <strong>Predicted vs reference gene count per tool.</strong> Scatter (56 points) with y = x line; above the line = over-prediction. Backing: <code>gene_counts.tsv</code>.</li>
+<li><strong>fig12_eggnog_cost</strong> — <strong>Per-source annotate time, MycoNote matched (headline) vs full (with eggNOG).</strong> Grouped bars per source, log y. eggNOG is a genuine added source (~5800 s median); the small shared-source differences are peak-load contention noise — <strong>raw matched-vs-full totals are contention-confounded and are NOT reported as a speedup.</strong> Backing: <code>annotate_per_source.tsv</code>.</li>
 </ul>
-<p><strong>Portability (Test 5):</strong> MycoNote (Augustus 3.3.3) and MAKER run the full node
-pool; funannotate/BRAKER (Augustus 3.5.0, AVX2-compiled) require AVX2 nodes.</p>
-<h2 id="caveats">Caveats<a class="headerlink" href="#caveats" title="Permanent link">&para;</a></h2>
+<h2 id="backing-tables-tsv-one-header-row-each">Backing tables (TSV, one header row each)<a class="headerlink" href="#backing-tables-tsv-one-header-row-each" title="Permanent link">&para;</a></h2>
 <ul>
-<li>BRAKER wall-time is excluded from the speed figure: its <code>performance.json</code>
-  records all-zeros (a known BRAKER instrumentation issue).</li>
-<li>antiSMASH and InterProScan are excluded from both pipelines' functional runs
-  (they need network access from execute nodes).</li>
-<li>Timing means are right-skewed by the larger intron-rich genomes; see the
-  per-run data files for the full distribution.</li>
+<li><code>accuracy.tsv</code> (56) — genome, clade, tool, gene_f1_loose, gene_f1_strict, exon_f1_exact, nt_f1 (per-genome MEANs).</li>
+<li><code>timing_wall.tsv</code> (56) — genome, clade, size_mb, tool, wall_s_median, predict_wall_s_median, annotate_wall_s_median (stage cols blank for MAKER/BRAKER).</li>
+<li><code>timing_cpu.tsv</code> (56) — genome, tool, cpu_s_median.</li>
+<li><code>rss.tsv</code> (56) — genome, tool, peak_rss_mb_median, predict_rss_mb_median, annotate_rss_mb_median.</li>
+<li><code>annotate_per_source.tsv</code> (154) — genome, variant(matched|full), source, seconds_median.</li>
+<li><code>scaling.tsv</code> (56) — genome, size_mb, clade, tool, wall_min_median.</li>
+<li><code>gene_counts.tsv</code> (56) — genome, tool, n_pred_genes_mean, n_ref_genes.</li>
+<li><code>clade_strata.tsv</code> (56) — same columns as accuracy.tsv (clade-stratified view).</li>
+<li><code>per_run_raw.tsv</code> (350) — every run: variant, tool, genome, clade, size_mb, rep, all four F1 metrics, gene counts, wall_s, cpu_s, peak_rss_mb, predict/annotate wall + RSS. <strong>This is the per-run table the Phase-6 statistics consume.</strong></li>
+<li><code>completeness.tsv</code> (28) — BUSCO-of-predicted-proteins, <strong>MycoNote + funannotate ONLY</strong> (MAKER/BRAKER dirs carry no protein-BUSCO). CAVEAT: different lineages/BUSCO versions (myconote fungi_odb10 n=758 BUSCO v5; funannotate dikarya_odb9 n=1312 BUSCO v3) → NOT a fair cross-tool axis; no figure drawn from it.</li>
+<li><code>_braker_history_146852.tsv</code> — raw condor_history dump backing BRAKER timing (ProcId, ExitCode, RemoteWallClockTime, RemoteUserCpu, RemoteSysCpu, MemoryUsage, ResidentSetSize, NumJobStarts, Args).</li>
+</ul>
+<h2 id="reproduce">Reproduce<a class="headerlink" href="#reproduce" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a># on the cluster (light JSON parsing, submit-node safe):
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cd ~/myconote-cli/docs/paper/htcondor_benchmark
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>condor_history 146852 -af:t ProcId ExitCode RemoteWallClockTime RemoteUserCpu \
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   RemoteSysCpu MemoryUsage ResidentSetSize NumJobStarts Args &gt; figures/_braker_history_146852.tsv
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python3 scripts/aggregate_bench.py            # writes figures/*.tsv
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a># locally (needs matplotlib):
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>python3 scripts/plot_bench.py &lt;tsv_dir&gt; &lt;out_dir&gt;   # writes fig1..fig12 .pdf + .png
+</code></pre></div>
+<h2 id="dimensions-not-built-missing-data-not-fabricated">Dimensions NOT built (missing data, not fabricated)<a class="headerlink" href="#dimensions-not-built-missing-data-not-fabricated" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Cross-tool BUSCO completeness figure</strong> — protein-BUSCO exists only for MycoNote + funannotate, at different lineages/versions. <code>completeness.tsv</code> is emitted with the caveat; no figure.</li>
+<li><strong>BRAKER / MAKER predict-vs-annotate stage split</strong> (fig4, fig6b) — neither tool emits per-stage instrumentation; shown as totals (fig4 hatched) or omitted from the stage panel (fig6b).</li>
 </ul>
 
 

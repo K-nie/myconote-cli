@@ -113,6 +113,18 @@ myconote-cli annotate predict_out/consensus.gff3 \
   --genetic-code 12    # for Candida CTG clade
 ```
 
+**EggNog is off by default — run with or without it:**
+```bash
+# fast (default): Swiss-Prot + Pfam + CAZyme + MEROPS, no emapper
+myconote-cli annotate ... --cazyme --merops
+
+# full: add EggNog orthology (COG/NOG/KEGG). Adds a ~30-min emapper step;
+# it does not change gene-model accuracy, only functional coverage.
+myconote-cli annotate ... --cazyme --merops --eggnog --eggnog-db <dir>
+```
+`--eggnog` turns the emapper layer on; `--no-eggnog` (the default) is the
+explicit off-switch. If both are given, the last one wins.
+
 ---
 
 ## 7. Validate and prepare NCBI submission

@@ -43,8 +43,14 @@ and portability:
   tool wins every axis; BRAKER3 leads overall.
 - **Portability** — MycoNote's Augustus 3.3.3 runs on any CPU; funannotate/BRAKER
   use AVX2-compiled Augustus 3.5.0 and require AVX2 nodes.
-- **Completeness** — MycoNote produces EggNog orthology (GO/KEGG/COG) by default,
-  which funannotate (as-run) and MAKER/BRAKER do not.
+- **Completeness** — MycoNote's default annotation scope (Swiss-Prot + Pfam +
+  CAZyme + MEROPS) matches funannotate's default workflow, so the headline
+  comparison is like-for-like. On top of that MycoNote offers an **optional**
+  EggNog orthology layer (GO/KEGG/COG) via `annotate --eggnog` — a one-flag
+  extra that funannotate's default workflow does not include. It is off by
+  default (`--no-eggnog` is the explicit default) because it adds a ~30-min
+  emapper step and does not change gene-model accuracy; turn it on when you want
+  the pathway/orthology annotation.
 
 Honest caveat: at matched functional sources, funannotate's annotation is faster
 (9 vs 17 min) — a deliberate tradeoff, as MycoNote keeps the standard, portable

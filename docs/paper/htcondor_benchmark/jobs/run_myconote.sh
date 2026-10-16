@@ -32,6 +32,14 @@ export AUGUSTUS_CONFIG_PATH="${AUGUSTUS_CONFIG_PATH:-$HOME/.myconote/augustus_co
 # (the tool never derives it from --db-dir). Point it at the copy provisioned
 # by setup.sh under $MYCONOTE_DB_DIR/eggnog.
 EGGNOG_DB_DIR="${EGGNOG_DB_DIR:-$MYCONOTE_DB_DIR/eggnog}"
+# EggNog is OFF by default so the MycoNote annotate scope MATCHES funannotate's
+# arm (which runs plain `funannotate annotate`, no emapper) — a fair end-to-end
+# speed comparison. Set RUN_EGGNOG=1 for the "full" MycoNote profile (adds the
+# ~30-min emapper COG/NOG/KEGG layer). eggNOG does not affect gene-model accuracy.
+EGGNOG_ARGS=()
+if [[ "${RUN_EGGNOG:-0}" == "1" ]]; then
+    EGGNOG_ARGS=(--eggnog --eggnog-db "$EGGNOG_DB_DIR")
+fi
 
 # annotate --cazyme (v0.7.15+) prefers a native hmmsearch of the proteins against
 # the dbCAN HMM database — the same method funannotate uses, so the two arms are
@@ -219,10 +227,11 @@ echo "[$(date +%T)] Step 3: predict"
     >> "$LOG" 2>&1
 
 # ── Step 4: Annotate ───────────────────────────────────────────────────────
-# Full functional-annotation suite, matched to funannotate's default workflow:
-# Swiss-Prot + Pfam (always on) plus EggNog COG/NOG, CAZyme (dbCAN), and MEROPS
-# protease families. All resolve from --db-dir. antiSMASH and InterProScan are
-# deliberately excluded — they require network access from execute nodes.
+# Functional-annotation scope MATCHED to funannotate's default workflow:
+# Swiss-Prot + Pfam + CAZyme (dbCAN) + MEROPS. EggNog is OFF by default (see the
+# RUN_EGGNOG toggle above) so neither arm runs emapper — a fair end-to-end speed
+# comparison. antiSMASH and InterProScan are excluded (network-only on execute
+# nodes). Set RUN_EGGNOG=1 for the "full" MycoNote profile with emapper COG/NOG.
 echo "[$(date +%T)] Step 4: annotate"
 /usr/bin/time -v -o "$OUT_DIR/time_annotate.log" \
     myconote-cli annotate "$OUT_DIR/predict_out/consensus.gff3" \
@@ -232,8 +241,7 @@ echo "[$(date +%T)] Step 4: annotate"
     --locus-prefix "$LOCUS_PREFIX" \
     --genetic-code "$GENETIC_CODE" \
     --db-dir "$MYCONOTE_DB_DIR" \
-    --eggnog \
-    --eggnog-db "$EGGNOG_DB_DIR" \
+    ${EGGNOG_ARGS[@]+"${EGGNOG_ARGS[@]}"} \
     --cazyme \
     --cazyme-hmm "$CAZYME_HMM" \
     --cazyme-db "$CAZYME_DB" \

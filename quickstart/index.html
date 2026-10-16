@@ -1903,32 +1903,42 @@ your original contig names pass through unchanged. For an NCBI submission, add
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--interproscan<span class="w"> </span>--email<span class="w"> </span>you@email.edu<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--genetic-code<span class="w"> </span><span class="m">12</span><span class="w">    </span><span class="c1"># for Candida CTG clade</span>
 </code></pre></div></p>
+<p><strong>EggNog is off by default — run with or without it:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># fast (default): Swiss-Prot + Pfam + CAZyme + MEROPS, no emapper</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>...<span class="w"> </span>--cazyme<span class="w"> </span>--merops
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># full: add EggNog orthology (COG/NOG/KEGG). Adds a ~30-min emapper step;</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># it does not change gene-model accuracy, only functional coverage.</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>myconote-cli<span class="w"> </span>annotate<span class="w"> </span>...<span class="w"> </span>--cazyme<span class="w"> </span>--merops<span class="w"> </span>--eggnog<span class="w"> </span>--eggnog-db<span class="w"> </span>&lt;dir&gt;
+</code></pre></div>
+<code>--eggnog</code> turns the emapper layer on; <code>--no-eggnog</code> (the default) is the
+explicit off-switch. If both are given, the last one wins.</p>
 <hr />
 <h2 id="7-validate-and-prepare-ncbi-submission">7. Validate and prepare NCBI submission<a class="headerlink" href="#7-validate-and-prepare-ncbi-submission" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Check for errors first</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">"Genus species"</span><span class="w"> </span>--validate-only
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Generate submission files</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">"Genus species"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--strain<span class="w"> </span><span class="s2">"CBS 123"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>MYORG<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span>--bioproject<span class="w"> </span>PRJNA123456
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Check for errors first</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">"Genus species"</span><span class="w"> </span>--validate-only
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Generate submission files</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>myconote-cli<span class="w"> </span>submit<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span>--fasta<span class="w"> </span>assembly_masked.fa<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span>--organism<span class="w"> </span><span class="s2">"Genus species"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span>--strain<span class="w"> </span><span class="s2">"CBS 123"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span>--locus-prefix<span class="w"> </span>MYORG<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">  </span>--bioproject<span class="w"> </span>PRJNA123456
 </code></pre></div>
 <hr />
 <h2 id="8-explore-your-results">8. Explore your results<a class="headerlink" href="#8-explore-your-results" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Summary statistics with taxonomic benchmarking</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--taxon<span class="w"> </span>fungi
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Convert to GenBank for Proksee upload or IGV browsing</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>genbank<span class="w"> </span>--fasta<span class="w"> </span>assembly_masked.fa
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># For interactive exploration, load the GFF3 + FASTA in IGV (desktop)</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># or upload the .gbk to Proksee (https://proksee.ca/) for publication maps.</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="c1"># For cross-species gene-cluster synteny, pipe multiple .gbk files into clinker.</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Summary statistics with taxonomic benchmarking</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>myconote-cli<span class="w"> </span>stats<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--taxon<span class="w"> </span>fungi
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Convert to GenBank for Proksee upload or IGV browsing</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>myconote-cli<span class="w"> </span>convert<span class="w"> </span>annotate_out/annotated.gff3<span class="w"> </span>--to<span class="w"> </span>genbank<span class="w"> </span>--fasta<span class="w"> </span>assembly_masked.fa
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># For interactive exploration, load the GFF3 + FASTA in IGV (desktop)</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="c1"># or upload the .gbk to Proksee (https://proksee.ca/) for publication maps.</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="c1"># For cross-species gene-cluster synteny, pipe multiple .gbk files into clinker.</span>
 </code></pre></div>
 <hr />
 <h2 id="output-files">Output files<a class="headerlink" href="#output-files" title="Permanent link">&para;</a></h2>
@@ -1968,29 +1978,29 @@ your original contig names pass through unchanged. For an NCBI submission, add
 </table>
 <hr />
 <h2 id="9-interpret-your-results-with-ai">9. Interpret your results with AI<a class="headerlink" href="#9-interpret-your-results-with-ai" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Interpret prediction results (local LLM, no data leaves your machine)</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Rules-only mode (no Ollama needed)</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict<span class="w"> </span>--no-llm
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Analyze a pasted error</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"ERROR: SEQ_FEAT.NoStop"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Interpret prediction results (local LLM, no data leaves your machine)</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Rules-only mode (no Ollama needed)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>myconote-cli<span class="w"> </span>explain<span class="w"> </span>predict<span class="w"> </span>--no-llm
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Analyze a pasted error</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">"ERROR: SEQ_FEAT.NoStop"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>myconote-cli<span class="w"> </span>explain<span class="w"> </span>--paste
 </code></pre></div>
 <p>First-time setup for the AI interpreter:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>ollama<span class="w">        </span><span class="c1"># install Ollama + best model for your hardware</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>chat-corpus<span class="w">   </span><span class="c1"># optional: Q1 paper corpus for grounded citations</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>ollama<span class="w">        </span><span class="c1"># install Ollama + best model for your hardware</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>myconote-cli<span class="w"> </span>setup<span class="w"> </span>chat-corpus<span class="w">   </span><span class="c1"># optional: Q1 paper corpus for grounded citations</span>
 </code></pre></div>
 <hr />
 <h2 id="10-annotate-multiple-genomes-at-once">10. Annotate multiple genomes at once<a class="headerlink" href="#10-annotate-multiple-genomes-at-once" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># From a directory of FASTAs</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>genomes/<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># From a sample sheet with per-genome settings</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>samples.tsv<span class="w"> </span>--parallel<span class="w"> </span><span class="m">4</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Generate HTCondor submit files for HPC</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>genomes/<span class="w"> </span>--condor<span class="w"> </span>--condor-mem<span class="w"> </span>64G
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># From a directory of FASTAs</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>genomes/<span class="w"> </span>--kingdom<span class="w"> </span>fungi<span class="w"> </span>--threads<span class="w"> </span><span class="m">8</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># From a sample sheet with per-genome settings</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>samples.tsv<span class="w"> </span>--parallel<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Generate HTCondor submit files for HPC</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>myconote-cli<span class="w"> </span>batch<span class="w"> </span>genomes/<span class="w"> </span>--condor<span class="w"> </span>--condor-mem<span class="w"> </span>64G
 </code></pre></div>
 <hr />
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>

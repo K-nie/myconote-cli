@@ -1,0 +1,175 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/spom/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out
+  [1/4] Augustus self-training (first-pass prediction)…
+  Running Augustus (species: schizosaccharomyces_pombe) — 4 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/training/first_pass.gff3
+── Augustus self-training ───────────────────────────────────
+  Species  : spom_trained
+  GFF3     : /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/training/first_pass.gff3
+  FASTA    : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/spom/rep1/masked.fa
+  Output   : /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/training
+  Loaded 4752 gene models (≥300 bp)
+  Wrote 4752 mini-GenBank records for training
+  Split: 3802 training, 950 test
+Will create parameters for a EUKARYOTIC species!
+creating directory /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/augustus_config/species/spom_trained/ ...
+creating /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/augustus_config/species/spom_trained/spom_trained_parameters.cfg ...
+creating /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/augustus_config/species/spom_trained/spom_trained_weightmatrix.txt ...
+creating /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/augustus_config/species/spom_trained/spom_trained_metapars.cfg ...
+The necessary files for training spom_trained have been created.
+Now, either run etraining or optimize_parameters.pl with --species=spom_trained.
+etraining quickly estimates the parameters from a file with training genes.
+optimize_augustus.pl alternates running etraining and augustus to find optimal metaparameters.
+
+  Running etraining…
+  etraining complete
+  Evaluating model accuracy…
+  ✓ Trained species: spom_trained
+    Use with: myconote predict <fasta> --species spom_trained
+  ✓ Trained species: spom_trained
+  [2/4] Augustus (spom_trained)…
+  Running Augustus (species: spom_trained) — 4 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      SNAP HMM trained → /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/snap_training/snap_trained.hmm
+  Running SNAP (HMM: /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/snap_training/snap_trained.hmm)…
+  SNAP finished → /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/snap.gff3
+      SNAP complete → /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/snap.gff3
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	1053
+Internal	550
+Terminal	1063
+Single	1252
+Intron:	1618	1454286
+Intergenic:	1798	2415716
+Initial	1138
+Internal	768
+Terminal	1152
+Single	1477
+Intron:	1924	1047760
+Intergenic:	2010	2453063
+Initial	1186
+Internal	950
+Terminal	1198
+Single	1531
+Intron:	2153	935249
+Intergenic:	2085	2458494
+Initial	1336
+Internal	1689
+Terminal	1344
+Single	1650
+Intron:	3038	486038
+Intergenic:	2165	2293650
+SvsM  0.551562217807477 vs 0.448437782192523
+genes in IvsT all and selected: 3020 1312
+1, -0.842482238357593
+2, -1.29598558101576
+3, -1.89610424076605
+4, -2.5445789812744
+5, -3.30810695859614
+6, -3.4904285153901
+# estimate 1: 0.556291390728477
+# estimate 2: 0.56593647845531
+# value: 0.56593647845531
+IvsT  0.56593647845531 vs 0.43406352154469
+Initial	1386
+Internal	1795
+Terminal	1387
+Single	1714
+Intron:	3186	313720
+Intergenic:	2167	2189435
+SvsM  0.556509549675837 vs 0.443490450324163
+genes in IvsT all and selected: 3177 1362
+1, -0.874588067988306
+2, -1.25828479367968
+3, -1.91340457865038
+4, -2.6015889698682
+5, -3.26546576812803
+6, -3.6903489620933
+7, -4.27227050754302
+# estimate 1: 0.564054139124961
+# estimate 2: 0.556524450493684
+# value: 0.556524450493684
+IvsT  0.556524450493684 vs 0.443475549506316
+Initial	1386
+Internal	1780
+Terminal	1388
+Single	1727
+Intron:	3171	292297
+Intergenic:	2180	2188255
+SvsM  0.558464223385689 vs 0.441535776614311
+genes in IvsT all and selected: 3163 1363
+1, -0.868304440316735
+2, -1.25129669257284
+3, -1.92413860697204
+4, -2.60232291485527
+5, -3.36729582998647
+6, -3.66209537020712
+7, -4.27300445253009
+# estimate 1: 0.561808409737591
+# estimate 2: 0.555142455296476
+# value: 0.555142455296476
+IvsT  0.555142455296476 vs 0.444857544703524
+Initial	1387
+Internal	1780
+Terminal	1389
+Single	1728
+Intron:	3172	289790
+Intergenic:	2181	2188114
+SvsM  0.558382711746253 vs 0.441617288253747
+genes in IvsT all and selected: 3164 1364
+1, -0.867291121688668
+2, -1.25203009927972
+3, -1.92487201367892
+4, -2.59320402511914
+5, -3.38953544191431
+6, -3.66282877691399
+7, -4.27373785923697
+# estimate 1: 0.561630847029077
+# estimate 2: 0.554612420926304
+# value: 0.554612420926304
+IvsT  0.554612420926304 vs 0.445387579073696
+  [4/4] Merging predictions (agreement-weighted consensus)…
+  7 predictions from Augustus
+  0 predictions from SNAP
+  4458 predictions from GeneMark
+  Consensus: 4129 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/consensus.gff3
+     4129 genes called
+
+── Prediction complete ──────────────────────────────────────
+  4129 genes in /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_1979734/busco_ab_self_spom_1979735/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/spom/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix SPOM \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 4 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/spom/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/spom/reference.gff3
+Predicted: 4,129 genes
+Reference: 5,124 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.797  Spec=0.994  F1=0.884  (TP=4,103 FP=26 FN=1,047)
+  moderate    Sens=0.799  Spec=0.993  F1=0.885  (TP=4,101 FP=28 FN=1,033)
+  strict      Sens=0.696  Spec=0.863  F1=0.771  (TP=3,565 FP=564 FN=1,559)
+
+Exon-level:
+  exact_match     Sens=0.237  Spec=0.264  F1=0.250
+  overlap_match   Sens=0.858  Spec=0.958  F1=0.905
+
+Nucleotide-level:
+  Sens=0.893  Spec=0.993  F1=0.940
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/spom/metrics.json

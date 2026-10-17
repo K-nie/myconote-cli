@@ -1,0 +1,129 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ylp/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_3716216/busco_ab_stock_ylp_3716217/predict_out
+  [1/3] Augustus (yarrowia_lipolytica)…
+  Running Augustus (species: yarrowia_lipolytica) — 7 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_3716216/busco_ab_stock_ylp_3716217/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      ⚠ SNAP self-training failed (non-fatal): External tool error: fathom training.ann training.dna -categorize 1000 failed: 
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	465
+Internal	136
+Terminal	477
+Single	1554
+Intron:	624	717565
+Intergenic:	1534	2347717
+Initial	448
+Internal	114
+Terminal	460
+Single	1670
+Intron:	587	488512
+Intergenic:	1566	2293407
+Initial	468
+Internal	138
+Terminal	479
+Single	1642
+Intron:	630	520804
+Intergenic:	1561	2262789
+Initial	464
+Internal	177
+Terminal	468
+Single	1701
+Intron:	659	344301
+Intergenic:	1541	2207583
+SvsM  0.779905496145238 vs 0.220094503854763
+genes in IvsT all and selected: 627 449
+1, -0.266381230368856
+2, -1.66437163125194
+3, -3.11129061418826
+# estimate 1: 0.266347687400319
+# estimate 2: 0.241121411085206
+# value: 0.241121411085206
+IvsT  0.241121411085206 vs 0.758878588914794
+Initial	443
+Internal	146
+Terminal	444
+Single	1763
+Intron:	600	232352
+Intergenic:	1553	2216126
+SvsM  0.795398923152227 vs 0.204601076847773
+genes in IvsT all and selected: 579 427
+1, -0.230783905848174
+2, -1.76632457208023
+3, -3.34873381212641
+# estimate 1: 0.245250431778929
+# estimate 2: 0.210351580955836
+# value: 0.210351580955836
+IvsT  0.210351580955836 vs 0.789648419044164
+Initial	440
+Internal	139
+Terminal	441
+Single	1777
+Intron:	590	201569
+Intergenic:	1558	2220656
+SvsM  0.797566909975669 vs 0.202433090024331
+genes in IvsT all and selected: 569 428
+1, -0.23017757797159
+2, -1.81062795353244
+3, -3.16875143768563
+# estimate 1: 0.235500878734622
+# estimate 2: 0.230089496654211
+# value: 0.230089496654211
+IvsT  0.230089496654211 vs 0.769910503345789
+Initial	439
+Internal	139
+Terminal	441
+Single	1778
+Intron:	589	197634
+Intergenic:	1555	2216588
+SvsM  0.797859401605449 vs 0.202140598394551
+genes in IvsT all and selected: 569 428
+1, -0.22724071829828
+2, -1.83961549040569
+3, -3.11468421641536
+# estimate 1: 0.235500878734622
+# estimate 2: 0.236047611878014
+# value: 0.236047611878014
+IvsT  0.236047611878014 vs 0.763952388121986
+  [3/3] Merging predictions (agreement-weighted consensus)…
+  6433 predictions from Augustus
+  3169 predictions from GeneMark
+  Consensus: 6467 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_3716216/busco_ab_stock_ylp_3716217/predict_out/consensus.gff3
+     6467 genes called
+
+── Prediction complete ──────────────────────────────────────
+  6467 genes in /var/lib/condor/execute/dir_3716216/busco_ab_stock_ylp_3716217/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_3716216/busco_ab_stock_ylp_3716217/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ylp/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix YLP \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 7 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/ylp/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/ylp/reference.gff3
+Predicted: 6,467 genes
+Reference: 6,471 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.955  Spec=0.957  F1=0.956  (TP=6,186 FP=281 FN=290)
+  moderate    Sens=0.955  Spec=0.956  F1=0.956  (TP=6,185 FP=282 FN=290)
+  strict      Sens=0.763  Spec=0.764  F1=0.764  (TP=4,940 FP=1,527 FN=1,531)
+
+Exon-level:
+  exact_match     Sens=0.786  Spec=0.747  F1=0.766
+  overlap_match   Sens=0.948  Spec=0.909  F1=0.928
+
+Nucleotide-level:
+  Sens=0.973  Spec=0.974  F1=0.973
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/ylp/metrics.json

@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=busco  genome=Komagataella_phaffii_GS115 (kpha)
+Kingdom=fungi  Species=pichia_stipitis  Code=1
+busco_lineage(tsv, informational only)=saccharomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:38:26] predict (arm=busco)
+predict rc=0
+[22:47:34] score consensus.gff3 vs reference
+genome=kpha arm=busco
+verdict=FELL_BACK reason=Invalid GFF format: BUSCO genome-mode run failed. Check that the lineage dataset is available and that `--augustus` is supported by this BUSCO build.
+predict_rc=0
+[22:47:38] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/busco/kpha

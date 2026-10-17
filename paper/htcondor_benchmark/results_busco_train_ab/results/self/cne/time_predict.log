@@ -1,0 +1,23 @@
+	Command being timed: "myconote-cli predict /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cne/rep1/masked.fa --kingdom fungi --species cryptococcus_neoformans_neoformans_JEC21 --locus-prefix CNE --genetic-code 1 --output /var/lib/condor/execute/dir_3511179/busco_ab_self_cne_3511180/predict_out --threads 8 --augustus-training self"
+	User time (seconds): 5989.64
+	System time (seconds): 56.15
+	Percent of CPU this job got: 271%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 37:06.99
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 554832
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 704
+	Minor (reclaiming a frame) page faults: 23918647
+	Voluntary context switches: 18160
+	Involuntary context switches: 2287551
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 1663416
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

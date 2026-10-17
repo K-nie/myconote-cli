@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Candida_albicans_SC5314 (cal)
+Kingdom=fungi  Species=candida_albicans  Code=12
+busco_lineage(tsv, informational only)=saccharomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cal/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_3510864/busco_ab_stock_cal_3510868/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:35:26] predict (arm=stock)
+predict rc=0
+[22:43:38] score consensus.gff3 vs reference
+genome=cal arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[22:43:43] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/cal

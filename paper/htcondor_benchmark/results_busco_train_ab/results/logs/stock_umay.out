@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Ustilago_maydis_521 (umay)
+Kingdom=fungi  Species=ustilago_maydis  Code=1
+busco_lineage(tsv, informational only)=basidiomycota_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/umay/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_3511011/busco_ab_stock_umay_3511012/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:36:27] predict (arm=stock)
+predict rc=0
+[22:48:56] score consensus.gff3 vs reference
+genome=umay arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[22:49:01] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/umay

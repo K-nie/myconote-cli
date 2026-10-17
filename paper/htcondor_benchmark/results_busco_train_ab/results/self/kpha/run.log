@@ -1,0 +1,158 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out
+  [1/4] Augustus self-training (first-pass prediction)…
+  Running Augustus (species: pichia_stipitis) — 4 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/training/first_pass.gff3
+── Augustus self-training ───────────────────────────────────
+  Species  : kpha_trained
+  GFF3     : /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/training/first_pass.gff3
+  FASTA    : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+  Output   : /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/training
+  Loaded 3918 gene models (≥300 bp)
+  Wrote 3918 mini-GenBank records for training
+  Split: 3135 training, 783 test
+Will create parameters for a EUKARYOTIC species!
+creating directory /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/augustus_config/species/kpha_trained/ ...
+creating /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/augustus_config/species/kpha_trained/kpha_trained_parameters.cfg ...
+creating /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/augustus_config/species/kpha_trained/kpha_trained_weightmatrix.txt ...
+creating /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/augustus_config/species/kpha_trained/kpha_trained_metapars.cfg ...
+The necessary files for training kpha_trained have been created.
+Now, either run etraining or optimize_parameters.pl with --species=kpha_trained.
+etraining quickly estimates the parameters from a file with training genes.
+optimize_augustus.pl alternates running etraining and augustus to find optimal metaparameters.
+
+  Running etraining…
+  etraining complete
+  Evaluating model accuracy…
+  ✓ Trained species: kpha_trained
+    Use with: myconote predict <fasta> --species kpha_trained
+  ✓ Trained species: kpha_trained
+  [2/4] Augustus (kpha_trained)…
+  Running Augustus (species: kpha_trained) — 4 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      SNAP HMM trained → /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/snap_training/snap_trained.hmm
+  Running SNAP (HMM: /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/snap_training/snap_trained.hmm)…
+  SNAP finished → /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/snap.gff3
+      SNAP complete → /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/snap.gff3
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	800
+Internal	200
+Terminal	799
+Single	2113
+Intron:	1005	482651
+Intergenic:	2370	1120982
+Initial	761
+Internal	126
+Terminal	752
+Single	2383
+Intron:	887	290438
+Intergenic:	2487	1015462
+Initial	821
+Internal	151
+Terminal	812
+Single	2302
+Intron:	972	313862
+Intergenic:	2463	984085
+Initial	767
+Internal	233
+Terminal	761
+Single	2373
+Intron:	1000	213938
+Intergenic:	2352	904512
+SvsM  0.745990688049664 vs 0.254009311950336
+genes in IvsT all and selected: 994 763
+1, -0.270787583553019
+2, -1.68849814090629
+3, -3.2360606496223
+4, -4.33467293829041
+# estimate 1: 0.232394366197183
+# estimate 2: 0.253112339973198
+# value: 0.253112339973198
+IvsT  0.253112339973198 vs 0.746887660026802
+Initial	634
+Internal	134
+Terminal	628
+Single	2632
+Intron:	768	132245
+Intergenic:	2412	918320
+SvsM  0.800199634004325 vs 0.199800365995675
+genes in IvsT all and selected: 762 627
+1, -0.194839775151358
+2, -1.88706964903238
+3, -3.66835781839314
+# estimate 1: 0.174540682414698
+# estimate 2: 0.176090181265125
+# value: 0.176090181265125
+IvsT  0.176090181265125 vs 0.823909818734875
+Initial	596
+Internal	93
+Terminal	590
+Single	2724
+Intron:	689	104783
+Intergenic:	2447	922190
+SvsM  0.816500245539368 vs 0.183499754460632
+genes in IvsT all and selected: 683 591
+1, -0.149368000855576
+2, -2.10514989839004
+3, -4.07923092441205
+# estimate 1: 0.134699853587116
+# estimate 2: 0.140165492980251
+# value: 0.140165492980251
+IvsT  0.140165492980251 vs 0.859834507019749
+Initial	587
+Internal	81
+Terminal	581
+Single	2765
+Intron:	668	94539
+Intergenic:	2471	921523
+SvsM  0.822233025441582 vs 0.177766974558418
+genes in IvsT all and selected: 662 576
+# estimate 1: 0.120845921450151
+# estimate 2: 0
+# value: 0.120845921450151
+IvsT  0.120845921450151 vs 0.879154078549849
+  [4/4] Merging predictions (agreement-weighted consensus)…
+  8 predictions from Augustus
+  0 predictions from SNAP
+  4617 predictions from GeneMark
+  Consensus: 4011 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/consensus.gff3
+     4011 genes called
+
+── Prediction complete ──────────────────────────────────────
+  4011 genes in /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix KPHA \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 4 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/kpha/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/kpha/reference.gff3
+Predicted: 4,011 genes
+Reference: 5,040 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.771  Spec=0.972  F1=0.860  (TP=3,898 FP=113 FN=1,159)
+  moderate    Sens=0.771  Spec=0.972  F1=0.860  (TP=3,898 FP=113 FN=1,159)
+  strict      Sens=0.599  Spec=0.752  F1=0.667  (TP=3,017 FP=994 FN=2,023)
+
+Exon-level:
+  exact_match     Sens=0.584  Spec=0.571  F1=0.578
+  overlap_match   Sens=0.899  Spec=0.916  F1=0.907
+
+Nucleotide-level:
+  Sens=0.928  Spec=0.966  F1=0.946
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/kpha/metrics.json

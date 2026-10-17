@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Tuber_melanosporum_Mel28 (tmel)
+Kingdom=fungi  Species=aspergillus_nidulans  Code=1
+busco_lineage(tsv, informational only)=ascomycota_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/tmel/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_1706275/busco_ab_stock_tmel_1706276/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:36:27] predict (arm=stock)
+predict rc=0
+[23:56:24] score consensus.gff3 vs reference
+genome=tmel arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[23:56:33] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/tmel

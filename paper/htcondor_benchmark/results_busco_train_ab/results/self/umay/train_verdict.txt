@@ -1,0 +1,3 @@
+genome=umay arm=self
+verdict=TRAINED (self)
+predict_rc=0

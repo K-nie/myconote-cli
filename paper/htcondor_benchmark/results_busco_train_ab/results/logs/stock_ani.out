@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Aspergillus_nidulans_FGSC_A4 (ani)
+Kingdom=fungi  Species=aspergillus_nidulans  Code=1
+busco_lineage(tsv, informational only)=eurotiomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ani/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_2383898/busco_ab_stock_ani_2383899/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:35:32] predict (arm=stock)
+predict rc=0
+[23:11:13] score consensus.gff3 vs reference
+genome=ani arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[23:11:28] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/ani

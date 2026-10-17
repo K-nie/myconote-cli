@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=self  genome=Cryptococcus_neoformans_JEC21 (cne)
+Kingdom=fungi  Species=cryptococcus_neoformans_neoformans_JEC21  Code=1
+busco_lineage(tsv, informational only)=tremellomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cne/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_3511179/busco_ab_self_cne_3511180/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:37:27] predict (arm=self)
+predict rc=0
+[23:14:34] score consensus.gff3 vs reference
+genome=cne arm=self
+verdict=TRAINED (self)
+predict_rc=0
+[23:14:45] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/cne

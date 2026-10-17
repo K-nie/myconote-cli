@@ -1,0 +1,72 @@
+000 (146872.011.000) 2026-10-16 22:16:48 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146872.011.000) 2026-10-16 22:17:30 Job executing on host: <144.92.98.129:9618?addrs=144.92.98.129-9618&alias=scarcity-19.glbrc.org&noUDP&sock=startd_9000_d473>
+	SlotName: slot1_2@scarcity-19.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_3686281"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146872.011.000) 2026-10-16 22:17:39 Image size of job updated: 1210496
+	1183  -  MemoryUsage of job (MB)
+	1210496  -  ResidentSetSize of job (KB)
+...
+006 (146872.011.000) 2026-10-16 22:22:40 Image size of job updated: 2592796
+	1183  -  MemoryUsage of job (MB)
+	1210612  -  ResidentSetSize of job (KB)
+...
+004 (146872.011.000) 2026-10-16 22:34:16 Job was evicted. Code 1009 Subcode 0
+	(0) CPU times
+		Usr 0 00:46:33, Sys 0 00:00:47  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	Reason: Claim deactivated
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :  1183       16384     16384 
+	   TimeExecute (s)      :  1006                       
+	   TimeSlotBusy (s)     :  1006                       
+...
+009 (146872.011.000) 2026-10-16 22:34:16 Job was aborted.
+	via condor_rm (by user narhmadey)
+...
+000 (146876.011.000) 2026-10-16 22:35:15 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146876.011.000) 2026-10-16 22:36:25 Job executing on host: <144.92.98.129:9618?addrs=144.92.98.129-9618&alias=scarcity-19.glbrc.org&noUDP&sock=startd_9000_d473>
+	SlotName: slot1_2@scarcity-19.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_3716360"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146876.011.000) 2026-10-16 22:36:34 Image size of job updated: 1078516
+	1054  -  MemoryUsage of job (MB)
+	1078516  -  ResidentSetSize of job (KB)
+...
+006 (146876.011.000) 2026-10-16 22:41:34 Image size of job updated: 2506052
+	1054  -  MemoryUsage of job (MB)
+	1078668  -  ResidentSetSize of job (KB)
+...
+005 (146876.011.000) 2026-10-17 00:16:01 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 02:54:39, Sys 0 00:01:20  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 02:54:39, Sys 0 00:01:20  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :  1054       16384     16384 
+	   TimeExecute (s)      :  5976                       
+	   TimeSlotBusy (s)     :  5976                       
+...

@@ -1,0 +1,108 @@
+000 (146873.000.000) 2026-10-16 22:16:48 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146873.000.000) 2026-10-16 22:19:30 Job executing on host: <144.92.98.129:9618?addrs=144.92.98.129-9618&alias=scarcity-19.glbrc.org&noUDP&sock=startd_9000_d473>
+	SlotName: slot1_4@scarcity-19.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_3687013"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146873.000.000) 2026-10-16 22:19:39 Image size of job updated: 61044
+	60  -  MemoryUsage of job (MB)
+	61044  -  ResidentSetSize of job (KB)
+...
+000 (146874.000.000) 2026-10-16 22:24:37 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+006 (146873.000.000) 2026-10-16 22:24:40 Image size of job updated: 1173056
+	205  -  MemoryUsage of job (MB)
+	209184  -  ResidentSetSize of job (KB)
+...
+001 (146874.000.000) 2026-10-16 22:24:50 Job executing on host: <144.92.98.7:9618?addrs=144.92.98.7-9618&alias=scarcity-14.glbrc.org&noUDP&sock=startd_8827_2a91>
+	SlotName: slot1_1@scarcity-14.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_3492447"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146874.000.000) 2026-10-16 22:24:59 Image size of job updated: 60840
+	60  -  MemoryUsage of job (MB)
+	60840  -  ResidentSetSize of job (KB)
+...
+005 (146873.000.000) 2026-10-16 22:28:21 Job terminated.
+	(1) Normal termination (return value 2)
+		Usr 0 00:29:17, Sys 0 00:00:14  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:29:17, Sys 0 00:00:14  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :   205       16384     16384 
+	   TimeExecute (s)      :   531                       
+	   TimeSlotBusy (s)     :   531                       
+...
+006 (146874.000.000) 2026-10-16 22:29:59 Image size of job updated: 1162940
+	384  -  MemoryUsage of job (MB)
+	392268  -  ResidentSetSize of job (KB)
+...
+005 (146874.000.000) 2026-10-16 22:34:06 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:30:13, Sys 0 00:02:07  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:30:13, Sys 0 00:02:07  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     6.84        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :   384       16384     16384 
+	   TimeExecute (s)      :   556                       
+	   TimeSlotBusy (s)     :   556                       
+...
+000 (146876.028.000) 2026-10-16 22:35:15 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146876.028.000) 2026-10-16 22:38:25 Job executing on host: <144.92.98.7:9618?addrs=144.92.98.7-9618&alias=scarcity-14.glbrc.org&noUDP&sock=startd_8827_2a91>
+	SlotName: slot1_4@scarcity-14.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_3511412"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146876.028.000) 2026-10-16 22:38:33 Image size of job updated: 60308
+	59  -  MemoryUsage of job (MB)
+	60308  -  ResidentSetSize of job (KB)
+...
+006 (146876.028.000) 2026-10-16 22:43:33 Image size of job updated: 1166036
+	407  -  MemoryUsage of job (MB)
+	416564  -  ResidentSetSize of job (KB)
+...
+005 (146876.028.000) 2026-10-16 22:47:38 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:30:50, Sys 0 00:02:07  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:30:50, Sys 0 00:02:07  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     4.86        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :   407       16384     16384 
+	   TimeExecute (s)      :   553                       
+	   TimeSlotBusy (s)     :   553                       
+...

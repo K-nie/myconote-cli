@@ -1,0 +1,80 @@
+000 (146872.003.000) 2026-10-16 22:16:48 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146872.003.000) 2026-10-16 22:16:48 Job executing on host: <144.92.98.71:9618?addrs=144.92.98.71-9618&alias=scarcity-2.glbrc.org&noUDP&sock=startd_9315_e4c8>
+	SlotName: slot1_1@scarcity-2.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_2363621"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146872.003.000) 2026-10-16 22:16:57 Image size of job updated: 23868
+	2  -  MemoryUsage of job (MB)
+	1712  -  ResidentSetSize of job (KB)
+...
+006 (146872.003.000) 2026-10-16 22:21:58 Image size of job updated: 2140244
+	845  -  MemoryUsage of job (MB)
+	865116  -  ResidentSetSize of job (KB)
+...
+004 (146872.003.000) 2026-10-16 22:34:16 Job was evicted. Code 1009 Subcode 0
+	(0) CPU times
+		Usr 0 01:14:53, Sys 0 00:00:29  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	Reason: Claim deactivated
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     5.50        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :   845       16384     16384 
+	   TimeExecute (s)      :  1048                       
+	   TimeSlotBusy (s)     :  1048                       
+...
+009 (146872.003.000) 2026-10-16 22:34:16 Job was aborted.
+	via condor_rm (by user narhmadey)
+...
+000 (146876.003.000) 2026-10-16 22:35:15 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146876.003.000) 2026-10-16 22:35:25 Job executing on host: <144.92.98.71:9618?addrs=144.92.98.71-9618&alias=scarcity-2.glbrc.org&noUDP&sock=startd_9315_e4c8>
+	SlotName: slot1_1@scarcity-2.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_2383898"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146876.003.000) 2026-10-16 22:35:34 Image size of job updated: 655468
+	641  -  MemoryUsage of job (MB)
+	655468  -  ResidentSetSize of job (KB)
+...
+006 (146876.003.000) 2026-10-16 22:40:35 Image size of job updated: 2135908
+	641  -  MemoryUsage of job (MB)
+	656256  -  ResidentSetSize of job (KB)
+...
+006 (146876.003.000) 2026-10-16 22:55:37 Image size of job updated: 2135908
+	861  -  MemoryUsage of job (MB)
+	881484  -  ResidentSetSize of job (KB)
+...
+006 (146876.003.000) 2026-10-16 23:11:28 Image size of job updated: 2489924
+	861  -  MemoryUsage of job (MB)
+	881484  -  ResidentSetSize of job (KB)
+...
+005 (146876.003.000) 2026-10-16 23:11:28 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 01:54:50, Sys 0 00:00:36  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 01:54:50, Sys 0 00:00:36  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     0.99        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :   861       16384     16384 
+	   TimeExecute (s)      :  2163                       
+	   TimeSlotBusy (s)     :  2163                       
+...

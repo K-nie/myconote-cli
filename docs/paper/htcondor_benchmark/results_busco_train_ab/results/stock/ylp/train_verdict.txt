@@ -1,0 +1,3 @@
+genome=ylp arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0

@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=self  genome=Komagataella_phaffii_GS115 (kpha)
+Kingdom=fungi  Species=pichia_stipitis  Code=1
+busco_lineage(tsv, informational only)=saccharomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_2384159/busco_ab_self_kpha_2384160/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:37:27] predict (arm=self)
+predict rc=0
+[22:52:41] score consensus.gff3 vs reference
+genome=kpha arm=self
+verdict=TRAINED (self)
+predict_rc=0
+[22:52:45] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/kpha

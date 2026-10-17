@@ -1,0 +1,161 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/fgra/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_1979351/busco_ab_stock_fgra_1979352/predict_out
+  [1/3] Augustus (fusarium_graminearum)…
+  Running Augustus (species: fusarium_graminearum) — 19 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_1979351/busco_ab_stock_fgra_1979352/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      ⚠ SNAP self-training failed (non-fatal): External tool error: fathom training.ann training.dna -categorize 1000 failed: 
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	3835
+Internal	2561
+Terminal	3834
+Single	2473
+Intron:	6408	4667993
+Intergenic:	4443	7952915
+Initial	5279
+Internal	5419
+Terminal	5277
+Single	2025
+Intron:	10710	4130518
+Intergenic:	5686	9122764
+Initial	5688
+Internal	6513
+Terminal	5684
+Single	1940
+Intron:	12212	3800048
+Intergenic:	5954	9135251
+Initial	6589
+Internal	10072
+Terminal	6581
+Single	2040
+Intron:	16667	1982557
+Intergenic:	6527	8985049
+SvsM  0.228040434482326 vs 0.771959565517674
+genes in IvsT all and selected: 16647 6566
+1, -1.07676913657141
+2, -1.26888368299874
+3, -1.7667920119789
+4, -2.35350972969211
+5, -3.00276271669483
+6, -3.56391342434834
+7, -4.12622100394947
+8, -4.67878623388823
+9, -5.49382323205721
+10, -5.8452211188951
+11, -6.30475344827354
+# estimate 1: 0.60419294767826
+# estimate 2: 0.57224661311439
+# value: 0.57224661311439
+IvsT  0.57224661311439 vs 0.42775338688561
+Initial	6970
+Internal	10612
+Terminal	6962
+Single	1998
+Intron:	17586	1481284
+Intergenic:	6766	9015924
+SvsM  0.214867064568638 vs 0.785132935431362
+genes in IvsT all and selected: 17570 6948
+1, -1.05924212474612
+2, -1.28352788063911
+3, -1.77633499890242
+4, -2.37540962357839
+5, -2.94084727930643
+6, -3.72224514795774
+7, -4.20181822821962
+8, -4.40355787087068
+9, -5.18264748123135
+10, -5.95583736946483
+11, -6.44831385456262
+# estimate 1: 0.603357996585088
+# estimate 2: 0.573442163723784
+# value: 0.573442163723784
+IvsT  0.573442163723784 vs 0.426557836276216
+Initial	7002
+Internal	10560
+Terminal	6995
+Single	2018
+Intron:	17567	1383354
+Intergenic:	6777	8954569
+SvsM  0.21636865474619 vs 0.78363134525381
+genes in IvsT all and selected: 17550 6980
+1, -1.0485948795093
+2, -1.28449318098395
+3, -1.78093006729785
+4, -2.38310546965206
+5, -2.95090684217393
+6, -3.73281038333966
+7, -4.20641329661505
+8, -4.46877756108254
+9, -5.21321803603003
+10, -5.96043243786025
+11, -6.54821910276237
+# estimate 1: 0.601025641025641
+# estimate 2: 0.569520822766712
+# value: 0.569520822766712
+IvsT  0.569520822766712 vs 0.430479177233288
+Initial	7014
+Internal	10564
+Terminal	7007
+Single	2022
+Intron:	17583	1367494
+Intergenic:	6788	8950622
+SvsM  0.216494845360825 vs 0.783505154639175
+genes in IvsT all and selected: 17566 6992
+1, -1.04663987710675
+2, -1.28621090256291
+3, -1.780100016798
+4, -2.3832716005396
+5, -2.95811908307052
+6, -3.7226232024123
+7, -4.2275491040511
+8, -4.45807276266293
+9, -5.16364246322143
+10, -6.07993319509559
+11, -6.54993682434133
+# estimate 1: 0.600705909142662
+# estimate 2: 0.567786735587934
+# value: 0.567786735587934
+IvsT  0.567786735587934 vs 0.432213264412066
+  [3/3] Merging predictions (agreement-weighted consensus)…
+  11745 predictions from Augustus
+  12145 predictions from GeneMark
+  Consensus: 11997 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_1979351/busco_ab_stock_fgra_1979352/predict_out/consensus.gff3
+     11997 genes called
+
+── Prediction complete ──────────────────────────────────────
+  11997 genes in /var/lib/condor/execute/dir_1979351/busco_ab_stock_fgra_1979352/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_1979351/busco_ab_stock_fgra_1979352/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/fgra/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix FGRA \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 19 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/fgra/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/fgra/reference.gff3
+Predicted: 11,997 genes
+Reference: 13,312 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.875  Spec=0.974  F1=0.922  (TP=11,685 FP=312 FN=1,670)
+  moderate    Sens=0.875  Spec=0.973  F1=0.921  (TP=11,678 FP=319 FN=1,670)
+  strict      Sens=0.515  Spec=0.571  F1=0.542  (TP=6,855 FP=5,142 FN=6,457)
+
+Exon-level:
+  exact_match     Sens=0.544  Spec=0.590  F1=0.566
+  overlap_match   Sens=0.867  Spec=0.928  F1=0.896
+
+Nucleotide-level:
+  Sens=0.955  Spec=0.931  F1=0.943
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/fgra/metrics.json

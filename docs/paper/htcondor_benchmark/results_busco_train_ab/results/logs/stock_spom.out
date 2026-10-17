@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Schizosaccharomyces_pombe_972h- (spom)
+Kingdom=fungi  Species=schizosaccharomyces_pombe  Code=1
+busco_lineage(tsv, informational only)=ascomycota_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/spom/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_2384044/busco_ab_stock_spom_2384045/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:36:27] predict (arm=stock)
+predict rc=0
+[22:50:14] score consensus.gff3 vs reference
+genome=spom arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[22:50:21] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/spom

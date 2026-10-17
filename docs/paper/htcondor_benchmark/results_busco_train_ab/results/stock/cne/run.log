@@ -1,0 +1,200 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cne/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out
+  [1/3] Augustus (cryptococcus_neoformans_neoformans_JEC21)…
+  Running Augustus (species: cryptococcus_neoformans_neoformans_JEC21) — 14 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      SNAP HMM trained → /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/snap_training/snap_trained.hmm
+  Running SNAP (HMM: /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/snap_training/snap_trained.hmm)…
+  SNAP finished → /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/snap.gff3
+      SNAP complete → /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/snap.gff3
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	1870
+Internal	2445
+Terminal	1881
+Single	328
+Intron:	4331	3261709
+Intergenic:	1250	2242318
+Initial	2416
+Internal	5264
+Terminal	2434
+Single	267
+Intron:	7706	3556712
+Intergenic:	1929	3187579
+Initial	2795
+Internal	7273
+Terminal	2812
+Single	213
+Intron:	10094	3553456
+Intergenic:	2234	3080285
+Initial	3889
+Internal	17244
+Terminal	3895
+Single	175
+Intron:	21152	2305439
+Intergenic:	3075	2881239
+SvsM  0.0396930404869013 vs 0.960306959513099
+genes in IvsT all and selected: 21120 3871
+1, -2.59138722759713
+2, -2.04466204949278
+3, -1.96784887173117
+4, -1.87945213317155
+5, -2.08540088047189
+6, -2.26730672327108
+7, -2.55415788582877
+8, -2.9882685920139
+9, -3.19867311755068
+10, -3.73947957352861
+11, -3.66614830044306
+12, -4.01277290852829
+13, -4.65035023793342
+14, -4.76476058911117
+15, -4.96543128457332
+16, -5.77636150078965
+17, -5.42805480652143
+18, -5.62221082096239
+22, -5.86337287777928
+# estimate 1: 0.815056818181818
+# estimate 2: 0.79464391742433
+# value: 0.79464391742433
+IvsT  0.79464391742433 vs 0.20535608257567
+Initial	4466
+Internal	22600
+Terminal	4462
+Single	119
+Intron:	27074	1883105
+Intergenic:	3534	2836578
+SvsM  0.0236561658273803 vs 0.97634383417262
+genes in IvsT all and selected: 27054 4427
+1, -2.77507656701499
+2, -2.20107204162747
+3, -2.0965281858762
+4, -2.0085981133695
+5, -2.07650931898571
+6, -2.26207938973549
+7, -2.48468078869161
+8, -2.78967536643614
+9, -3.00640570291564
+10, -3.49763763278123
+11, -3.45383501012284
+12, -3.97663682493554
+13, -4.2210901628365
+14, -4.37012574199699
+15, -4.63427731703858
+16, -4.50365713462151
+17, -5.09964056672781
+18, -5.17660160786394
+20, -5.68742723162993
+22, -6.0928923397381
+# estimate 1: 0.834664005322688
+# estimate 2: 0.8163816318229
+# value: 0.8163816318229
+IvsT  0.8163816318229 vs 0.1836183681771
+Initial	4558
+Internal	23220
+Terminal	4556
+Single	118
+Intron:	27786	1775445
+Intergenic:	3571	2777493
+SvsM  0.0226830106541414 vs 0.977316989345859
+genes in IvsT all and selected: 27768 4516
+1, -2.79861082760298
+2, -2.22097653416488
+3, -2.10002392374722
+4, -2.0201203271541
+5, -2.08923245211445
+6, -2.27119629114391
+7, -2.45695723223977
+8, -2.7628927450009
+9, -2.94732178413442
+10, -3.43864818284898
+11, -3.45253729500965
+12, -3.84067094676617
+13, -4.22572718324313
+14, -4.42639787870528
+15, -4.75182027913991
+16, -4.52356162715893
+17, -5.19650610040135
+18, -5.19650610040135
+20, -5.93047527548155
+22, -6.11279683227551
+# estimate 1: 0.835602131950447
+# estimate 2: 0.81235326257488
+# value: 0.81235326257488
+IvsT  0.81235326257488 vs 0.18764673742512
+Initial	4575
+Internal	23296
+Terminal	4573
+Single	118
+Intron:	27879	1752027
+Intergenic:	3583	2769467
+SvsM  0.022615648201028 vs 0.977384351798972
+genes in IvsT all and selected: 27861 4533
+1, -2.7987383852237
+2, -2.22473385983618
+3, -2.11286396399283
+4, -2.01722205421366
+5, -2.08763740104716
+6, -2.26428115692443
+7, -2.46589591665307
+8, -2.73896664192378
+9, -2.94686857726937
+10, -3.38870132954841
+11, -3.46331219333959
+12, -3.86526235934031
+13, -4.24475198104521
+14, -4.3760879831063
+15, -4.86379118945144
+16, -4.54793824003296
+17, -5.20026342607265
+18, -5.20026342607265
+20, -5.93423260115285
+22, -6.1165541579468
+# estimate 1: 0.835540720002871
+# estimate 2: 0.811622183271569
+# value: 0.811622183271569
+IvsT  0.811622183271569 vs 0.188377816728431
+  [3/3] Merging predictions (agreement-weighted consensus)…
+  6811 predictions from Augustus
+  7432 predictions from SNAP
+  6163 predictions from GeneMark
+  Consensus: 7248 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/consensus.gff3
+     7248 genes called
+
+── Prediction complete ──────────────────────────────────────
+  7248 genes in /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_442465/busco_ab_stock_cne_442466/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cne/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix CNE \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 14 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/cne/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/cne/reference.gff3
+Predicted: 7,248 genes
+Reference: 6,632 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.965  Spec=0.904  F1=0.934  (TP=6,553 FP=695 FN=235)
+  moderate    Sens=0.966  Spec=0.903  F1=0.934  (TP=6,548 FP=700 FN=232)
+  strict      Sens=0.556  Spec=0.509  F1=0.532  (TP=3,690 FP=3,558 FN=2,942)
+
+Exon-level:
+  exact_match     Sens=0.580  Spec=0.608  F1=0.594
+  overlap_match   Sens=0.917  Spec=0.957  F1=0.936
+
+Nucleotide-level:
+  Sens=0.971  Spec=0.921  F1=0.945
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/cne/metrics.json

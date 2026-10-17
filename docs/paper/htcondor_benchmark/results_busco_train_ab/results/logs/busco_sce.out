@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=busco  genome=Saccharomyces_cerevisiae_S288C (sce)
+Kingdom=fungi  Species=saccharomyces_cerevisiae_S288C  Code=1
+busco_lineage(tsv, informational only)=saccharomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/sce/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_3717091/busco_ab_busco_sce_3717092/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:38:26] predict (arm=busco)
+predict rc=0
+[22:46:15] score consensus.gff3 vs reference
+genome=sce arm=busco
+verdict=FELL_BACK reason=Invalid GFF format: BUSCO genome-mode run failed. Check that the lineage dataset is available and that `--augustus` is supported by this BUSCO build.
+predict_rc=0
+[22:46:18] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/busco/sce

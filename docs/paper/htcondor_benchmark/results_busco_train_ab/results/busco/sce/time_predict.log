@@ -1,0 +1,23 @@
+	Command being timed: "myconote-cli predict /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/sce/rep1/masked.fa --kingdom fungi --species saccharomyces_cerevisiae_S288C --locus-prefix SCE --genetic-code 1 --output /var/lib/condor/execute/dir_3717091/busco_ab_busco_sce_3717092/predict_out --threads 8 --augustus-training busco"
+	User time (seconds): 1946.70
+	System time (seconds): 80.27
+	Percent of CPU this job got: 432%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 7:48.14
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 242364
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 2834
+	Minor (reclaiming a frame) page faults: 11970444
+	Voluntary context switches: 32081
+	Involuntary context switches: 15316012
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 2223648
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

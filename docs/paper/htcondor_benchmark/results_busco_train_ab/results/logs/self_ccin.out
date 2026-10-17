@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=self  genome=Coprinopsis_cinerea_okayama7_130 (ccin)
+Kingdom=fungi  Species=coprinus_cinereus  Code=1
+busco_lineage(tsv, informational only)=agaricomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ccin/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_1725341/busco_ab_self_ccin_1725342/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:37:27] predict (arm=self)
+predict rc=0
+[00:19:54] score consensus.gff3 vs reference
+genome=ccin arm=self
+verdict=TRAINED (self)
+predict_rc=0
+[00:20:22] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/ccin

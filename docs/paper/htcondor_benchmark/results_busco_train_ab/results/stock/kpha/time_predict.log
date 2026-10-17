@@ -1,0 +1,23 @@
+	Command being timed: "myconote-cli predict /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa --kingdom fungi --species pichia_stipitis --locus-prefix KPHA --genetic-code 1 --output /var/lib/condor/execute/dir_1725086/busco_ab_stock_kpha_1725087/predict_out --threads 8"
+	User time (seconds): 1791.83
+	System time (seconds): 14.55
+	Percent of CPU this job got: 335%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 8:58.06
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 325764
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 296
+	Minor (reclaiming a frame) page faults: 4608059
+	Voluntary context switches: 9423
+	Involuntary context switches: 2607
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 722568
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

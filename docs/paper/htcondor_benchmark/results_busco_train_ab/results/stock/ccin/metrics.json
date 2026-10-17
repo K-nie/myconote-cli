@@ -1,0 +1,73 @@
+{
+  "label": "stock_ccin",
+  "predicted_file": "/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/ccin/consensus.gff3",
+  "reference_file": "/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/ccin/reference.gff3",
+  "predicted_summary": {
+    "n_genes": 12051,
+    "n_exons": 74104,
+    "n_cds": 74104,
+    "mean_gene_length": 1991.0,
+    "n_single_exon_genes": 1207,
+    "mean_exons_per_gene": 6.15
+  },
+  "reference_summary": {
+    "n_genes": 13355,
+    "n_exons": 75564,
+    "n_cds": 75140,
+    "mean_gene_length": 1763.6,
+    "n_single_exon_genes": 1117,
+    "mean_exons_per_gene": 5.66
+  },
+  "gene_level": {
+    "loose": {
+      "TP": 11376,
+      "FP": 675,
+      "FN": 2063,
+      "sensitivity": 0.8465,
+      "specificity": 0.944,
+      "F1": 0.8926
+    },
+    "moderate": {
+      "TP": 11371,
+      "FP": 680,
+      "FN": 2063,
+      "sensitivity": 0.8464,
+      "specificity": 0.9436,
+      "F1": 0.8924
+    },
+    "strict": {
+      "TP": 5681,
+      "FP": 6370,
+      "FN": 7674,
+      "sensitivity": 0.4254,
+      "specificity": 0.4714,
+      "F1": 0.4472
+    }
+  },
+  "exon_level": {
+    "exact_match": {
+      "TP": 55201,
+      "FP": 18903,
+      "FN": 20361,
+      "sensitivity": 0.7305,
+      "specificity": 0.7449,
+      "F1": 0.7377
+    },
+    "overlap_match": {
+      "TP": 68838,
+      "FP": 5266,
+      "FN": 6937,
+      "sensitivity": 0.9085,
+      "specificity": 0.9289,
+      "F1": 0.9186
+    }
+  },
+  "nucleotide_level": {
+    "TP_nt": 17510850,
+    "FP_nt": 1845751,
+    "FN_nt": 1029083,
+    "sensitivity": 0.9445,
+    "specificity": 0.9046,
+    "F1": 0.9241
+  }
+}

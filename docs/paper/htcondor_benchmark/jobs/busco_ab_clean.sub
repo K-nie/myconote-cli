@@ -1,0 +1,53 @@
+# BUSCO-train A/B — CLEAN rerun on the stable ASCII wrapper (no mid-write race).
+# 30 jobs: 14 stock + 14 self + kpha/sce busco (busco falls back to stock
+# universally per the smoke diagnosis; kpha+sce included to confirm busco==stock).
+universe       = vanilla
+executable     = $(BENCHMARK_DIR)/jobs/run_busco_ab.sh
+getenv         = true
+
+request_cpus   = 8
+request_memory = 16 GB
+request_disk   = 20 GB
+
+log    = $(RESULTS_DIR)/logs/$(arm)_$(genome_id).log
+output = $(RESULTS_DIR)/logs/$(arm)_$(genome_id).out
+error  = $(RESULTS_DIR)/logs/$(arm)_$(genome_id).err
+
+arguments = $(genome_id) $(arm) $(BENCHMARK_DIR) $(RESULTS_DIR)
+
+should_transfer_files   = NO
+notification            = Never
+requirements = (TARGET.has_avx2 =?= true) && (TARGET.Microarch =?= "x86_64-v3")
+
+queue genome_id, arm from (
+  sce stock
+  cal stock
+  ylp stock
+  ani stock
+  ncr stock
+  cne stock
+  klac stock
+  kpha stock
+  fgra stock
+  afum stock
+  umay stock
+  ccin stock
+  spom stock
+  tmel stock
+  sce self
+  cal self
+  ylp self
+  ani self
+  ncr self
+  cne self
+  klac self
+  kpha self
+  fgra self
+  afum self
+  umay self
+  ccin self
+  spom self
+  tmel self
+  kpha busco
+  sce busco
+)

@@ -1,0 +1,154 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cal/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out
+  [1/4] Augustus self-training (first-pass prediction)…
+  Running Augustus (species: candida_albicans) — 8 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/training/first_pass.gff3
+── Augustus self-training ───────────────────────────────────
+  Species  : cal_trained
+  GFF3     : /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/training/first_pass.gff3
+  FASTA    : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cal/rep1/masked.fa
+  Output   : /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/training
+  Loaded 5702 gene models (≥300 bp)
+  Wrote 5702 mini-GenBank records for training
+  Split: 4562 training, 1140 test
+Will create parameters for a EUKARYOTIC species!
+creating directory /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/augustus_config/species/cal_trained/ ...
+creating /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/augustus_config/species/cal_trained/cal_trained_parameters.cfg ...
+creating /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/augustus_config/species/cal_trained/cal_trained_weightmatrix.txt ...
+creating /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/augustus_config/species/cal_trained/cal_trained_metapars.cfg ...
+The necessary files for training cal_trained have been created.
+Now, either run etraining or optimize_parameters.pl with --species=cal_trained.
+etraining quickly estimates the parameters from a file with training genes.
+optimize_augustus.pl alternates running etraining and augustus to find optimal metaparameters.
+
+  Running etraining…
+  etraining complete
+  Evaluating model accuracy…
+  ✓ Trained species: cal_trained
+    Use with: myconote predict <fasta> --species cal_trained
+  ✓ Trained species: cal_trained
+  [2/4] Augustus (cal_trained)…
+  Running Augustus (species: cal_trained) — 8 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      SNAP HMM trained → /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/snap_training/snap_trained.hmm
+  Running SNAP (HMM: /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/snap_training/snap_trained.hmm)…
+  SNAP finished → /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/snap.gff3
+      SNAP complete → /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/snap.gff3
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	696
+Internal	209
+Terminal	706
+Single	2171
+Intron:	928	689484
+Intergenic:	2304	2303803
+Initial	559
+Internal	111
+Terminal	560
+Single	2541
+Intron:	683	411471
+Intergenic:	2425	2306051
+Initial	581
+Internal	137
+Terminal	585
+Single	2497
+Intron:	733	440976
+Intergenic:	2413	2281137
+Initial	526
+Internal	156
+Terminal	527
+Single	2578
+Intron:	696	311152
+Intergenic:	2332	2135205
+SvsM  0.821678321678322 vs 0.178321678321678
+genes in IvsT all and selected: 669 508
+1, -0.221668262135887
+2, -1.81164083978188
+3, -3.34010968968232
+# estimate 1: 0.225710014947683
+# estimate 2: 0.210299891169834
+# value: 0.210299891169834
+IvsT  0.210299891169834 vs 0.789700108830166
+Initial	400
+Internal	103
+Terminal	398
+Single	2811
+Intron:	513	176322
+Intergenic:	2382	2170118
+SvsM  0.870672097759674 vs 0.129327902240326
+genes in IvsT all and selected: 491 382
+1, -0.173979485476559
+2, -2.03339760317843
+3, -3.5475253358082
+# estimate 1: 0.203665987780041
+# estimate 2: 0.185115944133901
+# value: 0.185115944133901
+IvsT  0.185115944133901 vs 0.814884055866099
+Initial	359
+Internal	80
+Terminal	356
+Single	2879
+Intron:	447	138557
+Intergenic:	2382	2145417
+SvsM  0.885411408379606 vs 0.114588591620394
+genes in IvsT all and selected: 428 335
+# estimate 1: 0.184579439252336
+# estimate 2: 0
+# value: 0.184579439252336
+IvsT  0.184579439252336 vs 0.815420560747664
+Initial	343
+Internal	79
+Terminal	338
+Single	2911
+Intron:	428	120077
+Intergenic:	2392	2146945
+SvsM  0.891642940880924 vs 0.108357059119076
+genes in IvsT all and selected: 411 319
+# estimate 1: 0.18978102189781
+# estimate 2: 0
+# value: 0.18978102189781
+IvsT  0.18978102189781 vs 0.81021897810219
+  [4/4] Merging predictions (agreement-weighted consensus)…
+  16 predictions from Augustus
+  0 predictions from SNAP
+  4476 predictions from GeneMark
+  Consensus: 3570 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/consensus.gff3
+     3570 genes called
+
+── Prediction complete ──────────────────────────────────────
+  3570 genes in /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_504881/busco_ab_self_cal_504882/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/cal/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix CAL \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 8 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/cal/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/cal/reference.gff3
+Predicted: 3,570 genes
+Reference: 6,030 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.584  Spec=0.987  F1=0.734  (TP=3,525 FP=45 FN=2,509)
+  moderate    Sens=0.584  Spec=0.987  F1=0.734  (TP=3,525 FP=45 FN=2,508)
+  strict      Sens=0.487  Spec=0.822  F1=0.611  (TP=2,934 FP=636 FN=3,096)
+
+Exon-level:
+  exact_match     Sens=0.489  Spec=0.532  F1=0.510
+  overlap_match   Sens=0.792  Spec=0.881  F1=0.834
+
+Nucleotide-level:
+  Sens=0.793  Spec=0.990  F1=0.881
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/cal/metrics.json

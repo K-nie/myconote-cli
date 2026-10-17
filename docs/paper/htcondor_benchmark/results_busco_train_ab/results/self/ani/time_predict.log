@@ -1,0 +1,23 @@
+	Command being timed: "myconote-cli predict /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ani/rep1/masked.fa --kingdom fungi --species aspergillus_nidulans --locus-prefix ANI --genetic-code 1 --output /var/lib/condor/execute/dir_1979591/busco_ab_self_ani_1979592/predict_out --threads 8 --augustus-training self"
+	User time (seconds): 12009.19
+	System time (seconds): 61.62
+	Percent of CPU this job got: 357%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 56:12.13
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1051480
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1780
+	Minor (reclaiming a frame) page faults: 6209887
+	Voluntary context switches: 28089
+	Involuntary context switches: 18782
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 2358600
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

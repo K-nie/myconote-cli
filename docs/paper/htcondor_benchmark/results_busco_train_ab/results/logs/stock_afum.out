@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Aspergillus_fumigatus_Af293 (afum)
+Kingdom=fungi  Species=aspergillus_fumigatus  Code=1
+busco_lineage(tsv, informational only)=eurotiomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/afum/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_1315372/busco_ab_stock_afum_1315381/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:36:27] predict (arm=stock)
+predict rc=0
+[23:21:04] score consensus.gff3 vs reference
+genome=afum arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[23:21:19] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/afum

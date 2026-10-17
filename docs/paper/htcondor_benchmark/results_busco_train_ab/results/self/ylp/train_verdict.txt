@@ -1,0 +1,3 @@
+genome=ylp arm=self
+verdict=TRAINED (self)
+predict_rc=0

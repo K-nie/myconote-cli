@@ -1,0 +1,196 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out
+  [1/4] Augustus BUSCO-seeded training…
+  Running BUSCO genome mode (lineage: fungi_odb10, seed species: pichia_stipitis)…
+2026-10-16 22:38:26 INFO:	***** Start a BUSCO v5.7.1 analysis, current time: 10/16/2026 22:38:26 *****
+2026-10-16 22:38:26 INFO:	Configuring BUSCO with local environment
+2026-10-16 22:38:26 INFO:	Running genome mode
+2026-10-16 22:38:26 INFO:	Input file is /mnt/cephfs/linuxhome/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+2026-10-16 22:38:26 ERROR:	Unable to run BUSCO in offline mode. Dataset /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/busco_train/busco_downloads/lineages/fungi_odb10 does not exist.
+2026-10-16 22:38:26 ERROR:	BUSCO analysis failed!
+2026-10-16 22:38:26 ERROR:	Check the logs, read the user guide (https://busco.ezlab.org/busco_userguide.html), and check the BUSCO issue board on https://gitlab.com/ezlab/busco/issues
+
+  BUSCO offline run produced no results dir — retrying with dataset download…
+2026-10-16 22:38:28 INFO:	***** Start a BUSCO v5.7.1 analysis, current time: 10/16/2026 22:38:28 *****
+2026-10-16 22:38:28 INFO:	Configuring BUSCO with local environment
+2026-10-16 22:38:28 INFO:	Running genome mode
+2026-10-16 22:38:28 INFO:	'Force' option selected; overwriting previous results directory
+2026-10-16 22:38:28 INFO:	Downloading information on latest versions of BUSCO data...
+2026-10-16 22:38:29 INFO:	Input file is /mnt/cephfs/linuxhome/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa
+2026-10-16 22:38:29 INFO:	Downloading file 'https://busco-data.ezlab.org/v5/data/lineages/fungi_odb10.2024-01-08.tar.gz'
+2026-10-16 22:38:32 INFO:	Decompressing file '/var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/busco_train/busco_downloads/lineages/fungi_odb10.tar.gz'
+2026-10-16 22:38:37 WARNING:	An augustus species was mentioned in the config file or on the command line, dataset default species (aspergillus_nidulans) will be ignored
+2026-10-16 22:38:41 INFO:	Running BUSCO using lineage dataset fungi_odb10 (eukaryota, 2024-01-08)
+2026-10-16 22:38:41 INFO:	Running 1 job(s) on bbtools, starting at 10/16/2026 22:38:41
+2026-10-16 22:38:42 INFO:	[bbtools]	1 of 1 task(s) completed
+2026-10-16 22:38:42 INFO:	Running 1 job(s) on makeblastdb, starting at 10/16/2026 22:38:42
+2026-10-16 22:38:42 INFO:	Creating BLAST database with input file
+2026-10-16 22:38:43 INFO:	[makeblastdb]	1 of 1 task(s) completed
+2026-10-16 22:38:43 INFO:	Running a BLAST search for BUSCOs against created database
+2026-10-16 22:38:43 INFO:	Running 1 job(s) on tblastn, starting at 10/16/2026 22:38:43
+2026-10-16 22:39:02 INFO:	[tblastn]	1 of 1 task(s) completed
+2026-10-16 22:39:02 INFO:	Running Augustus gene predictor on BLAST search results.
+2026-10-16 22:39:02 INFO:	Running Augustus prediction using pichia_stipitis as species:
+2026-10-16 22:39:02 INFO:	Running 867 job(s) on augustus, starting at 10/16/2026 22:39:02
+2026-10-16 22:39:03 INFO:	[augustus]	87 of 867 task(s) completed
+2026-10-16 22:39:04 INFO:	[augustus]	174 of 867 task(s) completed
+2026-10-16 22:39:05 INFO:	[augustus]	261 of 867 task(s) completed
+2026-10-16 22:39:05 INFO:	[augustus]	347 of 867 task(s) completed
+2026-10-16 22:39:06 INFO:	[augustus]	434 of 867 task(s) completed
+2026-10-16 22:39:07 INFO:	[augustus]	521 of 867 task(s) completed
+2026-10-16 22:39:07 INFO:	[augustus]	607 of 867 task(s) completed
+2026-10-16 22:39:08 INFO:	[augustus]	694 of 867 task(s) completed
+2026-10-16 22:39:09 INFO:	[augustus]	781 of 867 task(s) completed
+2026-10-16 22:39:10 INFO:	[augustus]	867 of 867 task(s) completed
+2026-10-16 22:39:10 INFO:	Extracting predicted proteins...
+2026-10-16 22:39:10 ERROR:	Augustus did not recognize any genes matching the dataset fungi_odb10 in the input file. If this is unexpected, check your input file and your installation of Augustus
+
+2026-10-16 22:39:10 ERROR:	BUSCO analysis failed!
+2026-10-16 22:39:10 ERROR:	Check the logs, read the user guide (https://busco.ezlab.org/busco_userguide.html), and check the BUSCO issue board on https://gitlab.com/ezlab/busco/issues
+
+
+======================================================================
+!!  WARNING: Augustus BUSCO-SEEDED TRAINING DID NOT RUN  !!
+======================================================================
+You requested training (--augustus-training busco),
+but NO genome-specific model was trained. Prediction is FALLING BACK
+to the stock pre-trained species. These results are NOT BUSCO-trained.
+
+reason         : Invalid GFF format: BUSCO genome-mode run failed. Check that the lineage dataset is available and that `--augustus` is supported by this BUSCO build.
+using species  : pichia_stipitis  (stock / pre-trained fallback)
+how to fix      : the reason above says which gate failed.
+• scripts missing → install the companion scripts
+(new_species.pl, etraining, gff2gbSmallDNA.pl) beside
+the `augustus` binary, or set $AUGUSTUS_SCRIPTS_PATH.
+• generic template missing → run
+`myconote setup --dbs augustus-fungi` to provision
+species/generic/ under $AUGUSTUS_CONFIG_PATH.
+• (BUSCO mode) BUSCO absent / wrong lineage → install
+busco=5 and provision the kingdom lineage dataset.
+======================================================================
+  [2/4] Augustus (pichia_stipitis)…
+  Running Augustus (species: pichia_stipitis) — 4 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      SNAP HMM trained → /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/snap_training/snap_trained.hmm
+  Running SNAP (HMM: /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/snap_training/snap_trained.hmm)…
+  SNAP finished → /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/snap.gff3
+      SNAP complete → /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/snap.gff3
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	800
+Internal	200
+Terminal	799
+Single	2113
+Intron:	1005	482651
+Intergenic:	2370	1120982
+Initial	761
+Internal	126
+Terminal	752
+Single	2383
+Intron:	887	290438
+Intergenic:	2487	1015462
+Initial	821
+Internal	151
+Terminal	812
+Single	2302
+Intron:	972	313862
+Intergenic:	2463	984085
+Initial	767
+Internal	233
+Terminal	761
+Single	2373
+Intron:	1000	213938
+Intergenic:	2352	904512
+SvsM  0.745990688049664 vs 0.254009311950336
+genes in IvsT all and selected: 994 763
+1, -0.270787583553019
+2, -1.68849814090629
+3, -3.2360606496223
+4, -4.33467293829041
+# estimate 1: 0.232394366197183
+# estimate 2: 0.253112339973198
+# value: 0.253112339973198
+IvsT  0.253112339973198 vs 0.746887660026802
+Initial	641
+Internal	131
+Terminal	634
+Single	2621
+Intron:	772	133241
+Intergenic:	2408	917858
+SvsM  0.798067310896368 vs 0.201932689103632
+genes in IvsT all and selected: 765 635
+1, -0.192133314571649
+2, -1.88927680742486
+3, -3.74557479779048
+# estimate 1: 0.168627450980392
+# estimate 2: 0.169192063048103
+# value: 0.169192063048103
+IvsT  0.169192063048103 vs 0.830807936951897
+Initial	605
+Internal	91
+Terminal	598
+Single	2712
+Intron:	696	108248
+Intergenic:	2444	920738
+SvsM  0.813237221494102 vs 0.186762778505898
+genes in IvsT all and selected: 689 593
+# estimate 1: 0.129172714078374
+# estimate 2: 0
+# value: 0.129172714078374
+IvsT  0.129172714078374 vs 0.870827285921626
+Initial	597
+Internal	82
+Terminal	590
+Single	2744
+Intron:	679	97832
+Intergenic:	2462	925542
+SvsM  0.818152244632401 vs 0.181847755367599
+genes in IvsT all and selected: 672 586
+# estimate 1: 0.119047619047619
+# estimate 2: 0
+# value: 0.119047619047619
+IvsT  0.119047619047619 vs 0.880952380952381
+  [4/4] Merging predictions (agreement-weighted consensus)…
+  3947 predictions from Augustus
+  4846 predictions from SNAP
+  4588 predictions from GeneMark
+  Consensus: 4681 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/consensus.gff3
+     4681 genes called
+
+── Prediction complete ──────────────────────────────────────
+  4681 genes in /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_3511412/busco_ab_busco_kpha_3511413/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/kpha/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix KPHA \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 4 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/busco/kpha/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/kpha/reference.gff3
+Predicted: 4,681 genes
+Reference: 5,040 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.873  Spec=0.955  F1=0.912  (TP=4,468 FP=213 FN=648)
+  moderate    Sens=0.873  Spec=0.954  F1=0.912  (TP=4,467 FP=214 FN=648)
+  strict      Sens=0.548  Spec=0.590  F1=0.568  (TP=2,761 FP=1,920 FN=2,279)
+
+Exon-level:
+  exact_match     Sens=0.535  Spec=0.484  F1=0.508
+  overlap_match   Sens=0.936  Spec=0.923  F1=0.930
+
+Nucleotide-level:
+  Sens=0.923  Spec=0.966  F1=0.944
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/busco/kpha/metrics.json

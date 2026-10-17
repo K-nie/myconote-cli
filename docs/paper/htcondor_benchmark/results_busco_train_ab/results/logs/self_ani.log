@@ -1,0 +1,84 @@
+000 (146872.017.000) 2026-10-16 22:16:48 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146872.017.000) 2026-10-16 22:17:30 Job executing on host: <144.92.98.78:9618?addrs=144.92.98.78-9618&alias=scarcity-12.glbrc.org&noUDP&sock=startd_12111_b795>
+	SlotName: slot1_2@scarcity-12.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_1961829"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146872.017.000) 2026-10-16 22:17:39 Image size of job updated: 1577012
+	1541  -  MemoryUsage of job (MB)
+	1577012  -  ResidentSetSize of job (KB)
+...
+006 (146872.017.000) 2026-10-16 22:22:40 Image size of job updated: 2153320
+	1635  -  MemoryUsage of job (MB)
+	1673568  -  ResidentSetSize of job (KB)
+...
+006 (146872.017.000) 2026-10-16 22:34:16 Image size of job updated: 4198256
+	4088  -  MemoryUsage of job (MB)
+	4185364  -  ResidentSetSize of job (KB)
+...
+004 (146872.017.000) 2026-10-16 22:34:16 Job was evicted. Code 1009 Subcode 0
+	(0) CPU times
+		Usr 0 01:07:01, Sys 0 00:00:29  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	Reason: Claim deactivated
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :  4088       16384     16384 
+	   TimeExecute (s)      :  1006                       
+	   TimeSlotBusy (s)     :  1006                       
+...
+009 (146872.017.000) 2026-10-16 22:34:16 Job was aborted.
+	via condor_rm (by user narhmadey)
+...
+000 (146876.017.000) 2026-10-16 22:35:15 Job submitted from host: <144.92.98.163:9618?addrs=144.92.98.163-9618&alias=scarcity-ap-1.glbrc.org&noUDP&sock=schedd_6499_5a16>
+...
+001 (146876.017.000) 2026-10-16 22:36:26 Job executing on host: <144.92.98.78:9618?addrs=144.92.98.78-9618&alias=scarcity-12.glbrc.org&noUDP&sock=startd_12111_b795>
+	SlotName: slot1_2@scarcity-12.glbrc.org
+	CondorScratchDir = "/var/lib/condor/execute/dir_1979591"
+	Cpus = 8
+	Disk = 20972544
+	GPUs = 0
+	Memory = 16384
+...
+006 (146876.017.000) 2026-10-16 22:36:34 Image size of job updated: 1580256
+	1544  -  MemoryUsage of job (MB)
+	1580256  -  ResidentSetSize of job (KB)
+...
+006 (146876.017.000) 2026-10-16 22:41:34 Image size of job updated: 2145752
+	1628  -  MemoryUsage of job (MB)
+	1666716  -  ResidentSetSize of job (KB)
+...
+006 (146876.017.000) 2026-10-16 22:56:35 Image size of job updated: 4363244
+	4261  -  MemoryUsage of job (MB)
+	4363244  -  ResidentSetSize of job (KB)
+...
+006 (146876.017.000) 2026-10-16 23:01:35 Image size of job updated: 4706936
+	4261  -  MemoryUsage of job (MB)
+	4363244  -  ResidentSetSize of job (KB)
+...
+005 (146876.017.000) 2026-10-16 23:32:57 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 03:20:26, Sys 0 00:01:04  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 03:20:26, Sys 0 00:01:04  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        8         8 
+	   Disk (KB)            :    12    20971520  20972544 
+	   GPUs                 :                           0 
+	   Memory (MB)          :  4261       16384     16384 
+	   TimeExecute (s)      :  3391                       
+	   TimeSlotBusy (s)     :  3392                       
+...

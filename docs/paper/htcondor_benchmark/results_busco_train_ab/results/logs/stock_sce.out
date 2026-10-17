@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=stock  genome=Saccharomyces_cerevisiae_S288C (sce)
+Kingdom=fungi  Species=saccharomyces_cerevisiae_S288C  Code=1
+busco_lineage(tsv, informational only)=saccharomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/sce/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_1315210/busco_ab_stock_sce_1315211/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:35:27] predict (arm=stock)
+predict rc=0
+[22:44:22] score consensus.gff3 vs reference
+genome=sce arm=stock
+verdict=STOCK (no training requested)
+predict_rc=0
+[22:44:27] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/stock/sce

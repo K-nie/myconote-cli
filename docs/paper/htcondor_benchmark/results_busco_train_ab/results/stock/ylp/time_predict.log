@@ -1,0 +1,23 @@
+	Command being timed: "myconote-cli predict /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ylp/rep1/masked.fa --kingdom fungi --species yarrowia_lipolytica --locus-prefix YLP --genetic-code 1 --output /var/lib/condor/execute/dir_3716216/busco_ab_stock_ylp_3716217/predict_out --threads 8"
+	User time (seconds): 2910.30
+	System time (seconds): 22.17
+	Percent of CPU this job got: 442%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 11:02.29
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 290808
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 181
+	Minor (reclaiming a frame) page faults: 9341027
+	Voluntary context switches: 13390
+	Involuntary context switches: 541366
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 764672
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

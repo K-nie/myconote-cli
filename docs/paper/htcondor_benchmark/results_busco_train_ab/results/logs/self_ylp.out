@@ -1,0 +1,16 @@
+========================================================
+BUSCO-train A/B -- arm=self  genome=Yarrowia_lipolytica_CLIB122 (ylp)
+Kingdom=fungi  Species=yarrowia_lipolytica  Code=1
+busco_lineage(tsv, informational only)=saccharomycetes_odb10
+masked=/home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/ylp/rep1/masked.fa
+AUGUSTUS_CONFIG_PATH=/var/lib/condor/execute/dir_1725202/busco_ab_self_ylp_1725203/augustus_config (per-job copy)
+myconote-cli: v0.9.0
+busco: BUSCO 5.7.1
+========================================================
+[22:36:27] predict (arm=self)
+predict rc=0
+[22:56:54] score consensus.gff3 vs reference
+genome=ylp arm=self
+verdict=TRAINED (self)
+predict_rc=0
+[22:56:59] done -- /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/ylp

@@ -1,0 +1,164 @@
+── Gene prediction ──────────────────────────────────────────
+  Kingdom : Fungi
+  Input   : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/umay/rep1/masked.fa
+  Output  : /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out
+  [1/4] Augustus self-training (first-pass prediction)…
+  Running Augustus (species: ustilago_maydis) — 27 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/training/first_pass.gff3
+── Augustus self-training ───────────────────────────────────
+  Species  : umay_trained
+  GFF3     : /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/training/first_pass.gff3
+  FASTA    : /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/umay/rep1/masked.fa
+  Output   : /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/training
+  Loaded 6381 gene models (≥300 bp)
+  Wrote 6381 mini-GenBank records for training
+  Split: 5105 training, 1276 test
+Will create parameters for a EUKARYOTIC species!
+creating directory /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/augustus_config/species/umay_trained/ ...
+creating /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/augustus_config/species/umay_trained/umay_trained_parameters.cfg ...
+creating /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/augustus_config/species/umay_trained/umay_trained_weightmatrix.txt ...
+creating /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/augustus_config/species/umay_trained/umay_trained_metapars.cfg ...
+The necessary files for training umay_trained have been created.
+Now, either run etraining or optimize_parameters.pl with --species=umay_trained.
+etraining quickly estimates the parameters from a file with training genes.
+optimize_augustus.pl alternates running etraining and augustus to find optimal metaparameters.
+
+  Running etraining…
+  etraining complete
+  Evaluating model accuracy…
+  ✓ Trained species: umay_trained
+    Use with: myconote predict <fasta> --species umay_trained
+  ✓ Trained species: umay_trained
+  [2/4] Augustus (umay_trained)…
+  Running Augustus (species: umay_trained) — 27 contigs × 8 threads in parallel…
+  Augustus finished → /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/augustus.gff3
+  [+] SNAP (secondary ab-initio predictor)…
+      self-training SNAP HMM on Augustus first-pass calls…
+      SNAP HMM trained → /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/snap_training/snap_trained.hmm
+  Running SNAP (HMM: /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/snap_training/snap_trained.hmm)…
+  SNAP finished → /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/snap.gff3
+      SNAP complete → /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/snap.gff3
+  [+] GeneMark-ES enabled by default for fungi (gmes found on PATH).
+Initial	910
+Internal	379
+Terminal	928
+Single	1628
+Intron:	1331	1507797
+Intergenic:	2119	3016448
+Initial	694
+Internal	223
+Terminal	710
+Single	2271
+Intron:	955	723805
+Intergenic:	2461	2922418
+Initial	786
+Internal	301
+Terminal	799
+Single	2220
+Intron:	1124	756623
+Intergenic:	2486	2794530
+Initial	825
+Internal	468
+Terminal	840
+Single	2322
+Intron:	1330	556111
+Intergenic:	2529	2712052
+SvsM  0.738394503100385 vs 0.261605496899615
+genes in IvsT all and selected: 1271 805
+1, -0.423641728877201
+2, -1.44381820525808
+3, -2.53195919405889
+4, -3.51278844707062
+# estimate 1: 0.356412273800157
+# estimate 2: 0.355028179303212
+# value: 0.355028179303212
+IvsT  0.355028179303212 vs 0.644971820696788
+Initial	769
+Internal	397
+Terminal	774
+Single	2457
+Intron:	1192	364820
+Intergenic:	2532	2714847
+SvsM  0.763886613141078 vs 0.236113386858922
+genes in IvsT all and selected: 1145 746
+1, -0.378356010000056
+2, -1.52712926497138
+3, -2.64443368665164
+4, -3.61899332664977
+# estimate 1: 0.338864628820961
+# estimate 2: 0.338266363161156
+# value: 0.338266363161156
+IvsT  0.338266363161156 vs 0.661733636838844
+Initial	740
+Internal	389
+Terminal	743
+Single	2514
+Intron:	1151	314707
+Intergenic:	2544	2722484
+SvsM  0.775377618970278 vs 0.224622381029722
+genes in IvsT all and selected: 1110 714
+1, -0.374438834545064
+2, -1.53393035992596
+3, -2.63905732961526
+4, -3.68051120444342
+# estimate 1: 0.345045045045045
+# estimate 2: 0.332094933076372
+# value: 0.332094933076372
+IvsT  0.332094933076372 vs 0.667905066923628
+Initial	726
+Internal	380
+Terminal	728
+Single	2544
+Intron:	1127	285673
+Intergenic:	2553	2730835
+SvsM  0.781441965729066 vs 0.218558034270934
+genes in IvsT all and selected: 1087 700
+1, -0.366931444105921
+2, -1.55386806127929
+3, -2.65926003693278
+4, -3.66070857714724
+# estimate 1: 0.344066237350506
+# estimate 2: 0.33331331766442
+# value: 0.33331331766442
+IvsT  0.33331331766442 vs 0.66668668233558
+  [4/4] Merging predictions (agreement-weighted consensus)…
+  49 predictions from Augustus
+  0 predictions from SNAP
+  4237 predictions from GeneMark
+  Consensus: 2748 genes after overlap resolution
+  ✓  Consensus GFF3 → /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/consensus.gff3
+     2748 genes called
+
+── Prediction complete ──────────────────────────────────────
+  2748 genes in /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/consensus.gff3
+
+  Next step: myconote-cli annotate /var/lib/condor/execute/dir_505026/busco_ab_self_umay_505027/predict_out/consensus.gff3 \
+               --fasta /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_timing_stage1_matched/myconote/umay/rep1/masked.fa \
+               --kingdom fungi \
+               --locus-prefix UMAY \
+               --interproscan --email <your@email.com>  # optional, very thorough
+predict rc=0
+Loaded rename table: 27 contigs (predicted seqids lifted to reference namespace)
+Parsing predicted annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/umay/consensus.gff3
+Parsing reference annotation: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/data/umay/reference.gff3
+Predicted: 2,748 genes
+Reference: 6,762 genes
+Computing metrics...
+
+======================================================================
+ACCURACY METRICS
+======================================================================
+
+Gene-level:
+  loose       Sens=0.398  Spec=0.982  F1=0.567  (TP=2,699 FP=49 FN=4,076)
+  moderate    Sens=0.398  Spec=0.982  F1=0.567  (TP=2,698 FP=50 FN=4,077)
+  strict      Sens=0.320  Spec=0.787  F1=0.455  (TP=2,163 FP=585 FN=4,599)
+
+Exon-level:
+  exact_match     Sens=0.344  Spec=0.228  F1=0.274
+  overlap_match   Sens=0.731  Spec=0.490  F1=0.587
+
+Nucleotide-level:
+  Sens=0.801  Spec=0.963  F1=0.875
+======================================================================
+Wrote: /home/glbrc.org/narhmadey/myconote-cli/docs/paper/htcondor_benchmark/results_busco_train_ab/results/self/umay/metrics.json

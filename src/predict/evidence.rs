@@ -46,21 +46,57 @@ pub struct EvidenceWeights {
     pub trnascan: f64,
 }
 
+// Serde fallbacks for a weights TOML that omits a field. They match the
+// current (corroborated-combiner) defaults below.
 fn default_glimmer_weight() -> f64 {
     2.0
 }
 fn default_genemark_weight() -> f64 {
-    5.0
+    3.0
 }
 fn default_miniprot_weight() -> f64 {
-    20.0
+    8.0
 }
 fn default_trna_weight() -> f64 {
-    15.0
+    6.0
 }
 
+/// Default weights (v0.9.1+), tuned for the corroborated combiner.
+///
+/// The old 10 / 5 / 3 (Augustus / GeneMark / SNAP) split made Augustus
+/// structurally decisive: with Augustus wrong and SNAP + GeneMark agreeing on
+/// the correct model, the agreement score is `10 + 8j` for Augustus vs
+/// `8 + 10j` for the pair, so Augustus wins for every `j < 1`. The Nov 2026
+/// accuracy diagnostic (docs/paper/htcondor_benchmark/diagnostics) found that
+/// 60–91% of the loci funannotate gets exactly right and MycoNote does not were
+/// already called correctly by SNAP and/or GeneMark and then outvoted this way.
+///
+/// The new ratios keep the ordering Augustus > GeneMark > SNAP (so Augustus
+/// still breaks three-way disagreements) but satisfy `snap + genemark >
+/// augustus`, so two independent predictors that agree exactly can overrule a
+/// lone Augustus call. The largest ab-initio ratio is 2:1, the same ceiling
+/// funannotate's EVM configuration uses. Extrinsic tracks are scaled by the
+/// same 0.4 factor as Augustus so their standing relative to Augustus is
+/// unchanged.
 impl Default for EvidenceWeights {
     fn default() -> Self {
+        Self {
+            augustus: 4.0,
+            snap: 2.0,
+            protein: 8.0,
+            est: 3.0,
+            glimmerhmm: 2.0,
+            genemark: 3.0,
+            miniprot: 8.0,
+            trnascan: 6.0,
+        }
+    }
+}
+
+impl EvidenceWeights {
+    /// The pre-v0.9.1 weights (Augustus 10, GeneMark 5, SNAP 3, ...). Used by
+    /// `--combiner legacy` so old benchmark numbers can be reproduced exactly.
+    pub fn legacy() -> Self {
         Self {
             augustus: 10.0,
             snap: 3.0,
@@ -72,21 +108,19 @@ impl Default for EvidenceWeights {
             trnascan: 15.0,
         }
     }
-}
 
-impl EvidenceWeights {
     /// Load weights from a TOML configuration file.
     ///
     /// Example TOML:
     /// ```toml
-    /// augustus = 10.0
-    /// snap = 3.0
-    /// protein = 20.0
-    /// est = 8.0
+    /// augustus = 4.0
+    /// snap = 2.0
+    /// protein = 8.0
+    /// est = 3.0
     /// glimmerhmm = 2.0
-    /// genemark = 5.0
-    /// miniprot = 20.0
-    /// trnascan = 15.0
+    /// genemark = 3.0
+    /// miniprot = 8.0
+    /// trnascan = 6.0
     /// ```
     pub fn from_toml(path: &std::path::Path) -> crate::utils::error::Result<Self> {
         let contents =
@@ -415,6 +449,48 @@ pub struct ConsensusExtras {
     pub repeat_filter_threshold: Option<f64>,
     /// NCBI translation table for the verified-ORF nucleotide check.
     pub genetic_code: u8,
+    /// How each overlap group is resolved (see [`Combiner`]).
+    pub combiner: Combiner,
+}
+
+/// Overlap-group resolution strategy for the consensus merge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Combiner {
+    /// v0.9.1+ default. Two changes over `Legacy`:
+    ///
+    /// 1. **Per-source agreement.** Each other source contributes at most one
+    ///    vote to a candidate, `weight · max_jaccard` over that source's models,
+    ///    instead of one vote per overlapping model. Under `Legacy` a fused
+    ///    model spanning two genes collected partial credit from *every* piece
+    ///    the other predictors called, so it outscored the correctly split
+    ///    calls; this is a driver of the "merged ≫ split" error.
+    /// 2. **Several winners per group.** After the best model is kept, the
+    ///    next-best model that does not overlap any kept model is kept too, and
+    ///    so on. `Legacy` keeps exactly one model per transitively-overlapping
+    ///    group, so when a correct non-fused call wins, its neighbour (linked
+    ///    to the group only through the fused model) is silently dropped.
+    #[default]
+    Corroborated,
+    /// Pre-v0.9.1 behaviour: sum agreement over every overlapping model and
+    /// keep exactly one winner per overlap group.
+    Legacy,
+}
+
+impl Combiner {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "corroborated" | "default" | "v2" => Some(Self::Corroborated),
+            "legacy" | "v1" => Some(Self::Legacy),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Corroborated => "corroborated",
+            Self::Legacy => "legacy",
+        }
+    }
 }
 
 impl Default for ConsensusExtras {
@@ -426,6 +502,7 @@ impl Default for ConsensusExtras {
             repeat_filter: false,
             repeat_filter_threshold: None,
             genetic_code: 1,
+            combiner: Combiner::default(),
         }
     }
 }
@@ -818,6 +895,37 @@ fn cds_intervals(m: &GeneModel) -> Vec<(u64, u64)> {
     iv
 }
 
+/// CDS intervals with the stop codon folded into the terminal segment, for
+/// agreement scoring. Predictors disagree on the convention: Augustus and
+/// GeneMark emit CDS without the stop (plus a separate `stop_codon` row), SNAP
+/// emits CDS that already includes it. Compared raw, an Augustus and a SNAP
+/// model with identical structure never reach Jaccard 1 (on the bundled
+/// Brettanomyces run 0 of 5218 Augustus models matched SNAP exactly raw vs
+/// 3439 after folding). The write path already folds stops, so this only
+/// aligns scoring with what is emitted.
+fn cds_intervals_stop_folded(m: &GeneModel) -> Vec<(u64, u64)> {
+    if !m.records.iter().any(|r| r.feature_type == "stop_codon") {
+        return cds_intervals(m);
+    }
+    let mut recs: Vec<GFFRecord> = m
+        .records
+        .iter()
+        .filter(|r| r.feature_type == "CDS" || r.feature_type == "stop_codon")
+        .cloned()
+        .collect();
+    crate::parser::gff::include_stop_codon_in_cds(&mut recs);
+    let folded = GeneModel {
+        seqid: String::new(),
+        start: m.start,
+        end: m.end,
+        strand: m.strand,
+        score: m.score,
+        source: String::new(),
+        records: recs,
+    };
+    cds_intervals(&folded)
+}
+
 /// Overlapping coding bases between two start-sorted interval lists.
 fn interval_overlap_bp(a: &[(u64, u64)], b: &[(u64, u64)]) -> u64 {
     let (mut i, mut j, mut total) = (0usize, 0usize, 0u64);
@@ -872,7 +980,14 @@ fn cds_jaccard(a: &[(u64, u64)], b: &[(u64, u64)]) -> f64 {
 /// → `resolve_overlaps_filtered` directly, so this is only compiled for tests.
 #[cfg(test)]
 fn resolve_overlaps(models: Vec<GeneModel>) -> Vec<GeneModel> {
-    resolve_overlaps_filtered(models, &ConsensusFilter::default(), None, 1).0
+    resolve_overlaps_filtered(
+        models,
+        &ConsensusFilter::default(),
+        None,
+        1,
+        Combiner::default(),
+    )
+    .0
 }
 
 /// Like `resolve_overlaps` but applies a `ConsensusFilter` to each group's
@@ -884,6 +999,7 @@ fn resolve_overlaps_filtered(
     filter: &ConsensusFilter,
     genome: Option<&HashMap<String, FastaRecord>>,
     genetic_code: u8,
+    combiner: Combiner,
 ) -> (Vec<GeneModel>, usize) {
     // Sort by start coordinate
     models.sort_by(|a, b| a.start.cmp(&b.start).then(a.seqid.cmp(&b.seqid)));
@@ -922,46 +1038,94 @@ fn resolve_overlaps_filtered(
         }
 
         // Precompute CDS intervals once per group member, then score each by
-        // agreement-weighted consensus and keep the best.
+        // agreement-weighted consensus.
         let cds: Vec<Vec<(u64, u64)>> = group
             .iter()
-            .map(|&idx| cds_intervals(&models[idx]))
+            .map(|&idx| match combiner {
+                Combiner::Legacy => cds_intervals(&models[idx]),
+                Combiner::Corroborated => cds_intervals_stop_folded(&models[idx]),
+            })
             .collect();
 
-        let consensus_score = |x: usize| -> f64 {
-            let mut s = models[group[x]].score;
-            for y in 0..group.len() {
-                if y == x {
-                    continue;
+        let scores: Vec<f64> = (0..group.len())
+            .map(|x| match combiner {
+                Combiner::Legacy => {
+                    let mut s = models[group[x]].score;
+                    for y in 0..group.len() {
+                        if y == x {
+                            continue;
+                        }
+                        s += models[group[y]].score * cds_jaccard(&cds[x], &cds[y]);
+                    }
+                    s
                 }
-                s += models[group[y]].score * cds_jaccard(&cds[x], &cds[y]);
-            }
-            s
-        };
+                Combiner::Corroborated => {
+                    // One vote per source: that source's best-agreeing model.
+                    let mut best_by_source: HashMap<&str, f64> = HashMap::new();
+                    for y in 0..group.len() {
+                        if y == x {
+                            continue;
+                        }
+                        let v = models[group[y]].score * cds_jaccard(&cds[x], &cds[y]);
+                        let e = best_by_source
+                            .entry(models[group[y]].source.as_str())
+                            .or_insert(0.0);
+                        if v > *e {
+                            *e = v;
+                        }
+                    }
+                    models[group[x]].score + best_by_source.values().sum::<f64>()
+                }
+            })
+            .collect();
 
         let cds_len =
             |x: usize| -> u64 { cds[x].iter().map(|&(s, e)| e.saturating_sub(s) + 1).sum() };
 
-        if let Some(best) = (0..group.len()).max_by(|&a, &b| {
-            consensus_score(a)
-                .partial_cmp(&consensus_score(b))
+        // Rank candidates best-first: consensus score, then raw source weight,
+        // then longer CDS, then position (fully deterministic).
+        let mut order: Vec<usize> = (0..group.len()).collect();
+        order.sort_by(|&a, &b| {
+            scores[b]
+                .partial_cmp(&scores[a])
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then(
-                    models[group[a]]
+                    models[group[b]]
                         .score
-                        .partial_cmp(&models[group[b]].score)
+                        .partial_cmp(&models[group[a]].score)
                         .unwrap_or(std::cmp::Ordering::Equal),
                 )
-                .then(cds_len(a).cmp(&cds_len(b)))
-        }) {
+                .then(cds_len(b).cmp(&cds_len(a)))
+                .then(models[group[a]].start.cmp(&models[group[b]].start))
+                .then(models[group[a]].end.cmp(&models[group[b]].end))
+        });
+
+        // Legacy keeps one model per group. Corroborated keeps, greedily in
+        // rank order, every model whose span overlaps no model already picked.
+        let mut picked: Vec<usize> = Vec::new();
+        for &cand in &order {
+            let m = &models[group[cand]];
+            if picked
+                .iter()
+                .any(|&p| models[group[p]].start <= m.end && m.start <= models[group[p]].end)
+            {
+                continue;
+            }
+            picked.push(cand);
+            if combiner == Combiner::Legacy {
+                break;
+            }
+        }
+
+        for best in picked {
             // Fast path: the default no-op filter keeps every winner, so skip
-            // the support count entirely and preserve byte-identical output.
+            // the support count entirely.
             if filter.is_noop() {
                 kept.push(models[group[best]].clone());
                 continue;
             }
 
-            let winner_score = consensus_score(best);
+            let winner_score = scores[best];
 
             // Support = distinct predictor sources whose CDS overlaps the
             // winner, counting the winner's own source. Two models from the
@@ -1116,8 +1280,13 @@ pub fn merge_predictions_filtered(
     chr_keys.sort();
     for chr in chr_keys {
         let models = by_chr.remove(&chr).unwrap();
-        let (kept, dropped) =
-            resolve_overlaps_filtered(models, filter, ctx.genome, ctx.extras.genetic_code);
+        let (kept, dropped) = resolve_overlaps_filtered(
+            models,
+            filter,
+            ctx.genome,
+            ctx.extras.genetic_code,
+            ctx.extras.combiner,
+        );
         total_dropped += dropped;
         final_models.extend(kept);
     }
@@ -1501,6 +1670,140 @@ mod tests {
         );
     }
 
+    // Diagnostic case (Nov 2026): Augustus calls a wrong structure, SNAP and
+    // GeneMark agree exactly on the correct one. Under the legacy 10/5/3
+    // weights Augustus always wins (`10 + 8j > 8 + 10j` for j < 1); under the
+    // default weights the corroborated pair wins.
+    fn augustus_vs_agreeing_pair(w: &EvidenceWeights, c: Combiner) -> Vec<GeneModel> {
+        // Wrong: alternative 3' exon boundary. Correct: two exons.
+        let aug = gene_model_src(100, 900, w.augustus, &[(100, 300), (400, 900)], "Augustus");
+        let snap = gene_model_src(100, 800, w.snap, &[(100, 300), (400, 800)], "SNAP");
+        let gm = gene_model_src(100, 800, w.genemark, &[(100, 300), (400, 800)], "GeneMark");
+        resolve_overlaps_filtered(vec![aug, snap, gm], &ConsensusFilter::default(), None, 1, c).0
+    }
+
+    #[test]
+    fn agreeing_pair_outvotes_lone_augustus_by_default() {
+        let kept = augustus_vs_agreeing_pair(&EvidenceWeights::default(), Combiner::default());
+        assert_eq!(kept.len(), 1);
+        assert_eq!((kept[0].start, kept[0].end), (100, 800));
+    }
+
+    #[test]
+    fn legacy_weights_and_combiner_reproduce_augustus_dominance() {
+        let kept = augustus_vs_agreeing_pair(&EvidenceWeights::legacy(), Combiner::Legacy);
+        assert_eq!(kept.len(), 1);
+        assert_eq!((kept[0].start, kept[0].end), (100, 900));
+        assert_eq!(kept[0].source, "Augustus");
+    }
+
+    // With no corroboration either way, Augustus still wins a two-way
+    // disagreement against SNAP or GeneMark alone.
+    #[test]
+    fn default_weights_keep_augustus_on_two_way_disagreement() {
+        let w = EvidenceWeights::default();
+        for (other, ow) in [("SNAP", w.snap), ("GeneMark", w.genemark)] {
+            let aug = gene_model_src(100, 900, w.augustus, &[(100, 300), (400, 900)], "Augustus");
+            let o = gene_model_src(100, 800, ow, &[(100, 300), (400, 800)], other);
+            let kept = resolve_overlaps(vec![aug, o]);
+            assert_eq!(kept.len(), 1);
+            assert_eq!(kept[0].source, "Augustus", "vs {}", other);
+        }
+    }
+
+    #[test]
+    fn default_weights_snap_plus_genemark_exceed_augustus() {
+        let w = EvidenceWeights::default();
+        assert!(w.snap + w.genemark > w.augustus);
+        assert!(w.augustus > w.genemark && w.genemark >= w.snap);
+        assert!(
+            w.augustus / w.snap <= 2.0 + 1e-9,
+            "ab-initio ratio capped at 2:1"
+        );
+    }
+
+    // Augustus fuses two adjacent genes; SNAP and GeneMark call them apart.
+    // Legacy: the fused model collects partial agreement from all four pieces
+    // and is the only model emitted for the group. Corroborated: both real
+    // genes are emitted.
+    fn fused_case(w: &EvidenceWeights) -> Vec<GeneModel> {
+        let fused = gene_model_src(
+            100,
+            2000,
+            w.augustus,
+            &[(100, 900), (1200, 2000)],
+            "Augustus",
+        );
+        vec![
+            fused,
+            gene_model_src(100, 900, w.snap, &[(100, 900)], "SNAP"),
+            gene_model_src(1200, 2000, w.snap, &[(1200, 2000)], "SNAP"),
+            gene_model_src(100, 900, w.genemark, &[(100, 900)], "GeneMark"),
+            gene_model_src(1200, 2000, w.genemark, &[(1200, 2000)], "GeneMark"),
+        ]
+    }
+
+    #[test]
+    fn corroborated_splits_fused_augustus_model() {
+        let kept = resolve_overlaps(fused_case(&EvidenceWeights::default()));
+        let mut spans: Vec<(u64, u64)> = kept.iter().map(|m| (m.start, m.end)).collect();
+        spans.sort();
+        assert_eq!(spans, vec![(100, 900), (1200, 2000)]);
+    }
+
+    #[test]
+    fn legacy_keeps_fused_augustus_model() {
+        let w = EvidenceWeights::legacy();
+        let (kept, _) = resolve_overlaps_filtered(
+            fused_case(&w),
+            &ConsensusFilter::default(),
+            None,
+            1,
+            Combiner::Legacy,
+        );
+        assert_eq!(kept.len(), 1);
+        assert_eq!((kept[0].start, kept[0].end), (100, 2000));
+    }
+
+    // Two genes linked into one overlap group only through a long model that
+    // loses: the neighbour must not be silently dropped.
+    #[test]
+    fn corroborated_keeps_non_overlapping_neighbour_in_group() {
+        let a1 = gene_model_src(100, 500, 4.0, &[(100, 500)], "Augustus");
+        let s1 = gene_model_src(100, 500, 2.0, &[(100, 500)], "SNAP");
+        let bridge = gene_model_src(450, 1100, 2.0, &[(450, 1100)], "GeneMark");
+        let a2 = gene_model_src(1000, 1500, 4.0, &[(1000, 1500)], "Augustus");
+        let kept = resolve_overlaps(vec![a1, s1, bridge, a2]);
+        let mut spans: Vec<(u64, u64)> = kept.iter().map(|m| (m.start, m.end)).collect();
+        spans.sort();
+        assert_eq!(spans, vec![(100, 500), (1000, 1500)]);
+    }
+
+    // Same structure, different stop conventions (Augustus: CDS + separate
+    // stop_codon row; SNAP: stop inside CDS) must score as exact agreement.
+    #[test]
+    fn stop_codon_convention_does_not_break_exact_agreement() {
+        let mut aug = gene_model_src(100, 899, 4.0, &[(100, 300), (400, 896)], "Augustus");
+        let mut stop = aug.records[0].clone();
+        stop.feature_type = "stop_codon".into();
+        stop.start = 897;
+        stop.end = 899;
+        aug.records.push(stop);
+        let snap = gene_model_src(100, 899, 2.0, &[(100, 300), (400, 899)], "SNAP");
+        let a = cds_intervals_stop_folded(&aug);
+        let b = cds_intervals_stop_folded(&snap);
+        assert_eq!(a, b);
+        assert!((cds_jaccard(&a, &b) - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn combiner_parse_round_trips() {
+        for c in [Combiner::Corroborated, Combiner::Legacy] {
+            assert_eq!(Combiner::parse(c.name()), Some(c));
+        }
+        assert_eq!(Combiner::parse("nope"), None);
+    }
+
     // Sanity: raw max-weight would have kept (150, 260) here.
     #[test]
     fn lone_model_passes_through_unchanged() {
@@ -1708,8 +2011,13 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
     fn singleton_dropped_at_support_2_kept_at_support_1() {
         let lone = gene_model_src(100, 200, 3.0, &[(100, 200)], "snap");
 
-        let (kept1, dropped1) =
-            resolve_overlaps_filtered(vec![lone.clone()], &ConsensusFilter::default(), None, 1);
+        let (kept1, dropped1) = resolve_overlaps_filtered(
+            vec![lone.clone()],
+            &ConsensusFilter::default(),
+            None,
+            1,
+            Combiner::default(),
+        );
         assert_eq!(kept1.len(), 1, "default keeps the lone locus");
         assert_eq!(dropped1, 0);
 
@@ -1718,7 +2026,8 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let (kept2, dropped2) = resolve_overlaps_filtered(vec![lone], &f2, None, 1);
+        let (kept2, dropped2) =
+            resolve_overlaps_filtered(vec![lone], &f2, None, 1, Combiner::default());
         assert_eq!(
             kept2.len(),
             0,
@@ -1739,6 +2048,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             &ConsensusFilter::default(),
             None,
             1,
+            Combiner::default(),
         );
         assert_eq!(k1.len(), 1);
         assert_eq!(d1, 0);
@@ -1748,7 +2058,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let (k2, d2) = resolve_overlaps_filtered(vec![a, b], &f2, None, 1);
+        let (k2, d2) = resolve_overlaps_filtered(vec![a, b], &f2, None, 1, Combiner::default());
         assert_eq!(
             k2.len(),
             1,
@@ -1768,7 +2078,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: None,
             ..ConsensusFilter::default()
         };
-        let (k, d) = resolve_overlaps_filtered(vec![a, b], &f2, None, 1);
+        let (k, d) = resolve_overlaps_filtered(vec![a, b], &f2, None, 1, Combiner::default());
         assert_eq!(
             k.len(),
             0,
@@ -1788,7 +2098,8 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: Some(15.0),
             ..ConsensusFilter::default()
         };
-        let (k, d) = resolve_overlaps_filtered(vec![lone.clone()], &rescue, None, 1);
+        let (k, d) =
+            resolve_overlaps_filtered(vec![lone.clone()], &rescue, None, 1, Combiner::default());
         assert_eq!(
             k.len(),
             1,
@@ -1801,7 +2112,7 @@ scaffold_001\ttest\tCDS\t15025\t15318\t.\t-\t2\tID=g1.cds2;Parent=g1.t1\n",
             min_consensus_score: Some(25.0),
             ..ConsensusFilter::default()
         };
-        let (k2, d2) = resolve_overlaps_filtered(vec![lone], &strict, None, 1);
+        let (k2, d2) = resolve_overlaps_filtered(vec![lone], &strict, None, 1, Combiner::default());
         assert_eq!(k2.len(), 0, "score 20 < 25 → not rescued, dropped");
         assert_eq!(d2, 1);
     }
@@ -1902,7 +2213,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_support_single_exon: 2, // single-exon: require corroboration
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![single, multi], &f, None, 1);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(vec![single, multi], &f, None, 1, Combiner::default());
         assert_eq!(dropped, 1, "the single-exon lone locus is dropped");
         assert_eq!(kept.len(), 1, "the multi-exon lone locus is kept");
         assert_eq!(
@@ -1922,7 +2234,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_support_single_exon: 2,
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![lone_protein], &f, None, 1);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(vec![lone_protein], &f, None, 1, Combiner::default());
         assert_eq!(dropped, 0, "evidence-backed single-exon locus is exempt");
         assert_eq!(kept.len(), 1);
     }
@@ -1938,7 +2251,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             min_support_single_exon: 5,
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![trna], &f, None, 1);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(vec![trna], &f, None, 1, Combiner::default());
         assert_eq!(
             dropped, 0,
             "non-coding locus is exempt from the single-exon drop"
@@ -1958,7 +2272,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             ..ConsensusFilter::default()
         };
         // effective bar for the single-exon locus = max(2, 1) = 2 > support 1.
-        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f, None, 1);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(vec![single], &f, None, 1, Combiner::default());
         assert_eq!(dropped, 1, "general bar still applies to single-exon loci");
         assert_eq!(kept.len(), 0);
     }
@@ -1992,6 +2307,7 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             &ConsensusFilter::default(),
             None,
             1,
+            Combiner::default(),
         );
         assert_eq!(dropped_off, 0);
         assert_eq!(kept_off.len(), 2);
@@ -2001,7 +2317,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             require_complete_orf: true,
             ..ConsensusFilter::default()
         };
-        let (kept_on, dropped_on) = resolve_overlaps_filtered(vec![bad, good], &f, None, 1);
+        let (kept_on, dropped_on) =
+            resolve_overlaps_filtered(vec![bad, good], &f, None, 1, Combiner::default());
         assert_eq!(dropped_on, 1, "frame-broken ORF dropped");
         assert_eq!(kept_on.len(), 1);
         assert_eq!((kept_on[0].start, kept_on[0].end), (1000, 1101));
@@ -2018,7 +2335,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
             require_complete_orf: true,
             ..ConsensusFilter::default()
         };
-        let (kept, dropped) = resolve_overlaps_filtered(vec![bad], &f, None, 1);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(vec![bad], &f, None, 1, Combiner::default());
         assert_eq!(dropped, 1, "incomplete ORF dropped despite score rescue");
         assert_eq!(kept.len(), 0);
     }
@@ -2030,7 +2348,8 @@ chr1\tSNAP\tCDS\t5000\t5100\t.\t+\t0\tID=s2.cds;Parent=s2.t1\n",
         let f = ConsensusFilter::default();
         assert!(f.is_noop());
         let single = gene_model_src(100, 200, 3.0, &[(100, 200)], "snap"); // len 101, lone
-        let (kept, dropped) = resolve_overlaps_filtered(vec![single], &f, None, 1);
+        let (kept, dropped) =
+            resolve_overlaps_filtered(vec![single], &f, None, 1, Combiner::default());
         assert_eq!(dropped, 0, "default drops nothing");
         assert_eq!(kept.len(), 1);
     }

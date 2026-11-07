@@ -56,7 +56,7 @@ pub struct PredictConfig {
     pub locus_prefix: String,
     /// Parallel threads for each tool
     pub threads: usize,
-    /// Evidence weights (None = use defaults: augustus=10, snap=3, protein=20)
+    /// Evidence weights (None = combiner defaults: augustus=4, genemark=3, snap=2, protein=8)
     pub weights: Option<evidence::EvidenceWeights>,
     /// Auto-train Augustus on a high-confidence subset before predicting
     pub self_train: bool,
@@ -125,6 +125,10 @@ pub struct PredictConfig {
     /// everything.  Predict-stage structural gate only; start/stop and
     /// internal-stop verification is done at the annotate stage.
     pub require_complete_orf: bool,
+    /// Overlap-group resolution strategy (`--combiner`). Default
+    /// `Corroborated`; `Legacy` reproduces pre-v0.9.1 consensus output and,
+    /// when no weights are given, also restores the legacy 10/5/3 weights.
+    pub combiner: evidence::Combiner,
     // ── Fused-gene splitting (v0.9.0, Feature #2) ────────────────────────────
     /// Split fused gene models at implausibly long inter-CDS gaps
     /// (funannotate's `--jaccard_clip` analog). `false` (default) = off; the
@@ -204,6 +208,7 @@ impl Default for PredictConfig {
             consensus_min_score: None,
             consensus_min_single_exon_support: 1,
             require_complete_orf: false,
+            combiner: evidence::Combiner::default(),
             jaccard_clip: false,
             repeat_filter: false,
             repeat_filter_threshold: None,
@@ -393,12 +398,19 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
                     "  Warning: failed to load weights file: {}. Using defaults.",
                     e
                 );
-                config.weights.clone().unwrap_or_default()
+                default_weights(config)
             }
         }
     } else {
-        config.weights.clone().unwrap_or_default()
+        default_weights(config)
     };
+    println!(
+        "  Consensus combiner: {} (Augustus {:.1} / GeneMark {:.1} / SNAP {:.1})",
+        config.combiner.name(),
+        weights.augustus,
+        weights.genemark,
+        weights.snap
+    );
 
     // Save weights used for reproducibility
     let weights_out = config.out_dir.join("evidence_weights.toml");
@@ -903,6 +915,7 @@ pub fn run_prediction(config: &PredictConfig) -> Result<(PathBuf, usize)> {
             repeat_filter: config.repeat_filter,
             repeat_filter_threshold: config.repeat_filter_threshold,
             genetic_code: config.genetic_code,
+            combiner: config.combiner,
         },
     };
 
@@ -952,6 +965,16 @@ fn count_genes_in_gff3(gff: &Path) -> Result<usize> {
 // Summary report
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Weights when no `--weights` file is given: the config's own, else the
+/// defaults that match the selected combiner.
+fn default_weights(config: &PredictConfig) -> evidence::EvidenceWeights {
+    match (&config.weights, config.combiner) {
+        (Some(w), _) => w.clone(),
+        (None, evidence::Combiner::Legacy) => evidence::EvidenceWeights::legacy(),
+        (None, evidence::Combiner::Corroborated) => evidence::EvidenceWeights::default(),
+    }
+}
+
 fn write_summary(
     path: &Path,
     config: &PredictConfig,
@@ -967,11 +990,13 @@ fn write_summary(
     writeln!(f, "Kingdom      : {}", config.kingdom.display_name()).map_err(MycoNoteError::Io)?;
     writeln!(f, "Locus prefix : {}", config.locus_prefix).map_err(MycoNoteError::Io)?;
     writeln!(f, "").map_err(MycoNoteError::Io)?;
+    writeln!(f, "Combiner     : {}", config.combiner.name()).map_err(MycoNoteError::Io)?;
+    writeln!(f, "").map_err(MycoNoteError::Io)?;
     writeln!(f, "Predictors used:").map_err(MycoNoteError::Io)?;
     for (path, source, weight) in inputs {
         writeln!(
             f,
-            "  {:<12} weight={:.0}  → {}",
+            "  {:<12} weight={:.1}  → {}",
             source,
             weight,
             path.display()

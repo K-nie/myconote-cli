@@ -94,6 +94,9 @@ fn print_main_help() {
     );
     println!("  mask     Identify and soft-mask repeats in a genome FASTA");
     println!("  train    RNA-seq mediated training of Augustus/SNAP (Trinity + PASA)");
+    println!(
+        "  consensus Re-run only the consensus merge on an existing predict_out/ (A/B combiners)"
+    );
     println!("  predict  Predict genes (Augustus + SNAP + GlimmerHMM + GeneMark-ES/ET/EP+/ETP+ + EVM, or BRAKER via --use-braker)");
     println!("  update   Refine gene models with RNA-seq evidence (PASA UTR extension)");
     println!("  annotate Functionally annotate genes (MMseqs2 + Pfam + EggNog + CAZyme + MEROPS + tRNAscan + ...)");
@@ -289,6 +292,11 @@ fn main() -> Result<()> {
                 println!("                              the absence of internal stops (translation table");
                 println!("                              from --genetic-code). Loads the genome into memory;");
                 println!("                              opt-in. Default: off.");
+                println!("  --combiner <MODE>           Consensus combiner: corroborated (default) or legacy.");
+                println!("                              corroborated lets two agreeing predictors outvote a");
+                println!("                              lone Augustus call and keeps every non-overlapping");
+                println!("                              winner per locus group. legacy = pre-0.9.1 output");
+                println!("                              (and 10/5/3 weights unless --weights is given).");
                 println!("  --jaccard-clip              Split fused gene models (funannotate --jaccard_clip");
                 println!("                              analog). A model is split wherever an inter-CDS gap");
                 println!("                              exceeds the max plausible intron (--max-intron),");
@@ -350,6 +358,27 @@ fn main() -> Result<()> {
             }
             let path = &args[2];
             handle_predict(path, &args[3..])?;
+        }
+        "consensus" => {
+            if args.len() < 3 || has_help_flag(&args[2..]) {
+                println!("Usage: myconote-cli consensus <predict_out_dir> [options]");
+                println!("\nRe-run ONLY the consensus merge on an existing predict output directory,");
+                println!("re-using its raw predictor GFF3s (augustus.gff3, snap.gff3,");
+                println!("genemark/genemark.gff3, glimmerhmm.gff3, protein_evidence/*). No predictor is");
+                println!("re-run, so this takes seconds. Use it to A/B the combiner on finished runs.");
+                println!("\nOptions:");
+                println!("  --output <file>        Output GFF3 (default: <dir>/consensus.<combiner>.gff3)");
+                println!("  --combiner <MODE>      corroborated (default) or legacy");
+                println!("  --weights <file.toml>  Evidence weights (default: the combiner's defaults)");
+                println!("  --locus-prefix <str>   Gene ID prefix (default: GENE)");
+                println!("  --input <gff3>:<src>   Add/override a source explicitly (repeatable), e.g.");
+                println!("                         --input my.gff3:SNAP. Disables auto-detection.");
+                println!("\nExamples:");
+                println!("  myconote-cli consensus predict_out");
+                println!("  myconote-cli consensus predict_out --combiner legacy --output old.gff3");
+                return Ok(());
+            }
+            handle_consensus(&args[2], &args[3..])?;
         }
         "annotate" => {
             if args.len() < 3 || has_help_flag(&args[2..]) {
@@ -1090,6 +1119,124 @@ fn main() -> Result<()> {
         _ => println!("Unknown command: {}. Try: sort | mask | train | predict | update | annotate | submit | batch | explain | remote | stats | quant | fetch-rna | de-template | ase | ase-template | go-template | compare | convert | clean | fix | install | check | setup | species | learn", command),
     }
 
+    Ok(())
+}
+
+fn handle_consensus(dir: &str, args: &[String]) -> Result<()> {
+    use predict::evidence::{self, Combiner, EvidenceWeights};
+    use std::path::Path;
+
+    let dir = Path::new(dir);
+    let mut output: Option<PathBuf> = None;
+    let mut combiner = Combiner::default();
+    let mut weights_file: Option<PathBuf> = None;
+    let mut locus_prefix = "GENE".to_string();
+    let mut explicit: Vec<(PathBuf, String)> = Vec::new();
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--output" | "-o" if i + 1 < args.len() => {
+                output = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            "--combiner" if i + 1 < args.len() => {
+                combiner = Combiner::parse(&args[i + 1]).ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Invalid --combiner {:?}: expected `corroborated` or `legacy`",
+                        args[i + 1]
+                    )
+                })?;
+                i += 2;
+            }
+            "--weights" if i + 1 < args.len() => {
+                weights_file = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            "--locus-prefix" if i + 1 < args.len() => {
+                locus_prefix = args[i + 1].clone();
+                i += 2;
+            }
+            "--input" if i + 1 < args.len() => {
+                let (path, src) = args[i + 1].rsplit_once(':').ok_or_else(|| {
+                    anyhow::anyhow!("--input expects <gff3>:<source>, got {:?}", args[i + 1])
+                })?;
+                explicit.push((PathBuf::from(path), src.to_string()));
+                i += 2;
+            }
+            other => {
+                return Err(anyhow::anyhow!(
+                    "unknown argument '{}' for `consensus`. Run `myconote-cli consensus --help`.",
+                    other
+                ));
+            }
+        }
+    }
+
+    let weights = match &weights_file {
+        Some(f) => EvidenceWeights::from_toml(f)?,
+        None => match combiner {
+            Combiner::Legacy => EvidenceWeights::legacy(),
+            Combiner::Corroborated => EvidenceWeights::default(),
+        },
+    };
+
+    let sources: Vec<(PathBuf, String)> = if !explicit.is_empty() {
+        explicit
+    } else {
+        let mut found = Vec::new();
+        for (rel, src) in [
+            ("augustus.gff3", "Augustus"),
+            ("snap.gff3", "SNAP"),
+            ("glimmerhmm.gff3", "GlimmerHMM"),
+            ("genemark/genemark.gff3", "GeneMark"),
+            ("protein_evidence/protein_alignments.gff3", "Protein"),
+        ] {
+            let p = dir.join(rel);
+            if p.exists() {
+                found.push((p, src.to_string()));
+            }
+        }
+        found
+    };
+    if sources.is_empty() {
+        return Err(anyhow::anyhow!(
+            "no predictor GFF3s found in {} (looked for augustus.gff3, snap.gff3, \
+             glimmerhmm.gff3, genemark/genemark.gff3, protein_evidence/protein_alignments.gff3). \
+             Pass them with --input <gff3>:<source>.",
+            dir.display()
+        ));
+    }
+
+    let output = output.unwrap_or_else(|| dir.join(format!("consensus.{}.gff3", combiner.name())));
+    println!("Consensus combiner: {}", combiner.name());
+    for (p, s) in &sources {
+        println!(
+            "  {:<12} weight={:.1}  ← {}",
+            s,
+            weights.weight_for(s),
+            p.display()
+        );
+    }
+    let inputs: Vec<(&Path, &str, f64)> = sources
+        .iter()
+        .map(|(p, s)| (p.as_path(), s.as_str(), weights.weight_for(s)))
+        .collect();
+    let ctx = evidence::ConsensusContext {
+        extras: evidence::ConsensusExtras {
+            combiner,
+            ..evidence::ConsensusExtras::default()
+        },
+        ..evidence::ConsensusContext::default()
+    };
+    let n = evidence::merge_predictions_filtered(
+        &inputs,
+        &output,
+        &locus_prefix,
+        &evidence::ConsensusFilter::default(),
+        &ctx,
+    )?;
+    println!("  {} genes → {}", n, output.display());
     Ok(())
 }
 
@@ -2149,6 +2296,18 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
                     Err(_) => {
                         return Err(anyhow::anyhow!(
                             "Invalid --min-single-exon-support {:?}: expected a non-negative integer",
+                            args[i + 1]
+                        ));
+                    }
+                }
+                i += 2;
+            }
+            "--combiner" if i + 1 < args.len() => {
+                match predict::evidence::Combiner::parse(&args[i + 1]) {
+                    Some(c) => config.combiner = c,
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid --combiner {:?}: expected `corroborated` or `legacy`",
                             args[i + 1]
                         ));
                     }

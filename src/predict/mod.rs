@@ -1031,6 +1031,8 @@ fn training_fallback_banner(mode: &str, reason: &str, stock_species: &str) -> St
                                species/generic/ under $AUGUSTUS_CONFIG_PATH.\n\
                              • (BUSCO mode) BUSCO absent / wrong lineage → install\n\
                                busco=5 and provision the kingdom lineage dataset.\n\
+                             • (BUSCO mode) BUSCO/Augustus version mismatch →\n\
+                               Augustus >= 3.4 in BUSCO's env, or BUSCO < 5.7.\n\
          ======================================================================"
     )
 }
@@ -1044,6 +1046,14 @@ fn run_busco_training(config: &PredictConfig) -> Result<String> {
     // Same companion-script gate as self-training: bail before the (expensive)
     // BUSCO run if new_species.pl / etraining cannot be resolved on this install.
     if let Some(reason) = train::self_training_unavailable_reason() {
+        return Err(MycoNoteError::UnsupportedFormat(format!(
+            "{reason} — BUSCO-seeded training cannot run on this install"
+        )));
+    }
+
+    // BUSCO 5.7+ cannot drive Augustus 3.3.3; catch that before spending the
+    // BUSCO run on a training set that can never be built.
+    if let Some(reason) = busco_train::busco_augustus_incompatibility() {
         return Err(MycoNoteError::UnsupportedFormat(format!(
             "{reason} — BUSCO-seeded training cannot run on this install"
         )));

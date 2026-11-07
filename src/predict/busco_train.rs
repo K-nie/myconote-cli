@@ -34,6 +34,113 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 0. Pre-flight: BUSCO ↔ Augustus version compatibility
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// First BUSCO release whose `--augustus` pipeline needs a newer Augustus.
+/// BUSCO 5.7.x calls Augustus options that 3.3.3 does not have, so the genome
+/// run "completes" without usable gene models and training falls back only
+/// after the expensive BUSCO run.
+const BUSCO_NEEDS_NEW_AUGUSTUS: (u32, u32, u32) = (5, 7, 0);
+/// Minimum Augustus those BUSCO releases work with.
+const MIN_AUGUSTUS_FOR_NEW_BUSCO: (u32, u32, u32) = (3, 4, 0);
+
+/// Pull the first `X.Y[.Z]` version number out of a tool's `--version` text,
+/// e.g. "BUSCO 5.7.1" or "AUGUSTUS (3.3.3) is a gene prediction tool".
+fn parse_version(text: &str) -> Option<(u32, u32, u32)> {
+    for token in text.split(|c: char| !(c.is_ascii_digit() || c == '.')) {
+        let parts: Vec<&str> = token.split('.').filter(|p| !p.is_empty()).collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        let nums: Vec<u32> = parts
+            .iter()
+            .take(3)
+            .filter_map(|p| p.parse().ok())
+            .collect();
+        if nums.len() >= 2 {
+            return Some((nums[0], nums[1], *nums.get(2).unwrap_or(&0)));
+        }
+    }
+    None
+}
+
+fn fmt_version(v: (u32, u32, u32)) -> String {
+    format!("{}.{}.{}", v.0, v.1, v.2)
+}
+
+/// Decide whether a BUSCO/Augustus pair can run BUSCO's `--augustus` mode.
+/// Returns a human-readable reason when it cannot. Unknown versions are not
+/// treated as a problem: the existing post-run fallback still covers them.
+fn version_incompatibility(
+    busco: Option<(u32, u32, u32)>,
+    augustus: Option<(u32, u32, u32)>,
+) -> Option<String> {
+    let (b, a) = (busco?, augustus?);
+    if b >= BUSCO_NEEDS_NEW_AUGUSTUS && a < MIN_AUGUSTUS_FOR_NEW_BUSCO {
+        return Some(format!(
+            "BUSCO {} needs Augustus >= {} for `--augustus` gene finding, but the \
+             Augustus BUSCO would use is {}. Either install Augustus >= {} into \
+             BUSCO's environment, or pin BUSCO below {} (e.g. `busco=5.6`)",
+            fmt_version(b),
+            fmt_version(MIN_AUGUSTUS_FOR_NEW_BUSCO),
+            fmt_version(a),
+            fmt_version(MIN_AUGUSTUS_FOR_NEW_BUSCO),
+            fmt_version(BUSCO_NEEDS_NEW_AUGUSTUS),
+        ));
+    }
+    None
+}
+
+/// Run a command and return its combined stdout + stderr (Augustus prints its
+/// version banner to stderr on some builds and exits non-zero).
+fn version_text(mut cmd: std::process::Command) -> Option<String> {
+    let out = cmd.output().ok()?;
+    let mut s = String::from_utf8_lossy(&out.stdout).into_owned();
+    s.push('\n');
+    s.push_str(&String::from_utf8_lossy(&out.stderr));
+    Some(s)
+}
+
+/// The Augustus binary BUSCO itself will pick up: the one inside BUSCO's
+/// conda env (or beside a direct `busco` binary), else `augustus` on PATH.
+fn augustus_for_busco(busco: &crate::annotate::busco::BuscoCmd) -> Option<PathBuf> {
+    use crate::annotate::busco::BuscoCmd;
+    let beside = match busco {
+        BuscoCmd::Direct(p) => p.parent().map(|d| d.join("augustus")),
+        BuscoCmd::CondaRun {
+            conda_path,
+            env_name,
+        } => conda_path
+            .parent()
+            .and_then(|bin| bin.parent())
+            .map(|root| {
+                root.join("envs")
+                    .join(env_name)
+                    .join("bin")
+                    .join("augustus")
+            }),
+    };
+    beside
+        .filter(|p| p.is_file())
+        .or_else(|| which::which("augustus").ok())
+}
+
+/// Pre-flight check run before the (expensive) BUSCO genome run. Returns
+/// `Some(reason)` when BUSCO-seeded training is known not to work with the
+/// installed BUSCO/Augustus pair.
+pub fn busco_augustus_incompatibility() -> Option<String> {
+    let busco = crate::annotate::busco::find_busco().ok()?;
+    let busco_v = version_text(busco.command(&["--version"])).and_then(|t| parse_version(&t));
+    let aug_v = augustus_for_busco(&busco).and_then(|p| {
+        let mut cmd = std::process::Command::new(p);
+        cmd.arg("--version");
+        version_text(cmd).and_then(|t| parse_version(&t))
+    });
+    version_incompatibility(busco_v, aug_v)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1. Run BUSCO in genome mode (Augustus gene finder)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -536,5 +643,31 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let out = dir.path().join("t.gff3");
         assert!(collect_busco_training_gff(dir.path(), &out).is_err());
+    }
+
+    #[test]
+    fn parse_version_reads_busco_and_augustus_banners() {
+        assert_eq!(parse_version("BUSCO 5.7.1\n"), Some((5, 7, 1)));
+        assert_eq!(
+            parse_version("AUGUSTUS (3.3.3) is a gene prediction tool\nwritten by M. Stanke"),
+            Some((3, 3, 3))
+        );
+        assert_eq!(parse_version("AUGUSTUS (3.5.0) is a gene"), Some((3, 5, 0)));
+        assert_eq!(parse_version("busco 5.4"), Some((5, 4, 0)));
+        assert_eq!(parse_version("no version here"), None);
+    }
+
+    #[test]
+    fn new_busco_with_old_augustus_is_rejected() {
+        let why = version_incompatibility(Some((5, 7, 1)), Some((3, 3, 3))).unwrap();
+        assert!(why.contains("5.7.1") && why.contains("3.3.3") && why.contains("3.4.0"));
+    }
+
+    #[test]
+    fn compatible_or_unknown_versions_pass() {
+        assert!(version_incompatibility(Some((5, 7, 1)), Some((3, 4, 0))).is_none());
+        assert!(version_incompatibility(Some((5, 6, 1)), Some((3, 3, 3))).is_none());
+        assert!(version_incompatibility(None, Some((3, 3, 3))).is_none());
+        assert!(version_incompatibility(Some((5, 7, 1)), None).is_none());
     }
 }

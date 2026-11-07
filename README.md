@@ -238,17 +238,28 @@ myconote-cli annotate genes.gff3 --fasta genome.fa --genetic-code 12   # Candida
 Customize how the Evidence Modeler scores predictions with a TOML file:
 
 ```toml
-# weights.toml
-augustus = 10.0
-snap = 3.0
-protein = 25.0
-est = 8.0
+# weights.toml (defaults shown)
+augustus = 4.0
+snap = 2.0
+protein = 8.0
+est = 3.0
 glimmerhmm = 2.0
-genemark = 5.0
+genemark = 3.0
 ```
 
 ```bash
 myconote-cli predict genome.fa --weights weights.toml
+```
+
+The default `corroborated` combiner lets two predictors that agree exactly
+(e.g. SNAP + GeneMark) overrule a lone Augustus call, and keeps every
+non-overlapping winner in a locus group so fused models don't swallow their
+neighbours. `--combiner legacy` restores pre-0.9.1 output and the old 10/5/3
+weights. To A/B combiners on a finished run without re-running predictors:
+
+```bash
+myconote-cli consensus predict_out                    # → consensus.corroborated.gff3
+myconote-cli consensus predict_out --combiner legacy  # → consensus.legacy.gff3
 ```
 
 ---

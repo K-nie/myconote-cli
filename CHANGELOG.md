@@ -4,6 +4,38 @@ All notable changes to MycoNote-CLI are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Consensus combiner: corroborated voting is the new default (accuracy gap vs
+  funannotate).** The Nov 2026 diagnostic
+  (`docs/paper/htcondor_benchmark/diagnostics/`) found that on 60–91% of loci
+  funannotate gets exactly right and MycoNote does not, SNAP and/or GeneMark had
+  already called the exact model and were outvoted by Augustus. Changes:
+  - Default weights Augustus 10 / GeneMark 5 / SNAP 3 → **4 / 3 / 2** (extrinsic
+    tracks scaled by the same factor). `snap + genemark > augustus`, so two
+    agreeing predictors overrule a lone Augustus call; max ab-initio ratio 2:1
+    as in funannotate's EVM config.
+  - Each other source votes once per candidate (its best-agreeing model)
+    instead of once per overlapping model, so a fused model no longer collects
+    partial credit from every piece it spans.
+  - Every non-overlapping winner in an overlap group is kept (was: one per
+    group), so a gene linked to the group only via a losing fused model is no
+    longer dropped.
+  - Stop codons are folded into CDS before agreement scoring, so Augustus
+    (separate `stop_codon` row) and SNAP (stop inside CDS) models with the same
+    structure count as exact agreement.
+- `predict --combiner legacy` restores the previous combiner and, unless
+  `--weights` is given, the old weights. `predict_summary.txt` now records the
+  combiner.
+
+### Added
+
+- **`myconote-cli consensus <predict_out>`** re-runs only the consensus merge on
+  the raw predictor GFF3s of a finished run (seconds, no predictors), for
+  combiner A/B on existing benchmark outputs.
+
 ## [0.9.0] — 2026-10-16
 
 Four competitor-parity "copies" for `predict`, each **off by default** so a

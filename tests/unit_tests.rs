@@ -12,6 +12,16 @@ mod evidence_tests {
     #[test]
     fn test_default_weights() {
         let w = EvidenceWeights::default();
+        assert_eq!(w.augustus, 4.0);
+        assert_eq!(w.snap, 2.0);
+        assert_eq!(w.protein, 8.0);
+        assert_eq!(w.glimmerhmm, 2.0);
+        assert_eq!(w.genemark, 3.0);
+    }
+
+    #[test]
+    fn test_legacy_weights() {
+        let w = EvidenceWeights::legacy();
         assert_eq!(w.augustus, 10.0);
         assert_eq!(w.snap, 3.0);
         assert_eq!(w.protein, 20.0);
@@ -22,10 +32,10 @@ mod evidence_tests {
     #[test]
     fn test_weight_for_lookup() {
         let w = EvidenceWeights::default();
-        assert_eq!(w.weight_for("Augustus"), 10.0);
-        assert_eq!(w.weight_for("snap"), 3.0);
-        assert_eq!(w.weight_for("protein"), 20.0);
-        assert_eq!(w.weight_for("genemark"), 5.0);
+        assert_eq!(w.weight_for("Augustus"), 4.0);
+        assert_eq!(w.weight_for("snap"), 2.0);
+        assert_eq!(w.weight_for("protein"), 8.0);
+        assert_eq!(w.weight_for("genemark"), 3.0);
         assert_eq!(w.weight_for("unknown_tool"), 1.0);
     }
 

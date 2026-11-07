@@ -60,6 +60,11 @@ banner and falls back to the stock species (it never silently pretends to
 train). On fungi with a curated model, `stock` usually wins — self-train earns
 its keep on a novel fungus with no close stock species.
 
+`--augustus-training busco` trains on the genome's complete single-copy BUSCO
+genes instead. It uses the `--kingdom` lineage (`fungi_odb10`) by default;
+pass `--busco-lineage <name|dir>` to pick a narrower dataset such as
+`dikarya_odb10`, or a path to a lineage directory.
+
 ## Choosing a GeneMark mode
 
 `gmes_petap.pl` ships four self-training algorithms. Pick one with

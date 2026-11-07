@@ -270,6 +270,9 @@ fn main() -> Result<()> {
                 println!("                                      etraining on those genes. Needs busco=5 +");
                 println!("                                      the kingdom lineage dataset. Both modes fall");
                 println!("                                      back LOUDLY to the stock species on failure.");
+                println!("  --busco-lineage <name|dir>  BUSCO lineage for `--augustus-training busco`");
+                println!("                              (e.g. dikarya_odb10, or a lineage directory).");
+                println!("                              Default: the --kingdom lineage (fungi_odb10).");
                 println!("  --train-species <name>      Species name for trained model (default: <prefix>_trained)");
                 println!("  --min-predictor-support <N> Drop consensus loci backed by < N distinct");
                 println!("                              predictors (default: 1 = keep all; try 2 for");
@@ -367,6 +370,8 @@ fn main() -> Result<()> {
                 println!("  --min-identity <float>      Min sequence identity for MMseqs2 (default: 0.3)");
                 println!("  --no-pfam                   Skip Pfam domain search");
                 println!("  --no-busco                  Skip BUSCO completeness check");
+                println!("  --busco-lineage <name|dir>  BUSCO lineage (e.g. dikarya_odb10, or a lineage");
+                println!("                              directory). Default: the --kingdom lineage.");
                 println!("  --interproscan              Run InterProScan via EBI REST API");
                 println!("  --email <address>           Email for InterProScan (required by EBI)");
                 println!("  --eggnog                    Run EggNog-mapper (COG/NOG categories) — off by default");
@@ -2012,6 +2017,10 @@ fn handle_predict(fasta_path: &str, args: &[String]) -> Result<()> {
             // --augustus-training {stock,self}: `self` trains a genome-specific
             // Augustus model (with stock fallback on failure); `stock` keeps the
             // pre-trained species (default). Alias for --self-train / --species.
+            "--busco-lineage" if i + 1 < args.len() => {
+                config.busco_lineage = Some(parse_busco_lineage(&args[i + 1])?);
+                i += 2;
+            }
             "--augustus-training" if i + 1 < args.len() => {
                 // Mutually exclusive modes — set one, clear the others.
                 match args[i + 1].to_lowercase().as_str() {
@@ -2345,6 +2354,10 @@ fn handle_annotate(gff_path: &str, args: &[String]) -> Result<()> {
             "--no-busco" => {
                 config.run_busco = false;
                 i += 1;
+            }
+            "--busco-lineage" if i + 1 < args.len() => {
+                config.busco_lineage = Some(parse_busco_lineage(&args[i + 1])?);
+                i += 2;
             }
             "--interproscan" => {
                 config.run_interproscan = true;
@@ -2933,6 +2946,11 @@ fn handle_fix(gbk_path: &str, args: &[String]) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 // remote command: remote annotation services
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Parse a `--busco-lineage` value shared by `predict` and `annotate`.
+fn parse_busco_lineage(value: &str) -> Result<String> {
+    predict::kingdom::validate_busco_lineage(value).map_err(|e| anyhow::anyhow!(e))
+}
 
 fn handle_remote(proteins_fa: &str, args: &[String]) -> Result<()> {
     use remote::{run_remote, RemoteConfig};

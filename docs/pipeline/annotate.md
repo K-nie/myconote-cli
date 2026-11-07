@@ -32,7 +32,7 @@ are **opt-in** — add the flag to enable each:
 |--------|------|----------|----------|
 | MMseqs2 | default on | Swiss-Prot | Gene names, best-hit species |
 | Pfam | default on (`--no-pfam`) | Pfam-A (hmmsearch) | Protein domain families |
-| BUSCO | default on (`--no-busco`) | fungi_odb10 | Completeness assessment |
+| BUSCO | default on (`--no-busco`) | fungi_odb10 (`--busco-lineage` to change) | Completeness assessment |
 | EggNOG | `--eggnog` | EggNOG / COG | GO terms, KEGG, COG categories |
 | CAZyme | `--cazyme` | dbCAN (DIAMOND) | Carbohydrate-active enzymes |
 | MEROPS | `--merops` | MEROPS (DIAMOND) | Protease families |

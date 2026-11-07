@@ -143,6 +143,10 @@ pub struct PredictConfig {
     /// `self_train`). `false` (default) = off. Falls back loudly to the stock
     /// species on any failure. Set by `--augustus-training busco`.
     pub augustus_train_busco: bool,
+    /// BUSCO lineage dataset for BUSCO-seeded training (e.g. `dikarya_odb10`
+    /// or a path to a lineage directory). `None` = the kingdom default.
+    /// Set by `--busco-lineage`.
+    pub busco_lineage: Option<String>,
     // ── Augustus training mode (v0.7.7) ──────────────────────────────────────
     // (self-training itself is driven by `self_train`; `--augustus-training
     // self` is an alias that sets it.  No extra field needed.)
@@ -208,6 +212,7 @@ impl Default for PredictConfig {
             repeat_filter: false,
             repeat_filter_threshold: None,
             augustus_train_busco: false,
+            busco_lineage: None,
             protein_hints: None,
             protein_hints_evalue: 1e-5,
             protein_hints_max: 50_000,
@@ -1059,7 +1064,10 @@ fn run_busco_training(config: &PredictConfig) -> Result<String> {
         config.augustus_species.as_deref(),
         config.clade,
     );
-    let lineage = config.kingdom.busco_lineage();
+    let lineage = config
+        .busco_lineage
+        .as_deref()
+        .unwrap_or_else(|| config.kingdom.busco_lineage());
 
     let run_dir = busco_train::run_busco_genome(
         &config.masked_fasta,

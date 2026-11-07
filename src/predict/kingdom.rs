@@ -321,9 +321,58 @@ pub fn resolve_augustus_species(
     (kingdom.default_augustus_species().to_string(), None)
 }
 
+/// Check a user-supplied `--busco-lineage` value: either an OrthoDB dataset
+/// name (`dikarya_odb10`, `fungi_odb12`, …) or a path to a lineage directory.
+/// Catches the common slips before an expensive BUSCO run: an empty value, a
+/// following flag swallowed as the value, or a bare clade name like `fungi`.
+pub fn validate_busco_lineage(value: &str) -> std::result::Result<String, String> {
+    let v = value.trim();
+    if v.is_empty() {
+        return Err("--busco-lineage needs a value, e.g. dikarya_odb10".to_string());
+    }
+    if v.starts_with('-') {
+        return Err(format!(
+            "--busco-lineage got {v:?}, which looks like another flag. \
+             Pass a lineage such as dikarya_odb10"
+        ));
+    }
+    let looks_like_path = v.contains('/') || std::path::Path::new(v).is_dir();
+    if !looks_like_path && !v.contains("_odb") {
+        return Err(format!(
+            "--busco-lineage {v:?} is not a BUSCO dataset name. Use the full \
+             OrthoDB name (e.g. {v}_odb10) or a path to a lineage directory"
+        ));
+    }
+    Ok(v.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn busco_lineage_accepts_dataset_names_and_paths() {
+        assert_eq!(
+            validate_busco_lineage("dikarya_odb10").unwrap(),
+            "dikarya_odb10"
+        );
+        assert_eq!(
+            validate_busco_lineage(" fungi_odb12 ").unwrap(),
+            "fungi_odb12"
+        );
+        assert_eq!(
+            validate_busco_lineage("/data/busco/ascomycota_odb10").unwrap(),
+            "/data/busco/ascomycota_odb10"
+        );
+    }
+
+    #[test]
+    fn busco_lineage_rejects_common_slips() {
+        assert!(validate_busco_lineage("").is_err());
+        assert!(validate_busco_lineage("--threads").is_err());
+        let e = validate_busco_lineage("dikarya").unwrap_err();
+        assert!(e.contains("dikarya_odb10"));
+    }
 
     #[test]
     fn each_clade_has_expected_default() {

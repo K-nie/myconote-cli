@@ -58,6 +58,9 @@ pub struct AnnotateConfig {
     pub run_pfam: bool,
     /// Run BUSCO completeness check
     pub run_busco: bool,
+    /// BUSCO lineage dataset (e.g. `dikarya_odb10` or a path to a lineage
+    /// directory). `None` = the kingdom default. Set by `--busco-lineage`.
+    pub busco_lineage: Option<String>,
     /// Path to Swiss-Prot MMseqs2 database (auto-detected from db_dir)
     pub swissprot_db: Option<PathBuf>,
     /// Path to Pfam-A HMM database (auto-detected from db_dir)
@@ -135,6 +138,7 @@ impl Default for AnnotateConfig {
             run_mmseqs: true,
             run_pfam: true,
             run_busco: true,
+            busco_lineage: None,
             swissprot_db: None,
             pfam_db: None,
             db_dir,
@@ -414,7 +418,10 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     // ── BUSCO completeness ────────────────────────────────────────────────────
     if config.run_busco {
         step += 1;
-        let lineage = config.kingdom.busco_lineage();
+        let lineage = config
+            .busco_lineage
+            .as_deref()
+            .unwrap_or_else(|| config.kingdom.busco_lineage());
         progress::step(
             step,
             total_steps,

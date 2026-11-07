@@ -21,7 +21,7 @@ use super::AnnotateConfig;
 /// DB setup: myconote annotate --download-dbs   (downloads Pfam-A.hmm)
 use crate::utils::error::{MycoNoteError, Result};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,36 +94,86 @@ fn run_hmmsearch(
     let hmmsearch = which::which("hmmsearch")
         .map_err(|_| MycoNoteError::UnsupportedFormat("hmmsearch not found".to_string()))?;
 
-    println!("  Running hmmsearch (Pfam-A) — faster than hmmscan for large proteomes");
+    let (n_shards, cpu_per_shard) = shard_plan(config.threads);
+    let evalue_s = config.evalue.to_string();
+    let query_s = query_fa.to_string_lossy().into_owned();
 
-    let pfam_s = pfam_hmm.to_string_lossy();
-    let query_s = query_fa.to_string_lossy();
-    let dom_s = domtblout.to_string_lossy();
-
-    let status = Command::new(&hmmsearch)
-        .args([
-            "--domtblout",
-            dom_s.as_ref(),
-            "--cpu",
-            &config.threads.to_string(),
-            "-E",
-            &config.evalue.to_string(),
-            "--domE",
-            &config.evalue.to_string(),
-            "--noali", // skip alignment output (saves time + disk)
-            pfam_s.as_ref(),
-            query_s.as_ref(),
-        ])
-        .stdout(std::process::Stdio::null())
-        .status()
-        .map_err(MycoNoteError::Io)?;
-
-    if !status.success() {
-        return Err(MycoNoteError::InvalidFormat(
-            "hmmsearch failed. Check that Pfam-A.hmm is properly pressed (hmmpress).".to_string(),
-        ));
+    if n_shards <= 1 {
+        println!("  Running hmmsearch (Pfam-A) — faster than hmmscan for large proteomes");
+        run_one_hmmsearch(
+            &hmmsearch,
+            pfam_hmm,
+            &query_s,
+            domtblout,
+            cpu_per_shard,
+            &evalue_s,
+        )?;
+    } else {
+        // `hmmsearch --cpu N` stops scaling after a few threads (one master
+        // thread feeds the workers), so split the PROFILE database into shards
+        // and run one hmmsearch per shard in parallel. Splitting profiles, not
+        // proteins, keeps every E-value identical to a single run: per-sequence
+        // E-values use the number of target proteins (unchanged in every shard)
+        // and per-domain E-values depend only on that profile's own hits.
+        let fallback_dir = domtblout.parent().unwrap_or_else(|| Path::new("."));
+        let shards = match shard_hmm_db(pfam_hmm, n_shards, fallback_dir) {
+            Ok(shards) => shards,
+            Err(e) => {
+                eprintln!("  ⚠  Could not shard Pfam database ({e}); running one hmmsearch.");
+                run_one_hmmsearch(
+                    &hmmsearch,
+                    pfam_hmm,
+                    &query_s,
+                    domtblout,
+                    config.threads,
+                    &evalue_s,
+                )?;
+                return finish_hmmsearch(domtblout);
+            }
+        };
+        println!(
+            "  Running hmmsearch (Pfam-A) in {} parallel shards × {} CPU",
+            shards.len(),
+            cpu_per_shard
+        );
+        let shard_outs: Vec<PathBuf> = (0..shards.len())
+            .map(|i| domtblout.with_extension(format!("shard{i}.domtblout")))
+            .collect();
+        let results: Vec<Result<()>> = std::thread::scope(|scope| {
+            let handles: Vec<_> = shards
+                .iter()
+                .zip(&shard_outs)
+                .map(|(shard, out)| {
+                    let (hmmsearch, query_s, evalue_s) = (&hmmsearch, &query_s, &evalue_s);
+                    scope.spawn(move || {
+                        run_one_hmmsearch(hmmsearch, shard, query_s, out, cpu_per_shard, evalue_s)
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|h| {
+                    h.join().unwrap_or_else(|_| {
+                        Err(MycoNoteError::InvalidFormat(
+                            "hmmsearch shard thread panicked".to_string(),
+                        ))
+                    })
+                })
+                .collect()
+        });
+        for r in results {
+            r?;
+        }
+        concat_files(&shard_outs, domtblout)?;
+        for out in &shard_outs {
+            let _ = std::fs::remove_file(out);
+        }
     }
 
+    finish_hmmsearch(domtblout)
+}
+
+fn finish_hmmsearch(domtblout: &Path) -> Result<Vec<PfamHit>> {
     // hmmsearch --domtblout has the same format as hmmscan --domtblout
     // but columns 0-2 and 3-5 are swapped:
     //   hmmscan:   target=domain, query=protein
@@ -132,6 +182,164 @@ fn run_hmmsearch(
     println!("  hmmsearch finished — {} domain hits", hits.len());
 
     Ok(hits)
+}
+
+/// Run one hmmsearch process over `hmm` (a full database or one shard).
+fn run_one_hmmsearch(
+    hmmsearch: &Path,
+    hmm: &Path,
+    query: &str,
+    domtblout: &Path,
+    cpu: usize,
+    evalue: &str,
+) -> Result<()> {
+    let hmm_s = hmm.to_string_lossy();
+    let dom_s = domtblout.to_string_lossy();
+    let cpu_s = cpu.to_string();
+    let status = Command::new(hmmsearch)
+        .args([
+            "--domtblout",
+            dom_s.as_ref(),
+            "--cpu",
+            &cpu_s,
+            "-E",
+            evalue,
+            "--domE",
+            evalue,
+            "--noali", // skip alignment output (saves time + disk)
+            hmm_s.as_ref(),
+            query,
+        ])
+        .stdout(std::process::Stdio::null())
+        .status()
+        .map_err(MycoNoteError::Io)?;
+    if !status.success() {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "hmmsearch failed on {}. Check that the Pfam-A.hmm file is intact.",
+            hmm.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Below this many threads one hmmsearch process with `--cpu` is about as
+/// fast as sharding, so keep the simple path.
+const MIN_THREADS_TO_SHARD: usize = 4;
+/// Upper bound on parallel shards (each re-reads its slice of Pfam-A).
+const MAX_SHARDS: usize = 32;
+
+/// How to spread `threads` over hmmsearch processes: (shards, --cpu each).
+fn shard_plan(threads: usize) -> (usize, usize) {
+    let threads = threads.max(1);
+    if threads < MIN_THREADS_TO_SHARD {
+        return (1, threads);
+    }
+    let shards = threads.min(MAX_SHARDS);
+    (shards, (threads / shards).max(1))
+}
+
+/// Split an HMMER3 text database into `n` shards, round-robin by profile so
+/// each shard gets a similar mix of profile sizes. Shards are cached beside
+/// the database (`<db>.shards<n>/`) and reused while the database's size and
+/// mtime are unchanged; if that directory is not writable they go under
+/// `fallback_dir` instead.
+fn shard_hmm_db(hmm: &Path, n: usize, fallback_dir: &Path) -> Result<Vec<PathBuf>> {
+    let meta = std::fs::metadata(hmm).map_err(MycoNoteError::Io)?;
+    let mtime = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let stamp = format!("{} {}\n", meta.len(), mtime);
+    let file_name = hmm
+        .file_name()
+        .map(|f| f.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "pfam.hmm".to_string());
+    let dir_name = format!("{file_name}.shards{n}");
+
+    let beside = hmm.parent().map(|p| p.join(&dir_name));
+    let candidates: Vec<PathBuf> = beside
+        .into_iter()
+        .chain(std::iter::once(fallback_dir.join(&dir_name)))
+        .collect();
+
+    let shard_paths = |dir: &Path| -> Vec<PathBuf> {
+        (0..n).map(|i| dir.join(format!("shard{i}.hmm"))).collect()
+    };
+
+    // Reuse a valid cache from any candidate location.
+    for dir in &candidates {
+        let paths = shard_paths(dir);
+        let stamp_ok = std::fs::read_to_string(dir.join("STAMP"))
+            .map(|s| s == stamp)
+            .unwrap_or(false);
+        if stamp_ok && paths.iter().all(|p| p.is_file()) {
+            return Ok(paths);
+        }
+    }
+
+    let mut last_err = None;
+    for dir in &candidates {
+        match write_shards(hmm, dir, &shard_paths(dir), &stamp) {
+            Ok(paths) => return Ok(paths),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err
+        .unwrap_or_else(|| MycoNoteError::InvalidFormat("could not write Pfam shards".to_string())))
+}
+
+fn write_shards(hmm: &Path, dir: &Path, paths: &[PathBuf], stamp: &str) -> Result<Vec<PathBuf>> {
+    use std::io::{BufRead, BufReader, BufWriter};
+    std::fs::create_dir_all(dir).map_err(MycoNoteError::Io)?;
+    // Invalidate first so a half-written cache is never reused.
+    let _ = std::fs::remove_file(dir.join("STAMP"));
+    println!(
+        "  Splitting {} into {} shards (one-time)…",
+        hmm.display(),
+        paths.len()
+    );
+
+    let mut writers = paths
+        .iter()
+        .map(|p| std::fs::File::create(p).map(BufWriter::new))
+        .collect::<std::io::Result<Vec<_>>>()
+        .map_err(MycoNoteError::Io)?;
+    let reader = BufReader::new(std::fs::File::open(hmm).map_err(MycoNoteError::Io)?);
+    let mut current = 0usize;
+    let mut profiles = 0usize;
+    for line in reader.lines() {
+        let line = line.map_err(MycoNoteError::Io)?;
+        writeln!(writers[current], "{line}").map_err(MycoNoteError::Io)?;
+        // Each HMMER3 profile record ends with a line that is exactly "//".
+        if line.trim_end() == "//" {
+            profiles += 1;
+            current = (current + 1) % writers.len();
+        }
+    }
+    for w in &mut writers {
+        w.flush().map_err(MycoNoteError::Io)?;
+    }
+    if profiles < paths.len() {
+        return Err(MycoNoteError::InvalidFormat(format!(
+            "{} has only {} profiles; too few to split into {} shards",
+            hmm.display(),
+            profiles,
+            paths.len()
+        )));
+    }
+    std::fs::write(dir.join("STAMP"), stamp).map_err(MycoNoteError::Io)?;
+    Ok(paths.to_vec())
+}
+
+fn concat_files(parts: &[PathBuf], out: &Path) -> Result<()> {
+    let mut f = std::fs::File::create(out).map_err(MycoNoteError::Io)?;
+    for p in parts {
+        let mut src = std::fs::File::open(p).map_err(MycoNoteError::Io)?;
+        std::io::copy(&mut src, &mut f).map_err(MycoNoteError::Io)?;
+    }
+    Ok(())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -354,4 +562,74 @@ fn write_pfam_tsv(path: &Path, hits: &[PfamHit]) -> Result<()> {
         .map_err(MycoNoteError::Io)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fake_hmm(n: usize) -> String {
+        (0..n)
+            .map(|i| format!("HMMER3/f [3.1b2 | February 2015]\nNAME  dom{i}\nACC   PF{i:05}.1\nHMM ...\n//\n"))
+            .collect()
+    }
+
+    #[test]
+    fn shard_plan_keeps_small_runs_single() {
+        assert_eq!(shard_plan(0), (1, 1));
+        assert_eq!(shard_plan(2), (1, 2));
+        assert_eq!(shard_plan(8), (8, 1));
+        assert_eq!(shard_plan(64), (32, 2));
+    }
+
+    #[test]
+    fn shards_partition_every_profile_round_robin() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("Pfam-A.hmm");
+        std::fs::write(&db, fake_hmm(10)).unwrap();
+        let shards = shard_hmm_db(&db, 4, dir.path()).unwrap();
+        assert_eq!(shards.len(), 4);
+
+        let mut names: Vec<String> = Vec::new();
+        let mut counts = Vec::new();
+        for s in &shards {
+            let text = std::fs::read_to_string(s).unwrap();
+            counts.push(text.matches("\n//\n").count());
+            names.extend(
+                text.lines()
+                    .filter_map(|l| l.strip_prefix("NAME  ").map(String::from)),
+            );
+            assert!(text.starts_with("HMMER3/f"));
+        }
+        assert_eq!(counts, vec![3, 3, 2, 2]);
+        names.sort_by_key(|n| n[3..].parse::<usize>().unwrap());
+        let expected: Vec<String> = (0..10).map(|i| format!("dom{i}")).collect();
+        assert_eq!(names, expected);
+    }
+
+    #[test]
+    fn shard_cache_is_reused_then_rebuilt_when_db_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("Pfam-A.hmm");
+        std::fs::write(&db, fake_hmm(6)).unwrap();
+        let first = shard_hmm_db(&db, 2, dir.path()).unwrap();
+        // Tamper with a shard: a reused cache keeps the tampered content.
+        std::fs::write(&first[0], "tampered").unwrap();
+        let again = shard_hmm_db(&db, 2, dir.path()).unwrap();
+        assert_eq!(std::fs::read_to_string(&again[0]).unwrap(), "tampered");
+        // A different-sized database invalidates the stamp and rebuilds.
+        std::fs::write(&db, fake_hmm(8)).unwrap();
+        let rebuilt = shard_hmm_db(&db, 2, dir.path()).unwrap();
+        assert!(std::fs::read_to_string(&rebuilt[0])
+            .unwrap()
+            .contains("NAME  dom0"));
+    }
+
+    #[test]
+    fn too_few_profiles_to_shard_is_an_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("tiny.hmm");
+        std::fs::write(&db, fake_hmm(2)).unwrap();
+        assert!(shard_hmm_db(&db, 4, dir.path()).is_err());
+    }
 }

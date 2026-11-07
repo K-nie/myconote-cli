@@ -388,12 +388,12 @@ pub fn run_annotation(config: &AnnotateConfig) -> Result<AnnotationResults> {
     // ── Pfam domain search ────────────────────────────────────────────────────
     if config.run_pfam {
         step += 1;
-        progress::step(step, total_steps, "Pfam domain search (hmmscan)…");
+        progress::step(step, total_steps, "Pfam domain search (HMMER)…");
         let t_pfam = Instant::now();
         let pfam_db = resolve_pfam(config);
         match pfam_db {
             Some(db) => {
-                let pb2 = progress::spinner("Running hmmscan…");
+                let pb2 = progress::spinner("Running Pfam search…");
                 let pfam_out = config.out_dir.join("pfam_hits.tsv");
                 match pfam::run(&proteins_fa, &db, &pfam_out, config) {
                     Ok(domains) => {
